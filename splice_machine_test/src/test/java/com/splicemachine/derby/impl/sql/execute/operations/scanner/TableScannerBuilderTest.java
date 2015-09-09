@@ -3,6 +3,9 @@ package com.splicemachine.derby.impl.sql.execute.operations.scanner;
 import java.io.IOException;
 
 import com.splicemachine.db.iapi.error.StandardException;
+import com.splicemachine.si.impl.NoopKeepAliveScheduler;
+import com.splicemachine.si.impl.TxnLifecycleObserver;
+import com.splicemachine.si.impl.UnsupportedLifecycleManager;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
@@ -18,7 +21,10 @@ public class TableScannerBuilderTest {
 	protected static int[] array1 = {1,2};
 	protected static int[] array2 = {2,3};
 	protected static int[] array3 = {3,4};
-	protected static TxnView txn = ReadOnlyTxn.create(23, IsolationLevel.READ_UNCOMMITTED, null);
+	protected static TxnView txn = ReadOnlyTxn.create(23,
+			IsolationLevel.READ_UNCOMMITTED,
+			UnsupportedLifecycleManager.INSTANCE,
+			new TxnLifecycleObserver(NoopKeepAliveScheduler.INSTANCE));
 		
 	
 	@Test 

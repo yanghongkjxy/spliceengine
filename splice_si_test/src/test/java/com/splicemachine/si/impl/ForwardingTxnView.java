@@ -15,7 +15,7 @@ public abstract class ForwardingTxnView extends AbstractTxn{
     protected final Txn delegate;
 
     protected ForwardingTxnView(Txn delegate) {
-        super(delegate.getTxnId(),delegate.getBeginTimestamp(),delegate.getIsolationLevel());
+        super(delegate.getTxnId(),delegate.getBeginTimestamp(),delegate.getIsolationLevel(),null);
         this.delegate = delegate;
     }
 

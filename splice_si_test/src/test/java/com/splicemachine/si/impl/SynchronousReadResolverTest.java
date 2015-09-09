@@ -56,7 +56,9 @@ public class SynchronousReadResolverTest {
             }
         }).when(tc).rollback(1l);
 
-        Txn rolledBackTxn = new WritableTxn(1l, 1l, Txn.IsolationLevel.SNAPSHOT_ISOLATION, Txn.ROOT_TRANSACTION, tc, false);
+        TxnLifecycleObserver tcO = new TxnLifecycleObserver(NoopKeepAliveScheduler.INSTANCE);
+
+        Txn rolledBackTxn = new WritableTxn(1l, 1l, Txn.IsolationLevel.SNAPSHOT_ISOLATION, Txn.ROOT_TRANSACTION, tc,tcO, false);
         store.recordNewTransaction(rolledBackTxn);
         rolledBackTxn.rollback(); //ensure that it's rolled back
 
@@ -68,8 +70,9 @@ public class SynchronousReadResolverTest {
 
         region.put(testPut);
 
+        TxnLifecycleObserver tcObserver = new TxnLifecycleObserver(NoopKeepAliveScheduler.INSTANCE);
         Txn readTxn = ReadOnlyTxn.createReadOnlyTransaction(2l, Txn.ROOT_TRANSACTION, 2l,
-                Txn.IsolationLevel.SNAPSHOT_ISOLATION, false, mock(TxnLifecycleManager.class));
+                Txn.IsolationLevel.SNAPSHOT_ISOLATION, false, mock(TxnLifecycleManager.class),tcObserver);
         SimpleTxnFilter filter = new SimpleTxnFilter(null, store, ignoreTxnCacheSupplier, readTxn, resolver, TxnTestUtils.getMockDataStore());
 
         Result result = region.get(new Get(rowKey));
@@ -89,6 +92,7 @@ public class SynchronousReadResolverTest {
     public void testResolvingCommittedWorks() throws Exception {
         HRegion region = MockRegionUtils.getMockRegion();
 
+        TxnLifecycleObserver tcO = new TxnLifecycleObserver(NoopKeepAliveScheduler.INSTANCE);
         final SimpleTimestampSource commitTsGenerator = new SimpleTimestampSource();
         final TxnStore store = new InMemoryTxnStore(commitTsGenerator, Long.MAX_VALUE);
         ReadResolver resolver = SynchronousReadResolver.getResolver(region, store, new RollForwardStatus(), GreenLight.INSTANCE, false);
@@ -102,7 +106,7 @@ public class SynchronousReadResolverTest {
                 return next + 1;
             }
         }).when(tc).commit(anyLong());
-        Txn committedTxn = new WritableTxn(1l, 1l, Txn.IsolationLevel.SNAPSHOT_ISOLATION, Txn.ROOT_TRANSACTION, tc, false);
+        Txn committedTxn = new WritableTxn(1l, 1l, Txn.IsolationLevel.SNAPSHOT_ISOLATION, Txn.ROOT_TRANSACTION, tc,tcO, false);
         store.recordNewTransaction(committedTxn);
         committedTxn.commit();
 
@@ -115,7 +119,7 @@ public class SynchronousReadResolverTest {
         region.put(testPut);
 
         Txn readTxn = ReadOnlyTxn.createReadOnlyTransaction(3l, Txn.ROOT_TRANSACTION, 3l,
-                Txn.IsolationLevel.SNAPSHOT_ISOLATION, false, mock(TxnLifecycleManager.class));
+                Txn.IsolationLevel.SNAPSHOT_ISOLATION, false, mock(TxnLifecycleManager.class),tcO);
         SimpleTxnFilter filter = new SimpleTxnFilter(null, store, ignoreTxnCacheSupplier, readTxn, resolver, TxnTestUtils.getMockDataStore());
 
         Result result = region.get(new Get(rowKey));
@@ -146,7 +150,7 @@ public class SynchronousReadResolverTest {
 
         ClientTxnLifecycleManager tc = new ClientTxnLifecycleManager(timestampSource);
         tc.setStore(store);
-        tc.setKeepAliveScheduler(new ManualKeepAliveScheduler(store));
+        tc.setLifecycleObserver(new TxnLifecycleObserver(new ManualKeepAliveScheduler(store)));
         Txn parentTxn = tc.beginTransaction(Bytes.toBytes("1184"));
 
         Txn childTxn = tc.beginChildTransaction(parentTxn, Txn.IsolationLevel.SNAPSHOT_ISOLATION, false, Bytes.toBytes("1184"));

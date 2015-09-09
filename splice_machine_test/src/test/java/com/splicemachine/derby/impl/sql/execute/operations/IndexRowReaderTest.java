@@ -15,7 +15,9 @@ import com.splicemachine.derby.utils.marshall.dvd.DescriptorSerializer;
 import com.splicemachine.derby.utils.marshall.dvd.VersionedSerializers;
 import com.splicemachine.derby.utils.test.TestingDataType;
 import com.splicemachine.si.api.Txn;
+import com.splicemachine.si.impl.NoopKeepAliveScheduler;
 import com.splicemachine.si.impl.ReadOnlyTxn;
+import com.splicemachine.si.impl.TxnLifecycleObserver;
 import com.splicemachine.si.impl.UnsupportedLifecycleManager;
 import com.splicemachine.storage.EntryEncoder;
 import com.splicemachine.storage.EntryPredicateFilter;
@@ -172,7 +174,9 @@ public class IndexRowReaderTest {
 								.source(mockSource)
 								.outputTemplate(templateOutput)
 								.lookupBatchSize(1)
-                .transaction(ReadOnlyTxn.create(10, Txn.IsolationLevel.SNAPSHOT_ISOLATION, UnsupportedLifecycleManager.INSTANCE))
+                .transaction(ReadOnlyTxn.create(10, Txn.IsolationLevel.SNAPSHOT_ISOLATION,
+                        UnsupportedLifecycleManager.INSTANCE,
+                        new TxnLifecycleObserver(NoopKeepAliveScheduler.INSTANCE)))
 								.mainTableRowDecodingMap(adjustedBaseColumMap)
 								.mainTableAccessedRowColumns(rowCols)
 								.runtimeContext(new SpliceRuntimeContext(new TempTable(SpliceConstants.TEMP_TABLE_BYTES), kryoPool))

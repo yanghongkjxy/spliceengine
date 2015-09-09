@@ -35,9 +35,8 @@ public class IOUtils {
 		}
 	}
 
-	public static void copyFileWithThrottling(FileSystem srcFS, Object file,
-			FileSystem outputFs, Path outputPath, boolean deleteSource,
-			Configuration conf) throws IOException {
+	public static void copyFileWithThrottling(FileSystem srcFS,Object file,
+											  FileSystem outputFs,Path outputPath) throws IOException {
 		// Get the file information
 		FileStatus inputStat = getSourceFileStatus(srcFS, file);
 		// Verify if the output file exists and is the same that we want to copy
@@ -59,12 +58,9 @@ public class IOUtils {
 		try {
 			// Ensure that the output folder is there and copy the file
 			outputFs.mkdirs(outputPath.getParent());
-			FSDataOutputStream out = outputFs.create(outputPath, true);
-			try {
-				copyData(getPath(srcFS, file), in, outputPath, out,
+			try(FSDataOutputStream out=outputFs.create(outputPath,true)){
+				copyData(getPath(srcFS,file),in,outputPath,out,
 						inputStat.getLen());
-			} finally {
-				out.close();
 			}
 		} finally {
 			in.close();
@@ -79,9 +75,7 @@ public class IOUtils {
 	private static boolean sameFile(final FileStatus inputStat,
 			final FileStatus outputStat) {
 		// Not matching length
-		if (inputStat.getLen() != outputStat.getLen())
-			return false;
-		return true;
+		return inputStat.getLen()==outputStat.getLen();
 	}
 
 	private static FileStatus getSourceFileStatus(FileSystem fs, Object file)

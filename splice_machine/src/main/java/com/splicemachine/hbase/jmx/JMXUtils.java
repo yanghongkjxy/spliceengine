@@ -16,6 +16,7 @@ import java.util.List;
 import com.google.common.collect.Lists;
 import com.splicemachine.constants.SpliceConstants;
 
+import com.splicemachine.si.impl.txnclient.TxnStoreManagement;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.splicemachine.tools.version.SpliceMachineVersion;
@@ -48,6 +49,7 @@ public class JMXUtils {
     public static final String SPLICEMACHINE_VERSION = "com.splicemachine.version:type=SpliceMachineVersion";
     public static final String TIMESTAMP_MASTER_MANAGEMENT = "com.splicemachine.si.impl.timestamp.generator:type=TimestampMasterManagement";
     public static final String TIMESTAMP_REGION_MANAGEMENT = "com.splicemachine.si.impl.timestamp.request:type=TimestampRegionManagement";
+    public static final String TXN_STORE_MANAGEMENT = "com.splicemachine.txn:type=TxnStoreManagement";
 	public static final String DATABASE_PROPERTY_MANAGEMENT = "com.splicemachine.derby.utils:type=DatabasePropertyManagement";
 
     public static List<Pair<String,JMXConnector>> getMBeanServerConnections(Collection<Pair<String,String>> serverConnections) throws IOException {
@@ -101,7 +103,7 @@ public class JMXUtils {
     public static List<Pair<String,JobSchedulerManagement>> getJobSchedulerManagement(List<Pair<String,JMXConnector>> mbscArray) throws MalformedObjectNameException, IOException {
         List<Pair<String,JobSchedulerManagement>> jobMonitors = Lists.newArrayListWithCapacity(mbscArray.size());
         for (Pair<String,JMXConnector> mbsc: mbscArray) {
-            jobMonitors.add(new Pair<String, JobSchedulerManagement>(mbsc.getFirst(),getNewMBeanProxy(mbsc.getSecond(), JOB_SCHEDULER_MANAGEMENT, JobSchedulerManagement.class)));
+            jobMonitors.add(new Pair<>(mbsc.getFirst(),getNewMBeanProxy(mbsc.getSecond(),JOB_SCHEDULER_MANAGEMENT,JobSchedulerManagement.class)));
         }
         return jobMonitors;
     }
@@ -118,7 +120,7 @@ public class JMXUtils {
     public static List<Pair<String,ImportTaskManagement>> getImportTaskManagement(List<Pair<String,JMXConnector>> mbscArray) throws MalformedObjectNameException, IOException {
         List<Pair<String,ImportTaskManagement>> importTasks = Lists.newArrayListWithCapacity(mbscArray.size());
         for (Pair<String,JMXConnector> mbsc: mbscArray) {
-        	importTasks.add(new Pair<String, ImportTaskManagement>(mbsc.getFirst(), getNewMXBeanProxy(mbsc.getSecond(), IMPORT_TASK_MANAGEMENT, ImportTaskManagement.class)));
+        	importTasks.add(new Pair<>(mbsc.getFirst(),getNewMXBeanProxy(mbsc.getSecond(),IMPORT_TASK_MANAGEMENT,ImportTaskManagement.class)));
         }
         return importTasks;
     }
@@ -151,7 +153,7 @@ public class JMXUtils {
     public static List<TimestampMasterManagement> getTimestampMasterManagement(List<Pair<String,JMXConnector>> connections) throws MalformedObjectNameException, IOException {
         List<TimestampMasterManagement> managers = new ArrayList<TimestampMasterManagement>();
         for (Pair<String,JMXConnector> connection : connections) {
-            managers.add(getNewMXBeanProxy(connection.getSecond(), TIMESTAMP_MASTER_MANAGEMENT, TimestampMasterManagement.class));
+            managers.add(getNewMXBeanProxy(connection.getSecond(),TIMESTAMP_MASTER_MANAGEMENT,TimestampMasterManagement.class));
         }
         return managers;
     }
@@ -159,7 +161,14 @@ public class JMXUtils {
     public static List<Pair<String,TimestampRegionManagement>> getTimestampRegionManagement(List<Pair<String,JMXConnector>> connections) throws MalformedObjectNameException, IOException {
         List<Pair<String, TimestampRegionManagement>> managers = Lists.newArrayListWithCapacity(connections.size());
         for (Pair<String,JMXConnector> connectorPair : connections) {
-            managers.add(Pair.newPair(connectorPair.getFirst(), getNewMXBeanProxy(connectorPair.getSecond(), TIMESTAMP_REGION_MANAGEMENT, TimestampRegionManagement.class)));
+            managers.add(Pair.newPair(connectorPair.getFirst(),getNewMXBeanProxy(connectorPair.getSecond(),TIMESTAMP_REGION_MANAGEMENT,TimestampRegionManagement.class)));
+        }
+        return managers;
+    }
+    public static List<Pair<String,TxnStoreManagement>> getTxnStoreManagement(List<Pair<String,JMXConnector>> connections) throws MalformedObjectNameException, IOException {
+        List<Pair<String, TxnStoreManagement>> managers = Lists.newArrayListWithCapacity(connections.size());
+        for (Pair<String,JMXConnector> connectorPair : connections) {
+            managers.add(Pair.newPair(connectorPair.getFirst(), getNewMXBeanProxy(connectorPair.getSecond(), TXN_STORE_MANAGEMENT, TxnStoreManagement.class)));
         }
         return managers;
     }

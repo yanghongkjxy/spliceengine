@@ -156,7 +156,7 @@ public class CreateBackupTask extends ZkTask {
             String regionName = s[n - 3];
             Path destPath = new Path(backupFileSystem + "/" + regionName + "/V/" + fileName);
             if(throttleEnabled){
-            	IOUtils.copyFileWithThrottling(fs, file, backupFs,  destPath, false, getConfiguration());
+            	IOUtils.copyFileWithThrottling(fs, file, backupFs,  destPath);
             } else{
             	copyFile(fs, file, backupFs,  destPath, false, SpliceConstants.config);
             }

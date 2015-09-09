@@ -9,6 +9,12 @@ import javax.management.MXBean;
 @MXBean
 public interface TxnStoreManagement {
 
+    /**
+     * @return the begin timestamp of the minimum active transaction (the transaction whose begin timestamp
+     * is the smallest of all active transactions under this management).
+     */
+    long getMinimumActiveBeginTimestamp();
+
     long getTotalTxnLookups();
 
     long getTotalTxnElevations();
@@ -58,4 +64,6 @@ public interface TxnStoreManagement {
      * @return the maximum number of entries which can be contained before an eviction is forced.
      */
     int getMaxCacheSize();
+
+    long getLastActiveTimestamp();
 }

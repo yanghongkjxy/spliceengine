@@ -1,10 +1,8 @@
 package com.splicemachine.si;
 
 import com.google.common.collect.Lists;
-import com.splicemachine.si.api.Transactor;
-import com.splicemachine.si.api.Txn;
-import com.splicemachine.si.api.TxnLifecycleManager;
-import com.splicemachine.si.api.TxnView;
+import com.splicemachine.hbase.KVPair;
+import com.splicemachine.si.api.*;
 import com.splicemachine.si.impl.ForwardingLifecycleManager;
 import com.splicemachine.si.impl.ReadOnlyTxn;
 import com.splicemachine.si.impl.WriteConflict;
@@ -12,12 +10,16 @@ import com.splicemachine.si.testsetup.LStoreSetup;
 import com.splicemachine.si.testsetup.StoreSetup;
 import com.splicemachine.si.testsetup.TestTransactionSetup;
 import com.splicemachine.si.testsetup.TransactorTestUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.*;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Tests that indicate the expected behavior of transactions, particularly
@@ -73,6 +75,61 @@ public class TransactionInteractionTest {
         for(Txn id:createdParentTxns){
             id.rollback();
         }
+    }
+
+    @Test
+    public void insertDeleteInsertInsert() throws Exception{
+        /*
+         * Test related to DB-3685.
+         *
+         * The order of operations should be
+         *
+         * insert ->commit -> delete -> commit -> insert ->commit -> insert(with constraint) -> CONSTRAINT VIOLATION
+         */
+        ConstraintChecker uniqueConstraint=new ConstraintChecker(){
+            @Override
+            public OperationStatus checkConstraint(KVPair mutation,Result existingRow) throws IOException{
+                boolean failure=existingRow!=null && mutation.getType()==KVPair.Type.INSERT;
+                if(failure)
+                    return new OperationStatus(HConstants.OperationStatusCode.FAILURE,"UniqueConstraint violation");
+                else
+                    return new OperationStatus(HConstants.OperationStatusCode.SUCCESS);
+            }
+        };
+        Txn insertTxn1 = control.beginTransaction(DESTINATION_TABLE);
+        Txn child = control.beginChildTransaction(insertTxn1,DESTINATION_TABLE);
+        testUtility.insertAge(child,"scott",29,uniqueConstraint);
+        child.commit();
+        Assert.assertEquals("Incorrect row!","scott age=29 job=null",testUtility.read(insertTxn1,"scott"));
+        insertTxn1.commit();
+
+
+        //now delete the row
+        Txn deleteTxn = control.beginTransaction(DESTINATION_TABLE);
+        Txn deleteChild = control.beginChildTransaction(deleteTxn,DESTINATION_TABLE);
+        testUtility.deleteRow(deleteChild,"scott",uniqueConstraint);
+        deleteChild.commit();
+        Assert.assertEquals("Incorrect row!","scott absent",testUtility.read(deleteTxn,"scott"));
+        deleteTxn.commit();
+
+        Txn insertTxn2 = control.beginTransaction(DESTINATION_TABLE);
+        Txn insertChild2 = control.beginChildTransaction(insertTxn2,DESTINATION_TABLE);
+        testUtility.insertAge(insertChild2,"scott",29,uniqueConstraint);
+        insertChild2.commit();
+        Assert.assertEquals("Incorrect row!","scott age=29 job=null",testUtility.read(insertTxn2,"scott"));
+        insertTxn2.commit();
+
+
+        Txn insertTxn3 = control.beginTransaction(DESTINATION_TABLE);
+        Txn insertChild3 = control.beginChildTransaction(insertTxn3,DESTINATION_TABLE);
+        try{
+            testUtility.insertAge(insertChild3,"scott",30,uniqueConstraint);
+            Assert.fail("Did not throw the constraint violation");
+        }catch(IOException ioe){
+            Assert.assertEquals("Incorrect error message!","UniqueConstraint violation",ioe.getMessage());
+        }
+
+        Assert.assertEquals("Incorrect row!","scott age=29 job=null",testUtility.read(insertChild3,"scott"));
     }
 
     @Test

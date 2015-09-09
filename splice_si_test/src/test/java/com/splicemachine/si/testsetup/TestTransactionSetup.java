@@ -69,8 +69,11 @@ public class TestTransactionSetup {
         ClientTxnLifecycleManager lfManager = new ClientTxnLifecycleManager(timestampSource);
 
         txnStore = storeSetup.getTxnStore();
+        keepAliveScheduler = new ManualKeepAliveScheduler(txnStore);
+        TxnLifecycleObserver tcObserver = new TxnLifecycleObserver(keepAliveScheduler);
         if (isInMemory) {
             ((InMemoryTxnStore) txnStore).setLifecycleManager(lfManager);
+            ((InMemoryTxnStore)txnStore).setLifecycleObserver(tcObserver);
         }
         txnSupplier = new CompletedTxnCacheSupplier(txnStore, 100, 16);
         ignoreTxnSupplier = new IgnoreTxnCacheSupplier();
@@ -88,13 +91,11 @@ public class TestTransactionSetup {
                 SIConstants.EMPTY_BYTE_ARRAY,
                 SIConstants.SNAPSHOT_ISOLATION_ANTI_TOMBSTONE_VALUE_BYTES,
                 SIConstants.SNAPSHOT_ISOLATION_FAILED_TIMESTAMP,
-                SIConstants.DEFAULT_FAMILY_BYTES,
-                txnSupplier, txnLifecycleManager
+                SIConstants.DEFAULT_FAMILY_BYTES
         );
 
 
-        keepAliveScheduler = new ManualKeepAliveScheduler(txnStore);
-        ((ClientTxnLifecycleManager) txnLifecycleManager).setKeepAliveScheduler(keepAliveScheduler);
+        ((ClientTxnLifecycleManager) txnLifecycleManager).setLifecycleObserver(tcObserver);
 
         readController = new SITransactionReadController(dataStore, dataLib, txnStore, ignoreTxnSupplier);
 

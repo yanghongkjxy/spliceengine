@@ -8,8 +8,12 @@ import com.splicemachine.derby.impl.sql.execute.operations.scanner.TableScannerB
 import com.splicemachine.derby.utils.SpliceAdmin;
 import com.splicemachine.metrics.Metrics;
 import com.splicemachine.mrio.MRConstants;
+import com.splicemachine.si.api.Txn;
 import com.splicemachine.si.api.Txn.IsolationLevel;
+import com.splicemachine.si.api.TxnView;
+import com.splicemachine.si.impl.ActiveReadTxn;
 import com.splicemachine.si.impl.ReadOnlyTxn;
+import com.splicemachine.si.impl.UnsupportedLifecycleManager;
 import com.splicemachine.utils.IntArrays;
 import com.splicemachine.utils.SpliceLogUtils;
 import java.io.IOException;
@@ -387,7 +391,7 @@ public class SMSQLUtil extends SIConstants {
         List<PKColumnNamePosition> primaryKeys = getPrimaryKeys(tableName);
         List<NameType> nameTypes = getTableStructure(tableName);
         if (columnNames ==null) {
-            columnNames = new ArrayList<String>(nameTypes.size());
+            columnNames =new ArrayList<>(nameTypes.size());
             for (int i = 0; i< nameTypes.size(); i++) {
                 columnNames.add(nameTypes.get(i).name);
             }
@@ -408,8 +412,9 @@ public class SMSQLUtil extends SIConstants {
             throw new SQLException(e);
         }
         FormatableBitSet accessedKeyColumns = getAccessedKeyColumns(keyColumnEncodingOrder,keyDecodingMap);
+        TxnView txn = new ActiveReadTxn(Long.parseLong(getTransactionID()));
         return new TableScannerBuilder()
-                .transaction(ReadOnlyTxn.create(Long.parseLong(getTransactionID()),IsolationLevel.SNAPSHOT_ISOLATION, null))
+                .transaction(txn)
                 .metricFactory(Metrics.basicMetricFactory())
                 .scan(createNewScan())
                 .execRowTypeFormatIds(execRowFormatIds)

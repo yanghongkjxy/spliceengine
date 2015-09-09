@@ -94,7 +94,7 @@ public class RollForwardTask implements Task {
     @Override
     public void execute() throws ExecutionException, InterruptedException {
         try {
-            Txn txn = TransactionLifecycle.getLifecycleManager().beginTransaction();
+            Txn txn = Txn.ROOT_TRANSACTION;
             MeasuredRegionScanner mrs = null;
             try{
                 mrs = getRegionScanner(txn,context);
@@ -115,14 +115,11 @@ public class RollForwardTask implements Task {
                     rowCount++;
 
                 }while(shouldContinue);
-                txn.commit();
             }catch(Exception e){
-                txn.rollback();
                 if(LOG.isTraceEnabled())
                     SpliceLogUtils.trace(LOG,"RollForward encountered an exception",e);
                 else if(LOG.isDebugEnabled())
                     SpliceLogUtils.debug(LOG,"Stopping RollForward execution because of an error: "+e.getMessage());
-                return;
             }finally{
                 context.complete();
                 Closeables.closeQuietly(mrs);

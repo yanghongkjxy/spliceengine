@@ -84,10 +84,15 @@ public class SITransactor<Data, Table,
 
     @Override
     public boolean processPut(Table table, RollForward rollForwardQueue, Put put) throws IOException {
+        return processPut(table,rollForwardQueue,put,ConstraintChecker.NO_CONSTRAINT);
+    }
+
+    @Override
+    public boolean processPut(Table table,RollForward rollForwardQueue,Put put,ConstraintChecker constraintChecker) throws IOException{
         if (!isFlaggedForSITreatment(put)) return false;
         final Put[] mutations = (Put[]) Array.newInstance(put.getClass(), 1);
         mutations[0] = put;
-        OperationStatus[] operationStatuses = processPutBatch(table, rollForwardQueue, mutations);
+        OperationStatus[] operationStatuses = processPutBatch(table, rollForwardQueue, mutations,constraintChecker);
         switch (operationStatuses[0].getOperationStatusCode()) {
             case NOT_RUN:
                 throw new IOException("Could not acquire Lock");
@@ -103,8 +108,15 @@ public class SITransactor<Data, Table,
     }
 
     @Override
-    public OperationStatus[] processPutBatch(Table table, RollForward rollForwardQueue, Put[] mutations)
-            throws IOException {
+    public OperationStatus[] processPutBatch(Table table, RollForward rollForwardQueue, Put[] mutations) throws IOException {
+        return processPutBatch(table,rollForwardQueue,mutations,ConstraintChecker.NO_CONSTRAINT);
+    }
+
+    @Override
+    public OperationStatus[] processPutBatch(Table table,
+                                             RollForward rollForwardQueue,
+                                             Put[] mutations,
+                                             ConstraintChecker constraintChecker) throws IOException {
         if (mutations.length == 0) {
             //short-circuit special case of empty batch
             //noinspection unchecked
@@ -210,7 +222,7 @@ public class SITransactor<Data, Table,
                             return !statusMap.containsKey(input.getRowKey()) || statusMap.get(input.getRowKey()).getOperationStatusCode() == HConstants.OperationStatusCode.SUCCESS;
                         }
                     }));
-                    OperationStatus[] statuses = processKvBatch(table, null, family, qualifier, kvPairs, txnId, ConstraintChecker.NO_CONSTRAINT);
+                    OperationStatus[] statuses = processKvBatch(table, null, family, qualifier, kvPairs, txnId, constraintChecker);
                     for (int i = 0; i < statuses.length; i++) {
                         byte[] row = kvPairs.get(i).getRowKey();
                         OperationStatus status = statuses[i];
@@ -424,10 +436,10 @@ public class SITransactor<Data, Table,
         for (Data data : dataLib.getDataFromResult(row)) {
             Filter.ReturnCode code = constraintStateFilter.filterKeyValue(data);
             switch (code) {
-                case NEXT_COL:
                 case NEXT_ROW:
                 case SEEK_NEXT_USING_HINT:
                     return false;
+                case NEXT_COL:
                 case SKIP:
                     continue;
                 default:

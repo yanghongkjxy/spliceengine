@@ -72,10 +72,8 @@ public class SIFactoryImpl implements SIFactory<TxnMessage.Txn> {
 									HConstants.EMPTY_BYTE_ARRAY,
 									SIConstants.SNAPSHOT_ISOLATION_ANTI_TOMBSTONE_VALUE_BYTES,
 									SIConstants.SNAPSHOT_ISOLATION_FAILED_TIMESTAMP,
-									SIConstants.DEFAULT_FAMILY_BYTES,
-									TransactionStorage.getTxnSupplier(),
-									TransactionLifecycle.getLifecycleManager()
-									);
+									SIConstants.DEFAULT_FAMILY_BYTES
+			);
 	}
 
 	@Override

@@ -395,6 +395,14 @@ public class SpliceSystemProcedures extends DefaultSystemProcedureGenerator {
                             .build();
                     procedures.add(currTxn);
 
+                    Procedure matTxn = Procedure.newBuilder().name("GET_MINIMUM_ACTIVE_TRANSACTION")
+                            .numOutputParams(0)
+                            .numResultSets(1)
+                            .arg("refresh", DataTypeDescriptor.getBuiltInDataTypeDescriptor(Types.BOOLEAN).getCatalogType())
+                            .ownerClass(TransactionAdmin.class.getCanonicalName())
+                            .build();
+                    procedures.add(matTxn);
+
                     Procedure activeTxn = Procedure.newBuilder().name("SYSCS_GET_ACTIVE_TRANSACTION_IDS")
                             .numOutputParams(0)
                             .numResultSets(1)

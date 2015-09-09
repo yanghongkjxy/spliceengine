@@ -121,6 +121,11 @@ public class TransactionStorage {
     }
 
     private static class TxnStoreManagement implements com.splicemachine.si.impl.txnclient.TxnStoreManagement{
+        @Override
+        public long getMinimumActiveBeginTimestamp(){
+            return TransactionLifecycle.getLifecycleObserver().minimumActiveTransaction().getBeginTimestamp();
+        }
+
         @Override public long getTotalTxnLookups() { return baseStore.lookupCount(); }
         @Override public long getTotalTxnElevations() { return baseStore.elevationCount(); }
         @Override public long getTotalWritableTxnsCreated() { return baseStore.createdCount(); }
@@ -133,5 +138,10 @@ public class TransactionStorage {
         @Override public float getCacheHitPercentage() { return cachedTransactionSupplier.getHitPercentage(); }
         @Override public int getCurrentCacheSize() { return cachedTransactionSupplier.getCurrentSize(); }
         @Override public int getMaxCacheSize() { return cachedTransactionSupplier.getMaxSize(); }
+
+        @Override
+        public long getLastActiveTimestamp(){
+            return TransactionLifecycle.getLifecycleObserver().lastMinimumActiveTransaction().getBeginTimestamp();
+        }
     }
 }

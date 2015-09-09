@@ -266,7 +266,7 @@ public class SpliceTransaction extends BaseSpliceTransaction {
                     if(nested)
                         txn = lifecycleManager.beginChildTransaction(parentTxn,parentTxn.getIsolationLevel(), additive,table);
                     else
-                        txn = lifecycleManager.beginTransaction();
+                        txn = lifecycleManager.beginTransaction(table);
 
                     txnStack.push(Pair.newPair(transName,txn));
                     state = ACTIVE;

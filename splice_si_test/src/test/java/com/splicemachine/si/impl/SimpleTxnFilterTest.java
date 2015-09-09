@@ -93,7 +93,11 @@ public class SimpleTxnFilterTest {
         Map<Long, TxnView> txnMap = Maps.newHashMap();
         TxnSupplier baseStore = getMapStore(txnMap);
 
-        Txn active = new WritableTxn(1l, 1l, Txn.IsolationLevel.SNAPSHOT_ISOLATION, Txn.ROOT_TRANSACTION, mock(TxnLifecycleManager.class), false);
+        Txn active = new WritableTxn(1l, 1l, Txn.IsolationLevel.SNAPSHOT_ISOLATION,
+                Txn.ROOT_TRANSACTION,
+                mock(TxnLifecycleManager.class),
+                new TxnLifecycleObserver(NoopKeepAliveScheduler.INSTANCE),
+                false);
         txnMap.put(active.getTxnId(), active);
 
         assertActive(baseStore, active, 2l);
@@ -108,8 +112,12 @@ public class SimpleTxnFilterTest {
         Map<Long, TxnView> txnMap = Maps.newHashMap();
         TxnSupplier baseStore = getMapStore(txnMap);
 
-        TxnView active = new WritableTxn(1l, 1l, Txn.IsolationLevel.SNAPSHOT_ISOLATION, Txn.ROOT_TRANSACTION, mock(TxnLifecycleManager.class), false);
-        TxnView child = new WritableTxn(2l, 2l, Txn.IsolationLevel.SNAPSHOT_ISOLATION, active, mock(TxnLifecycleManager.class), false);
+        TxnView active = new WritableTxn(1l, 1l, Txn.IsolationLevel.SNAPSHOT_ISOLATION, Txn.ROOT_TRANSACTION, mock(TxnLifecycleManager.class),
+                new TxnLifecycleObserver(NoopKeepAliveScheduler.INSTANCE),
+                false);
+        TxnView child = new WritableTxn(2l, 2l, Txn.IsolationLevel.SNAPSHOT_ISOLATION, active, mock(TxnLifecycleManager.class),
+                new TxnLifecycleObserver(NoopKeepAliveScheduler.INSTANCE),
+                false);
         txnMap.put(active.getTxnId(), active);
         txnMap.put(child.getTxnId(), child);
 
@@ -347,7 +355,9 @@ public class SimpleTxnFilterTest {
 
     private void assertActive(TxnSupplier baseStore, TxnView active, long readTs) throws IOException {
         DataStore ds = getMockDataStore();
-        Txn myTxn = new ReadOnlyTxn(readTs, readTs, Txn.IsolationLevel.SNAPSHOT_ISOLATION, Txn.ROOT_TRANSACTION, mock(TxnLifecycleManager.class), false);
+        Txn myTxn = new ReadOnlyTxn(readTs, readTs, Txn.IsolationLevel.SNAPSHOT_ISOLATION, Txn.ROOT_TRANSACTION, mock(TxnLifecycleManager.class),
+                new TxnLifecycleObserver(NoopKeepAliveScheduler.INSTANCE),
+                false);
         final IgnoreTxnCacheSupplier ignoreTxnCacheSupplier = new IgnoreTxnCacheSupplier();
         ReadResolver resolver = getActiveReadResolver();
 

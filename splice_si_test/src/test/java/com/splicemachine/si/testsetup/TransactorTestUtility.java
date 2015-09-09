@@ -5,6 +5,7 @@ import com.carrotsearch.hppc.ObjectArrayList;
 import com.splicemachine.constants.SIConstants;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.encoding.MultiFieldDecoder;
+import com.splicemachine.si.api.ConstraintChecker;
 import com.splicemachine.si.api.Txn;
 import com.splicemachine.si.data.api.SDataLib;
 import com.splicemachine.si.data.api.STableReader;
@@ -58,16 +59,24 @@ public class TransactorTestUtility {
         insertAgeDirect(useSimple, transactorSetup, storeSetup, txn, name, age);
     }
 
+    public void insertAge(Txn txn, String name, Integer age,ConstraintChecker checker) throws IOException {
+        insertAgeDirect(useSimple, transactorSetup, storeSetup, txn, name, age,checker);
+    }
+
     public void insertAgeBatch(Object[]... args) throws IOException {
-        insertAgeDirectBatch(useSimple, transactorSetup, storeSetup, args);
+        insertAgeDirectBatch(useSimple,transactorSetup,storeSetup,args);
     }
 
     public void insertJob(Txn txn, String name, String job) throws IOException {
-        insertJobDirect(useSimple, transactorSetup, storeSetup, txn, name, job);
+        insertJobDirect(useSimple,transactorSetup,storeSetup,txn,name,job);
     }
 
     public void deleteRow(Txn txn, String name) throws IOException {
-        deleteRowDirect(useSimple, transactorSetup, storeSetup, txn, name);
+        deleteRowDirect(useSimple,transactorSetup,storeSetup,txn,name);
+    }
+
+    public void deleteRow(Txn txn, String name,ConstraintChecker checker) throws IOException {
+        deleteRowDirect(useSimple,transactorSetup,storeSetup,txn,name,checker);
     }
 
     public String read(Txn txn, String name) throws IOException {
@@ -79,14 +88,19 @@ public class TransactorTestUtility {
         insertField(useSimple, transactorSetup, storeSetup, txn, name, transactorSetup.agePosition, age);
     }
 
+    public static void insertAgeDirect(boolean useSimple, TestTransactionSetup transactorSetup, StoreSetup storeSetup,
+                                       Txn txn, String name, Integer age,ConstraintChecker checker) throws IOException {
+        insertField(useSimple, transactorSetup, storeSetup, txn, name, transactorSetup.agePosition, age,checker);
+    }
+
     public static void insertAgeDirectBatch(boolean useSimple, TestTransactionSetup transactorSetup, StoreSetup storeSetup,
                                             Object[] args) throws IOException {
-        insertFieldBatch(useSimple, transactorSetup, storeSetup, args, transactorSetup.agePosition);
+        insertFieldBatch(useSimple,transactorSetup,storeSetup,args,transactorSetup.agePosition);
     }
 
     public static void insertJobDirect(boolean useSimple, TestTransactionSetup transactorSetup, StoreSetup storeSetup,
                                        Txn txn, String name, String job) throws IOException {
-        insertField(useSimple, transactorSetup, storeSetup, txn, name, transactorSetup.jobPosition, job);
+        insertField(useSimple,transactorSetup,storeSetup,txn,name,transactorSetup.jobPosition,job);
     }
 
 
@@ -157,20 +171,24 @@ public class TransactorTestUtility {
         }
     }
 
-
     private static void insertField(boolean useSimple, TestTransactionSetup transactorSetup, StoreSetup storeSetup,
                                     Txn txn, String name, int index, Object fieldValue) throws IOException {
+       insertField(useSimple, transactorSetup, storeSetup, txn, name, index, fieldValue,ConstraintChecker.NO_CONSTRAINT);
+    }
+
+    private static void insertField(boolean useSimple, TestTransactionSetup transactorSetup, StoreSetup storeSetup,
+                                    Txn txn, String name, int index, Object fieldValue,ConstraintChecker checker) throws IOException {
         final SDataLib dataLib = storeSetup.getDataLib();
         final STableReader reader = storeSetup.getReader();
-        Object put = makePut(transactorSetup, txn, name, index, fieldValue, dataLib);
-        processPutDirect(useSimple, transactorSetup, storeSetup, reader, (OperationWithAttributes) put);
+        Object put = makePut(transactorSetup,txn,name,index,fieldValue,dataLib);
+        processPutDirect(useSimple, transactorSetup, storeSetup, reader, (OperationWithAttributes) put,checker);
     }
 
     private static OperationWithAttributes makePut(TestTransactionSetup transactorSetup,
                                                    Txn txn, String name, int index,
                                                    Object fieldValue, SDataLib dataLib) throws IOException {
         byte[] key = dataLib.newRowKey(new Object[]{name});
-        Put put = transactorSetup.txnOperationFactory.newPut(txn, key);
+        Put put = transactorSetup.txnOperationFactory.newPut(txn,key);
         final BitSet bitSet = new BitSet();
         if (fieldValue != null)
             bitSet.set(index);
@@ -206,24 +224,43 @@ public class TransactorTestUtility {
         processPutDirectBatch(useSimple, transactorSetup, storeSetup, reader, puts);
     }
 
-    static void deleteRowDirect(boolean useSimple, TestTransactionSetup transactorSetup, StoreSetup storeSetup,
-                                Txn txn, String name) throws IOException {
+    static void deleteRowDirect(boolean useSimple,
+                                TestTransactionSetup transactorSetup,
+                                StoreSetup storeSetup,
+                                Txn txn,
+                                String name) throws IOException {
+       deleteRowDirect(useSimple, transactorSetup, storeSetup, txn, name,ConstraintChecker.NO_CONSTRAINT);
+    }
+
+    static void deleteRowDirect(boolean useSimple,
+                                TestTransactionSetup transactorSetup,
+                                StoreSetup storeSetup,
+                                Txn txn,
+                                String name,
+                                ConstraintChecker checker) throws IOException {
         final SDataLib dataLib = storeSetup.getDataLib();
         final STableReader reader = storeSetup.getReader();
 
         byte[] key = dataLib.newRowKey(new Object[]{name});
         Mutation put = transactorSetup.txnOperationFactory.newDelete(txn, key);
         OperationWithAttributes deletePut = transactorSetup.convertTestTypePut((Put) put);
-        processPutDirect(useSimple, transactorSetup, storeSetup, reader, deletePut);
+        processPutDirect(useSimple,transactorSetup,storeSetup,reader,deletePut,checker);
     }
 
     private static void processPutDirect(boolean useSimple,
                                          TestTransactionSetup transactorSetup, StoreSetup storeSetup, STableReader reader,
                                          OperationWithAttributes put) throws IOException {
+       processPutDirect(useSimple,transactorSetup,storeSetup,reader,put,ConstraintChecker.NO_CONSTRAINT);
+    }
+
+    private static void processPutDirect(boolean useSimple,
+                                         TestTransactionSetup transactorSetup, StoreSetup storeSetup, STableReader reader,
+                                         OperationWithAttributes put,
+                                         ConstraintChecker checker) throws IOException {
         Object testSTable = reader.open(storeSetup.getPersonTableName());
         try {
             if (useSimple) {
-                assertTrue(transactorSetup.transactor.processPut(testSTable, transactorSetup.rollForwardQueue, put));
+                assertTrue(transactorSetup.transactor.processPut(testSTable, transactorSetup.rollForwardQueue, put,checker));
             } else {
                 storeSetup.getWriter().write(testSTable, put);
             }

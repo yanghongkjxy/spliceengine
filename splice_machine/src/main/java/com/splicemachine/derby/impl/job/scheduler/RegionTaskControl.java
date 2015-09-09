@@ -11,10 +11,10 @@ import com.splicemachine.si.api.TxnLifecycleManager;
 import com.splicemachine.si.api.TxnView;
 import com.splicemachine.si.impl.ReadOnlyTxn;
 import com.splicemachine.si.impl.TransactionLifecycle;
+import com.splicemachine.si.impl.TxnLifecycleObserver;
 import com.splicemachine.si.impl.WritableTxn;
 import com.splicemachine.utils.SpliceLogUtils;
 import com.splicemachine.utils.SpliceZooKeeperManager;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.log4j.Logger;
@@ -29,24 +29,24 @@ import java.util.concurrent.ExecutionException;
 
 /**
  * @author Scott Fines
- * Created on: 9/17/13
+ *         Created on: 9/17/13
  */
-public class RegionTaskControl implements Comparable<RegionTaskControl>,TaskFuture {
-    private static final Logger LOG = Logger.getLogger(RegionTaskControl.class);
+public class RegionTaskControl implements Comparable<RegionTaskControl>, TaskFuture{
+    private static final Logger LOG=Logger.getLogger(RegionTaskControl.class);
     private final byte[] startRow;
     private final RegionTask task;
     private final BaseJobControl jobControl;
     private final TaskFutureContext taskFutureContext;
     private final int tryNum;
     private final SpliceZooKeeperManager zkManager;
-    private volatile TaskStatus taskStatus = new TaskStatus(Status.PENDING,null);
-    private volatile boolean refresh = true;
+    private volatile TaskStatus taskStatus=new TaskStatus(Status.PENDING,null);
+    private volatile boolean refresh=true;
     /*
      * Flag to indicate that this task has been resubmitted and not to
      * retry resubmissions.
      */
-    private volatile boolean trashed = false;
-		private ControlWatcher statusWatcher;
+    private volatile boolean trashed=false;
+    private ControlWatcher statusWatcher;
     private Txn txn;
 
     RegionTaskControl(byte[] startRow,
@@ -54,34 +54,34 @@ public class RegionTaskControl implements Comparable<RegionTaskControl>,TaskFutu
                       BaseJobControl jobControl,
                       TaskFutureContext taskFutureContext,
                       int tryNum,
-                      SpliceZooKeeperManager zkManager) {
-        this.startRow = startRow;
-        this.task = task;
-        this.jobControl = jobControl;
-        this.taskFutureContext = taskFutureContext;
-        this.tryNum = tryNum;
-        this.zkManager = zkManager;
+                      SpliceZooKeeperManager zkManager){
+        this.startRow=startRow;
+        this.task=task;
+        this.jobControl=jobControl;
+        this.taskFutureContext=taskFutureContext;
+        this.tryNum=tryNum;
+        this.zkManager=zkManager;
     }
 
     @Override
-    public int compareTo(RegionTaskControl o) {
+    public int compareTo(RegionTaskControl o){
         if(o==null) return 1;
-        int compare = Bytes.compareTo(startRow, o.startRow);
+        int compare=Bytes.compareTo(startRow,o.startRow);
         if(compare!=0) return compare;
 
         //lexicographically sort based on the taskNode
-        String taskNode = taskFutureContext.getTaskNode();
-        String otherTasknode = o.taskFutureContext.getTaskNode();
+        String taskNode=taskFutureContext.getTaskNode();
+        String otherTasknode=o.taskFutureContext.getTaskNode();
         return taskNode.compareTo(otherTasknode);
     }
 
     @Override
-    public Status getStatus() throws ExecutionException {
+    public Status getStatus() throws ExecutionException{
             /*
              * These states are permanent--once entered they cannot be escaped, so there's
              * no point in refreshing even if an event is fired
              */
-        switch (taskStatus.getStatus()) {
+        switch(taskStatus.getStatus()){
             case INVALID:
             case FAILED:
             case COMPLETED:
@@ -104,17 +104,17 @@ public class RegionTaskControl implements Comparable<RegionTaskControl>,TaskFutu
                  */
             refresh=false;
             try{
-								statusWatcher = new ControlWatcher(RegionTaskControl.this);
-                byte[] data = zkManager.executeUnlessExpired(new SpliceZooKeeperManager.Command<byte[]>() {
+                statusWatcher=new ControlWatcher(RegionTaskControl.this);
+                byte[] data=zkManager.executeUnlessExpired(new SpliceZooKeeperManager.Command<byte[]>(){
                     @Override
-                    public byte[] execute(RecoverableZooKeeper zooKeeper) throws InterruptedException, KeeperException {
+                    public byte[] execute(RecoverableZooKeeper zooKeeper) throws InterruptedException, KeeperException{
                         try{
                             return zooKeeper.getData(
                                     taskFutureContext.getTaskNode(),
-																		statusWatcher
+                                    statusWatcher
                                     ,new Stat());
                         }catch(KeeperException ke){
-                            if(ke.code()== KeeperException.Code.NONODE){
+                            if(ke.code()==KeeperException.Code.NONODE){
                                     /*
                                      * The Task status node was deleted. This happens in two situations:
                                      *
@@ -141,15 +141,9 @@ public class RegionTaskControl implements Comparable<RegionTaskControl>,TaskFutu
                          */
                     taskStatus.setStatus(Status.INVALID);
                 }else{
-                    taskStatus = TaskStatus.fromBytes(data);
+                    taskStatus=TaskStatus.fromBytes(data);
                 }
-            } catch (InterruptedException e) {
-                throw new ExecutionException(e);
-            } catch (KeeperException e) {
-                throw new ExecutionException(e);
-            } catch (ClassNotFoundException e) {
-                throw new ExecutionException(e);
-            } catch (IOException e) {
+            }catch(InterruptedException | KeeperException | IOException | ClassNotFoundException e){
                 throw new ExecutionException(e);
             }
         }
@@ -158,85 +152,96 @@ public class RegionTaskControl implements Comparable<RegionTaskControl>,TaskFutu
     }
 
     @Override
-    public void complete() throws ExecutionException {
+    public void complete() throws ExecutionException{
         while(true){
-            Status runningStatus = getStatus();
-            switch (runningStatus) {
+            Status runningStatus=getStatus();
+            switch(runningStatus){
                 case INVALID:
-										statusWatcher.regionTaskControl=null;
+                    statusWatcher.regionTaskControl=null;
                     jobControl.markInvalid(this);
                     resubmit();
                     break;
                 case FAILED:
-										statusWatcher.regionTaskControl=null;
+                    statusWatcher.regionTaskControl=null;
                     dealWithError();
                     break;
                 case COMPLETED:
-										statusWatcher.regionTaskControl=null;
+                    statusWatcher.regionTaskControl=null;
                     return;
                 case CANCELLED:
-										statusWatcher.regionTaskControl=null;
+                    statusWatcher.regionTaskControl=null;
                     throw new CancellationException();
             }
 
-            synchronized (taskFutureContext){
-                try {
+            synchronized(taskFutureContext){
+                try{
                     taskFutureContext.wait();
-                } catch (InterruptedException e) {
+                }catch(InterruptedException e){
                     //just spin
                 }
             }
         }
     }
 
-    @Override public double getEstimatedCost() { return taskFutureContext.getEstimatedCost(); }
-    @Override public byte[] getTaskId() { return taskFutureContext.getTaskId(); }
-    @Override public TaskStats getTaskStats() { return taskStatus.getStats(); }
+    @Override
+    public double getEstimatedCost(){
+        return taskFutureContext.getEstimatedCost();
+    }
 
-/*************************************************************************************************/
+    @Override
+    public byte[] getTaskId(){
+        return taskFutureContext.getTaskId();
+    }
+
+    @Override
+    public TaskStats getTaskStats(){
+        return taskStatus.getStats();
+    }
+
+    /*************************************************************************************************/
     /*Package-local operators. Mainly used by JobControl */
 
     //get the zk node for this task
-    public String getTaskNode() {
+    public String getTaskNode(){
         return taskFutureContext.getTaskNode();
     }
 
     //get the start row for the task
-    byte[] getStartRow() {
+    byte[] getStartRow(){
         return startRow;
     }
 
     //convenience method for setting the state to failed
-    void fail(Throwable cause) {
-				if(statusWatcher!=null)
-						statusWatcher.regionTaskControl=null;
+    void fail(Throwable cause){
+        if(statusWatcher!=null)
+            statusWatcher.regionTaskControl=null;
 
-				taskStatus.setError(cause);
+        taskStatus.setError(cause);
         taskStatus.setStatus(Status.FAILED);
     }
 
     //get the underlying task instance
-    RegionTask getTask() {
+    RegionTask getTask(){
         return task;
     }
 
     //deal with an error state. Retry if possible, otherwise, bomb out with a wrapper around a StandardException
     void dealWithError() throws ExecutionException{
-				if(!rollback()){
-						fail(taskStatus.getError());
-						throw new ExecutionException(taskStatus.getError());
-				}
-        if(taskStatus.shouldRetry()) {
+        if(!rollback()){
+            fail(taskStatus.getError());
+            throw new ExecutionException(taskStatus.getError());
+        }
+        if(taskStatus.shouldRetry()){
             resubmit();
-        } else {
-						//dereference us so that we can be garbage collected
-						statusWatcher.regionTaskControl=null;
+        }else{
+            //dereference us so that we can be garbage collected
+            statusWatcher.regionTaskControl=null;
             throw new ExecutionException(taskStatus.getError());
         }
     }
 
     //get the current number of attempts that have been made to execute this task
-    int tryNumber() {
+    int tryNumber(){
         return tryNum;
     }
 
@@ -249,72 +254,54 @@ public class RegionTaskControl implements Comparable<RegionTaskControl>,TaskFutu
      * protects us from programmer error. However, as invalidations can result in tasks not having a child transaction, we can also be
      * relaxed about this check.
      */
-    boolean rollback() {
-				Txn txn = getTxn();
+    boolean rollback(){
+        Txn txn=getTxn();
         if(LOG.isTraceEnabled())
             SpliceLogUtils.trace(LOG,"rolling back transaction %s for task %s",txn,Bytes.toLong(getTaskId()));
-				if(txn==null) return true;
-				try {
-						txn.rollback();
-						return true;
-				} catch (IOException e) {
-						SpliceLogUtils.error(LOG,"Unable to roll back transaction %s for task %d",txn,Bytes.toLong(getTaskId()));
-						fail(e);
-						return false;
-				}
+        if(txn==null) return true;
+        try{
+            txn.rollback();
+            return true;
+        }catch(IOException e){
+            SpliceLogUtils.error(LOG,"Unable to roll back transaction %s for task %d",txn,Bytes.toLong(getTaskId()));
+            fail(e);
+            return false;
+        }
     }
-
 
 
     boolean commit(){
-				Txn txn = getTxn();
+        Txn txn=getTxn();
         if(LOG.isTraceEnabled())
             SpliceLogUtils.trace(LOG,"committing transaction %s for task %s",txn,Bytes.toLong(getTaskId()));
-				if(txn==null) return true;
+        if(txn==null) return true;
 
-				try{
-						txn.commit();
-						return true;
-				} catch (IOException e) {
-						SpliceLogUtils.warn(LOG,"Unable to commit transaction "+ txn,e);
-						fail(e);
-						return false;
-				}
-//				if(!task.isTransactional()){
-//            return true;
-//        }
-//        String tId = taskStatus.getTransactionId();
-//        Preconditions.checkNotNull(tId,"Transactional task has no transaction");
-//
-//        TransactionManager txnControl = HTransactorFactory.getTransactionManager();
-//
-//				if(LOG.isDebugEnabled())
-//						SpliceLogUtils.debug(LOG,"Committing transaction %s for task %d",tId,Bytes.toLong(getTaskId()));
-//        try {
-//						boolean commit = TransactionUtils.commit(txnControl, tId, maxTries);//TODO -sf- make 5 configurable
-//						if(LOG.isDebugEnabled())
-//								SpliceLogUtils.debug(LOG,"transaction %s committed for task %d with return state %b",tId,Bytes.toLong(getTaskId()),commit);
-//						return commit;
-//        } catch (AttemptsExhaustedException e) {
-//						if(LOG.isDebugEnabled())
-//								SpliceLogUtils.debug(LOG,"Unable to commit transaction "+tId,e);
-//            fail(e);
-//            return false;
-//        }
+        try{
+            txn.commit();
+            return true;
+        }catch(IOException e){
+            SpliceLogUtils.warn(LOG,"Unable to commit transaction "+txn,e);
+            fail(e);
+            return false;
+        }
     }
 
-    private Txn getTxn() {
+    private Txn getTxn(){
         if(txn==null){
-            TxnView txnInformation = taskStatus.getTxnInformation();
+            TxnView txnInformation=taskStatus.getTxnInformation();
             if(txnInformation==null) return null; //no transaction to commit
-            TxnLifecycleManager lifecycleManager = TransactionLifecycle.getLifecycleManager();
-            boolean isAdditive = txnInformation.isAdditive();
+            TxnLifecycleManager lifecycleManager=TransactionLifecycle.getLifecycleManager();
+            TxnLifecycleObserver lifecycleObserver=TransactionLifecycle.getLifecycleObserver();
+            boolean isAdditive=txnInformation.isAdditive();
             if(!txnInformation.allowsWrites())
-                txn = ReadOnlyTxn.wrapReadOnlyInformation(txnInformation, lifecycleManager);
+                txn=ReadOnlyTxn.wrapReadOnlyInformation(txnInformation,lifecycleManager,lifecycleObserver);
             else
-                txn =new WritableTxn(txnInformation.getTxnId(),
+                txn=new WritableTxn(txnInformation.getTxnId(),
                         txnInformation.getBeginTimestamp(),
-                        txnInformation.getIsolationLevel(),txnInformation.getParentTxnView(),lifecycleManager, isAdditive);
+                        txnInformation.getIsolationLevel(),
+                        txnInformation.getParentTxnView(),
+                        lifecycleManager, lifecycleObserver,
+                        isAdditive);
         }
         return txn;
     }
@@ -327,44 +314,41 @@ public class RegionTaskControl implements Comparable<RegionTaskControl>,TaskFutu
      * Resubmits the task. Rolls back its child transaction, then resubmits
      */
     private void resubmit() throws ExecutionException{
-        if (LOG.isDebugEnabled())
+        if(LOG.isDebugEnabled())
             SpliceLogUtils.debug(LOG,"resubmitting task %s",Bytes.toLong(getTaskId()));
         trashed=true;
 
-//        if(rollback(5)) //TODO -sf- make this configurable
-            jobControl.resubmit(this,tryNum);
-//        else
-//            throw new ExecutionException(taskStatus.getError());
+        jobControl.resubmit(this,tryNum);
     }
 
-    public Throwable getError() {
+    public Throwable getError(){
         return taskStatus.getError();
     }
 
-		public void cleanup() {
-				/*
+    public void cleanup(){
+                /*
 				 * Dereference our watch to prevent memory leaks
 				 */
-				if(statusWatcher!=null)
-						statusWatcher.regionTaskControl=null;
-		}
+        if(statusWatcher!=null)
+            statusWatcher.regionTaskControl=null;
+    }
 
-		private static class ControlWatcher implements Watcher {
-				private volatile RegionTaskControl regionTaskControl;
+    private static class ControlWatcher implements Watcher{
+        private volatile RegionTaskControl regionTaskControl;
 
-				private ControlWatcher(RegionTaskControl regionTaskControl) {
-						this.regionTaskControl = regionTaskControl;
-				}
+        private ControlWatcher(RegionTaskControl regionTaskControl){
+            this.regionTaskControl=regionTaskControl;
+        }
 
-				@Override
-				public void process(WatchedEvent event) {
-						SpliceLogUtils.trace(LOG, "Received %s event on node %s",
-										event.getType(), event.getPath());
-						if(regionTaskControl==null) return; //if we're dereferenced, then we don't care
-						regionTaskControl.refresh=true;
-						if(!regionTaskControl.trashed)
-								regionTaskControl.jobControl.taskChanged(regionTaskControl);
-				}
-		}
+        @Override
+        public void process(WatchedEvent event){
+            SpliceLogUtils.trace(LOG,"Received %s event on node %s",
+                    event.getType(),event.getPath());
+            if(regionTaskControl==null) return; //if we're dereferenced, then we don't care
+            regionTaskControl.refresh=true;
+            if(!regionTaskControl.trashed)
+                regionTaskControl.jobControl.taskChanged(regionTaskControl);
+        }
+    }
 
 }

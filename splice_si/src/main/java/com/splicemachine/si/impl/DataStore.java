@@ -3,10 +3,6 @@ package com.splicemachine.si.impl;
 import com.carrotsearch.hppc.LongOpenHashSet;
 import com.carrotsearch.hppc.procedures.LongProcedure;
 import com.splicemachine.constants.SIConstants;
-import com.splicemachine.encoding.MultiFieldDecoder;
-import com.splicemachine.si.api.Txn;
-import com.splicemachine.si.api.TxnLifecycleManager;
-import com.splicemachine.si.api.TxnSupplier;
 import com.splicemachine.si.data.api.SDataLib;
 import com.splicemachine.si.data.api.SRowLock;
 import com.splicemachine.si.data.api.STableReader;
@@ -15,10 +11,12 @@ import org.apache.hadoop.hbase.client.OperationWithAttributes;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.util.Pair;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+
 import static com.splicemachine.constants.SpliceConstants.*;
 
 /**
@@ -33,8 +31,6 @@ public class DataStore<Data, Mutation, Put extends OperationWithAttributes, Dele
     private final STableWriter<IHTable, Mutation, Put, Delete> writer;
     private final String siNeededAttribute;
     private final String deletePutAttribute;
-    private final TxnSupplier txnSupplier;
-    private final TxnLifecycleManager control;
     private final List<List<byte[]>> userFamilyColumnList;
 
     private final byte[] commitTimestampQualifier;
@@ -54,9 +50,7 @@ public class DataStore<Data, Mutation, Put extends OperationWithAttributes, Dele
                      byte[] siNull,
                      byte[] siAntiTombstoneValue,
                      byte[] siFail,
-                     byte[] userColumnFamily,
-                     TxnSupplier txnSupplier,
-                     TxnLifecycleManager control) {
+                     byte[] userColumnFamily) {
         this.dataLib = dataLib;
         this.reader = reader;
         this.writer = writer;
@@ -68,8 +62,6 @@ public class DataStore<Data, Mutation, Put extends OperationWithAttributes, Dele
         this.siAntiTombstoneValue = siAntiTombstoneValue;
         this.siFail = siFail;
         this.userColumnFamily = userColumnFamily;
-        this.txnSupplier = txnSupplier;
-        this.control = control;
         this.userFamilyColumnList = Arrays.asList(
                 Arrays.asList(this.userColumnFamily, tombstoneQualifier),
                 Arrays.asList(this.userColumnFamily, commitTimestampQualifier),
@@ -85,11 +77,7 @@ public class DataStore<Data, Mutation, Put extends OperationWithAttributes, Dele
     public Boolean getDeletePutAttribute(OperationWithAttributes operation) {
         byte[] neededValue = operation.getAttribute(deletePutAttribute);
         if (neededValue == null) return false;
-        return dataLib.decode(neededValue, Boolean.class);
-    }
-
-    public Txn getTxn(OperationWithAttributes op, boolean readOnly) throws IOException {
-        return decodeForOp(op.getAttribute(SIConstants.SI_TRANSACTION_KEY), readOnly);
+        return dataLib.decode(neededValue,Boolean.class);
     }
 
     public Delete copyPutToDelete(final Put put, LongOpenHashSet transactionIdsToDelete) {
@@ -113,7 +101,7 @@ public class DataStore<Data, Mutation, Put extends OperationWithAttributes, Dele
         Get get = dataLib.newGet(rowKey, null, userFamilyColumnList, null, 1); // Just Retrieve one per...
         suppressIndexing(get);
         checkBloom(get);
-        return reader.get(table, get);
+        return reader.get(table,get);
     }
 
     public void checkBloom(OperationWithAttributes operation) {
@@ -121,7 +109,7 @@ public class DataStore<Data, Mutation, Put extends OperationWithAttributes, Dele
     }
 
     boolean isAntiTombstone(Data keyValue) {
-        return dataLib.isAntiTombstone(keyValue, siAntiTombstoneValue);
+        return dataLib.isAntiTombstone(keyValue,siAntiTombstoneValue);
     }
 
     public KeyValueType getKeyValueType(Data keyValue) {
@@ -142,7 +130,7 @@ public class DataStore<Data, Mutation, Put extends OperationWithAttributes, Dele
     }
 
     public boolean isSINull(Data keyValue) {
-        return dataLib.matchingValue(keyValue, siNull);
+        return dataLib.matchingValue(keyValue,siNull);
     }
 
     public boolean isSIFail(Data keyValue) {
@@ -196,21 +184,6 @@ public class DataStore<Data, Mutation, Put extends OperationWithAttributes, Dele
 
     public String getTableName(IHTable table) {
         return reader.getTableName(table);
-    }
-
-    private Txn decodeForOp(byte[] txnData, boolean readOnly) throws IOException {
-        MultiFieldDecoder decoder = MultiFieldDecoder.wrap(txnData);
-        long txnId = decoder.decodeNextLong();
-        long parentTxnId = decoder.readOrSkipNextLong(-1l);
-        long beginTs = decoder.decodeNextLong();
-        Txn.IsolationLevel level = Txn.IsolationLevel.fromByte(decoder.decodeNextByte());
-
-        if (readOnly)
-            return ReadOnlyTxn.createReadOnlyTransaction(txnId,
-                    txnSupplier.getTransaction(parentTxnId), beginTs, level, false, control);
-        else {
-            return new WritableTxn(txnId, beginTs, level, txnSupplier.getTransaction(parentTxnId), control, false);
-        }
     }
 
     public SDataLib<Data, Put, Delete, Get, Scan> getDataLib() {

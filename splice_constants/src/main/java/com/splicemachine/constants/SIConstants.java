@@ -4,11 +4,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * Defines the schema used by SI for the transaction table and for additional metadata on data tables.
  */
 
 public class SIConstants extends SpliceConstants {
+
     static {
         setParameters();
     }
@@ -153,6 +156,13 @@ public class SIConstants extends SpliceConstants {
     @DefaultValue(READ_RESOLVER_QUEUE_SIZE)public static final int DEFAULT_READ_RESOLVER_QUEUE_SIZE=1<<16;
     public static int readResolverQueueSize;
 
+    /*
+     * Measured in seconds
+     */
+    @Parameter public static final String MAT_WATCHER_REFRESH_RATE = "splice.txn.matWatcher.refreshInterval";
+    @DefaultValue(MAT_WATCHER_REFRESH_RATE)public static final long DEFAULT_MAT_WATCHER_REFRESH_RATE = 60;
+
+    public static long matWatcherRefreshMs;
     public static void setParameters(Configuration config){
         committingPause = config.getInt(COMMITTING_PAUSE,DEFAULT_COMMITTING_PAUSE);
         transactionTimeout = config.getInt(TRANSACTION_TIMEOUT,DEFAULT_TRANSACTION_TIMEOUT);
@@ -189,5 +199,9 @@ public class SIConstants extends SpliceConstants {
 
         readResolverThreads = config.getInt(READ_RESOLVER_THREADS,DEFAULT_READ_RESOLVER_THREADS);
         readResolverQueueSize = config.getInt(READ_RESOLVER_QUEUE_SIZE,DEFAULT_READ_RESOLVER_QUEUE_SIZE);
+        long matRefresh = config.getLong(MAT_WATCHER_REFRESH_RATE,DEFAULT_MAT_WATCHER_REFRESH_RATE);
+        if(matRefresh<0) //TODO -sf- log a warning here
+            matRefresh = DEFAULT_MAT_WATCHER_REFRESH_RATE;
+        matWatcherRefreshMs = TimeUnit.SECONDS.toMillis(matRefresh);
     }
 }

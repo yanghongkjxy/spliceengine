@@ -9,13 +9,10 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.io.compress.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.regionserver.*;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -37,49 +34,33 @@ public class SpliceUtilities extends SIConstants {
 	 * Returns list of active region server names
 	 */
 	public static List<ServerName> getServers() throws SQLException {
-		HBaseAdmin admin = null;
-		List<ServerName> servers = null;
-		try {
-			admin = getAdmin();
-			try {
-				servers = new ArrayList<ServerName>(admin.getClusterStatus()
-						.getServers());
-			} catch (IOException e) {
-				throw new SQLException(e);
-			}
-		} finally {
-			if (admin != null)
-				try {
-					admin.close();
-				} catch (IOException e) {
-					// ignore
-				}
+		try (HBaseAdmin admin = getAdmin()){
+			return new ArrayList<>(admin.getClusterStatus().getServers());
+		}catch(IOException e){
+			throw new SQLException(e);
 		}
-		return servers;
 	}
+
+    /**
+     * Returns list of active region server names, without parsing any exceptions
+     */
+    public static List<ServerName> getServersRaw() throws IOException,InterruptedException {
+        try (HBaseAdmin admin = getAdmin()){
+            if(Thread.currentThread().isInterrupted()) throw new InterruptedException();
+            ClusterStatus clusterStatus=admin.getClusterStatus();
+            return new ArrayList<>(clusterStatus.getServers());
+        }
+    }
 
 	/**
 	 * Returns master server name
 	 */
 	public static ServerName getMasterServer() throws SQLException {
-		HBaseAdmin admin = null;
-		ServerName server = null;
-		try {
-			admin = getAdmin();
-			try {
-				server = admin.getClusterStatus().getMaster();
-			} catch (IOException e) {
-				throw new SQLException(e);
-			}
-		} finally {
-			if (admin != null)
-				try {
-					admin.close();
-				} catch (IOException e) {
-					// ignore
-				}
-		}
-		return server;
+        try(HBaseAdmin admin = getAdmin()) {
+            return admin.getClusterStatus().getMaster();
+        }catch (IOException e) {
+            throw new SQLException(e);
+        }
 	}
 
 	public static Configuration getConfig() {

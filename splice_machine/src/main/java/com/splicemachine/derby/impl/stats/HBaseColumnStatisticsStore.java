@@ -55,12 +55,7 @@ public class HBaseColumnStatisticsStore implements ColumnStatisticsStore {
     }
 
     public void start() throws ExecutionException {
-        try {
-            TxnView txn = TransactionLifecycle.getLifecycleManager().beginTransaction(Txn.IsolationLevel.READ_UNCOMMITTED);
-            refreshThread.scheduleAtFixedRate(new Refresher(txn),0l,StatsConstants.partitionCacheExpiration,TimeUnit.MILLISECONDS);
-        } catch (IOException e) {
-            throw new ExecutionException(e);
-        }
+        refreshThread.scheduleAtFixedRate(new Refresher(),0l,StatsConstants.partitionCacheExpiration,TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -194,20 +189,24 @@ public class HBaseColumnStatisticsStore implements ColumnStatisticsStore {
 
     @SuppressWarnings("unused")
 	private class Refresher implements Runnable {
-        private final TxnView baseTxn; //should be read-only, and use READ_UNCOMMITTED isolation level
 
-        public Refresher(TxnView baseTxn) {
-            this.baseTxn = baseTxn;
-        }
+        public Refresher() { }
 
         @Override
         public void run() {
         	boolean isTrace = LOG.isTraceEnabled();
             Kryo kryo = SpliceKryoRegistry.getInstance().get();
 			Map<String,List<ColumnStatistics>> toCacheMap = new HashMap<>();
-            
-            try(MeasuredResultScanner scanner = getScanner(baseTxn, -1, null)) {
-                Result nextRow;
+
+            Txn txn;
+            try{
+                txn = TransactionLifecycle.getLifecycleManager().beginTransaction(Txn.IsolationLevel.READ_UNCOMMITTED);
+            }catch(IOException e){
+                LOG.error("Unable to obtain transaction",e);
+                return;
+            }
+            try(SortedMultiScanner scanner = getScanner(txn, -1, null)) {
+                List<KeyValue> nextRow;
                 EntryDecoder decoder = new EntryDecoder();
                 while ((nextRow = scanner.next()) != null) {
                     Cell kv = matchDataColumn(nextRow.rawCells());
@@ -233,9 +232,17 @@ public class HBaseColumnStatisticsStore implements ColumnStatisticsStore {
                 	if (isTrace) LOG.trace(String.format("Refreshing cached column stats for partition %s", toCache.getKey()));
                     columnStatsCache.put(toCache.getKey(), toCache.getValue());
                 }
+                if(txn!=null) txn.commit();
             } catch (Exception e) {
                 LOG.warn("Error encountered while refreshing Column Statistics Cache", e);
-	        }
+                if(txn!=null){
+                    try{
+                        txn.rollback();
+                    }catch(IOException e1){
+                        LOG.warn("Error encountered while refreshing Column Statistics Cache",e);
+                    }
+                }
+            }
         }
     }
 }

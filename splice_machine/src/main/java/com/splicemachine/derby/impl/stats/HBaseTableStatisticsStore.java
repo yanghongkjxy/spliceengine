@@ -4,6 +4,8 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.splicemachine.constants.SIConstants;
 import com.splicemachine.db.iapi.error.StandardException;
+import com.splicemachine.constants.SIConstants;
+import com.splicemachine.constants.bytes.BytesUtil;
 import com.splicemachine.derby.iapi.catalog.TableStatisticsDescriptor;
 import com.splicemachine.derby.impl.storage.ClientResultScanner;
 import com.splicemachine.derby.impl.store.access.SpliceAccessManager;
@@ -53,12 +55,7 @@ public class HBaseTableStatisticsStore implements TableStatisticsStore {
     }
 
     public void start() throws ExecutionException {
-        try {
-            TxnView refreshTxn = TransactionLifecycle.getLifecycleManager().beginTransaction(Txn.IsolationLevel.READ_UNCOMMITTED);
-            refreshThread.scheduleAtFixedRate(new Refresher(refreshTxn),0l,StatsConstants.partitionCacheExpiration/3,TimeUnit.MILLISECONDS);
-        } catch (IOException e) {
-            throw new ExecutionException(e);
-        }
+        refreshThread.scheduleAtFixedRate(new Refresher(),0l,StatsConstants.partitionCacheExpiration/3,TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -148,16 +145,22 @@ public class HBaseTableStatisticsStore implements TableStatisticsStore {
 //    }
 
     private class Refresher implements Runnable {
-        private final TxnView refreshTxn;
 
-        public Refresher(TxnView refreshTxn) {
-            this.refreshTxn = refreshTxn;
+        public Refresher() {
         }
 
         public void run() {
+            Txn refreshTxn;
+            try{
+                refreshTxn=TransactionLifecycle.getLifecycleManager().beginTransaction(Txn.IsolationLevel.READ_UNCOMMITTED);
+            }catch(IOException e){
+                LOG.error("Unable to get a transaction for statistics updates",e);
+                return;
+            }
+
         	boolean isTrace = LOG.isTraceEnabled();
-            EntryDecoder decoder = new EntryDecoder();
             try(MeasuredResultScanner scanner = getScanner(refreshTxn,-1,null)) {
+                EntryDecoder decoder = new EntryDecoder();
                 Result rowBatch;
                 while((rowBatch = scanner.next())!=null){
                     TableStatisticsDescriptor stats = tableStatsDecoder.decode(rowBatch,decoder);
@@ -167,8 +170,14 @@ public class HBaseTableStatisticsStore implements TableStatisticsStore {
                         tableStatsCache.put(stats.getPartitionId(), stats);
                     }
                 }
+                refreshTxn.commit();
             } catch (Exception e) {
                 LOG.warn("Error encountered while refreshing Table Statistics Cache", e);
+                try{
+                    refreshTxn.rollback();
+                }catch(IOException e1){
+                    LOG.warn("Error encountered while refreshing Table Statistics Cache", e1);
+                }
             }
         }
 

@@ -23,6 +23,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.io.Closeables;
+import com.splicemachine.derby.utils.TransactionAdmin;
+import com.splicemachine.si.impl.TransactionLifecycle;
 import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.reporting.JmxReporter;
 import org.apache.hadoop.conf.Configuration;
@@ -307,6 +309,9 @@ public class SpliceDriver {
 
                         registerDebugTools();
 
+                        /*
+                         * Initiate the MinimumTransactionWatcher
+                         */
                         ddlWatcher.start();
 
                         writeCoordinator.start();
@@ -457,9 +462,9 @@ public class SpliceDriver {
         try {
 
             ObjectName statementInfoName = new ObjectName("com.splicemachine.statement:type=StatementManagement");
-            mbs.registerMBean(statementManager, statementInfoName);
+            mbs.registerMBean(statementManager,statementInfoName);
             ObjectName loggingInfoName = new ObjectName("com.splicemachine.utils.logging:type=LogManager");
-            mbs.registerMBean(logging, loggingInfoName);
+            mbs.registerMBean(logging,loggingInfoName);
 
             writeCoordinator.registerJMX(mbs);
 
@@ -484,14 +489,15 @@ public class SpliceDriver {
 
             //register transaction stuff
             ObjectName rollForwardName = new ObjectName("com.splicemachine.txn:type=RollForwardManagement");
-            mbs.registerMBean(TransactionalRegions.getRollForwardManagement(), rollForwardName);
+            mbs.registerMBean(TransactionalRegions.getRollForwardManagement(),rollForwardName);
 
             ObjectName txnStoreName = new ObjectName("com.splicemachine.txn:type=TxnStoreManagement");
-            mbs.registerMBean(TransactionStorage.getTxnStoreManagement(), txnStoreName);
+            mbs.registerMBean(TransactionStorage.getTxnStoreManagement(),txnStoreName);
 
             ImportTaskManagementStats.getInstance().registerJMX(mbs);
 
             DatabasePropertyManagementImpl.registerJMX(mbs);
+
 
         } catch (MalformedObjectNameException | NotCompliantMBeanException | InstanceAlreadyExistsException | MBeanRegistrationException e) {
             //we want to log the message, but this shouldn't affect startup

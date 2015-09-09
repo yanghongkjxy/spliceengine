@@ -65,7 +65,7 @@ public abstract class BaseAdminProcedures {
 	    throw new IllegalArgumentException(String.format("Required argument %s is null.", value));	
 	}
 	
-    protected static interface JMXServerOperation {
+    protected interface JMXServerOperation {
         void operate(List<Pair<String, JMXConnector>> jmxConnector) throws MalformedObjectNameException, IOException, SQLException;
     }
 
@@ -76,7 +76,7 @@ public abstract class BaseAdminProcedures {
      * @return
      * @throws IOException
      */
-    protected static List<Pair<String, JMXConnector>> getConnections(List<ServerName> serverNames) throws IOException {
+    public static List<Pair<String, JMXConnector>> getConnections(List<ServerName> serverNames) throws IOException {
     	return JMXUtils.getMBeanServerConnections(getServerNames(serverNames));
     }
 
@@ -93,9 +93,7 @@ public abstract class BaseAdminProcedures {
     	if (connections == null) throwNullArgError("connections");
         try {
             operation.operate(connections);
-        } catch (MalformedObjectNameException e) {
-            throw PublicAPI.wrapStandardException(Exceptions.parseException(e));
-        } catch (IOException e) {
+        } catch (MalformedObjectNameException | IOException e) {
             throw PublicAPI.wrapStandardException(Exceptions.parseException(e));
         }
     }
@@ -115,11 +113,9 @@ public abstract class BaseAdminProcedures {
         try {
             connections = getConnections(serverNames);
             operation.operate(connections);
-        } catch (MalformedObjectNameException e) {
+        } catch (MalformedObjectNameException | IOException e) {
             throw PublicAPI.wrapStandardException(Exceptions.parseException(e));
-        } catch (IOException e) {
-            throw PublicAPI.wrapStandardException(Exceptions.parseException(e));
-        } finally {
+        }finally {
             if (connections != null) {
             	close(connections);
             }
@@ -139,13 +135,13 @@ public abstract class BaseAdminProcedures {
         }
     }
 
-    protected static void operate(JMXServerOperation operation) throws SQLException {
+    static void operate(JMXServerOperation operation) throws SQLException {
     	if (operation == null) throwNullArgError("operation");
         List<ServerName> regionServers = SpliceUtils.getServers();
         operate(operation, regionServers);
     }
 
-    protected static void operateOnMaster(JMXServerOperation operation) throws SQLException {
+    static void operateOnMaster(JMXServerOperation operation) throws SQLException {
         if (operation == null) throwNullArgError("operation");
 
         ServerName masterServer = SpliceUtils.getMasterServer();
@@ -156,9 +152,7 @@ public abstract class BaseAdminProcedures {
             JMXServiceURL url = new JMXServiceURL(String.format("service:jmx:rmi://%1$s/jndi/rmi://%1$s:%2$s/jmxrmi",serverName,port));
             JMXConnector jmxc = JMXConnectorFactory.connect(url, null);
             operation.operate(Arrays.asList(Pair.newPair(serverName,jmxc)));
-        } catch (IOException e) {
-            throw PublicAPI.wrapStandardException(Exceptions.parseException(e));
-        } catch (MalformedObjectNameException e) {
+        } catch (IOException | MalformedObjectNameException e) {
             throw PublicAPI.wrapStandardException(Exceptions.parseException(e));
         }
     }

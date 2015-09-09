@@ -31,6 +31,7 @@ import java.sql.SQLException;
  * Date: 3/19/14
  */
 public class Vacuum {
+    private static final Logger LOG=Logger.getLogger(Vacuum.class);
 
 		private final Connection connection;
 		private final HBaseAdmin admin;
@@ -44,41 +45,120 @@ public class Vacuum {
 				} 
 		}
 
-		public void vacuumDatabase() throws SQLException{
-				ensurePriorTransactionsComplete();
+    public List<VacuumStats> vacuumTable(String schemaName,String tableName) throws StandardException{
+        if(schemaName==null)
+            throw ErrorState.TABLE_NAME_CANNOT_BE_NULL.newException(schemaName);
+        schemaName =schemaName.toUpperCase();
+        if(tableName==null)
+            throw ErrorState.TABLE_NAME_CANNOT_BE_NULL.newException(tableName);
+        tableName = tableName.toUpperCase();
 
-				//get all the conglomerates from sys.sysconglomerates
-				PreparedStatement ps = null;
-				ResultSet rs = null;
-				LongOpenHashSet activeConglomerates = LongOpenHashSet.newInstance();
-				try{
-						ps = connection.prepareStatement("select conglomeratenumber from sys.sysconglomerates");
+        TableDescriptor td = AdminUtilities.verifyTableExists(connection,schemaName,tableName);
 
-						rs = ps.executeQuery();
+        long mat = TransactionAdmin.minimumActiveTimestamp(true);
 
-						while(rs.next()){
-								activeConglomerates.add(rs.getLong(1));
-						}
-				}finally{
-						if(rs!=null)
-								rs.close();
-						if(ps!=null)
-								ps.close();
-				}
+        ConglomerateDescriptorList congloms=td.getConglomerateDescriptorList();
+        List<JobFuture> jobFutures = new ArrayList<>(congloms.size());
+        List<HTableInterface> toClose = new ArrayList<>(congloms.size());
+        List<VacuumStats> vacStats = new ArrayList<>(congloms.size());
+        JobScheduler<CoprocessorJob> jobScheduler=SpliceDriver.driver().getJobScheduler();
+        try{
+            for(ConglomerateDescriptor cd : congloms){
+                long cId=cd.getConglomerateNumber();
+                HTableInterface table=SpliceAccessManager.getHTable(Long.toString(cId).getBytes());
+                VacuumTableJob vtj=new VacuumTableJob(table,cId,mat);
+                try{
+                    jobFutures.add(jobScheduler.submit(vtj));
+                }catch(ExecutionException e){
+//                    for(JobFuture future:jobFutures){
+//                        try{
+//                            future.cancel();
+//                        }catch(ExecutionException e1){
+//                            LOG.warn("Unexpected exception encountered while cancelling a job",e1.getCause());
+//                        }
+//                    }
+                    throw Exceptions.parseException(e);
+                }
+                toClose.add(table);
+            }
+            Throwable t = null;
+            int i =0;
+            for(JobFuture future : jobFutures){
+                try{
+                    try{
+                        future.completeAll(null);
+                    }finally{
+                        future.cleanup();
+                    }
+//                    try{
+//                        if(t==null)
+//                            future.completeAll(null);
+//                        else
+//                            future.cancel();
+//                    }finally{
+//                        future.cleanup();
+//                    }
 
-				//get all the tables from HBaseAdmin
-				try {
-						HTableDescriptor[] hTableDescriptors = admin.listTables();
+                    JobStats jobStats=future.getJobStats();
+                    List<TaskStats> taskStats=future.getJobStats().getTaskStats();
+                    long totalRowsRead = 0l;
+                    long totalRowsWritten = 0l;
+                    long time = jobStats.getTotalTime();
+                    for(TaskStats ts:taskStats){
+                        totalRowsRead+=ts.getTotalRowsProcessed();
+                        totalRowsWritten+=ts.getTotalRowsWritten();
+                    }
+                    vacStats.add(new VacuumStats(congloms.get(i).getConglomerateNumber(),time,totalRowsRead,totalRowsWritten));
+                }catch(InterruptedException e){
+                    t = e;
+                }catch(ExecutionException e){
+                    t = e.getCause();
+                }
+            }
+            if(t!=null) throw Exceptions.parseException(t);
+        }finally{
+            for(HTableInterface t:toClose){
+               Closeables.closeQuietly(t);
+            }
+        }
+        return vacStats;
+    }
 
-						for(HTableDescriptor table:hTableDescriptors){
-								try{
-										long tableConglom = Long.parseLong(Bytes.toString(table.getName()));
-										if(tableConglom<1168l) continue; //ignore system tables
-										if(!activeConglomerates.contains(tableConglom)){
-											SpliceUtilities.deleteTable(admin, table);
-										}
-								}catch(NumberFormatException nfe){
-										/*
+    public void vacuumConglomerates() throws SQLException{
+        ensurePriorTransactionsComplete();
+
+        //get all the conglomerates from sys.sysconglomerates
+        PreparedStatement ps=null;
+        ResultSet rs=null;
+        LongOpenHashSet activeConglomerates=LongOpenHashSet.newInstance();
+        try{
+            ps=connection.prepareStatement("select conglomeratenumber from sys.sysconglomerates");
+
+            rs=ps.executeQuery();
+
+            while(rs.next()){
+                activeConglomerates.add(rs.getLong(1));
+            }
+        }finally{
+            if(rs!=null)
+                rs.close();
+            if(ps!=null)
+                ps.close();
+        }
+
+        //get all the tables from HBaseAdmin
+        try{
+            HTableDescriptor[] hTableDescriptors=admin.listTables();
+
+            for(HTableDescriptor table : hTableDescriptors){
+                try{
+                    long tableConglom=Long.parseLong(Bytes.toString(table.getName()));
+                    if(tableConglom<1168l) continue; //ignore system tables
+                    if(!activeConglomerates.contains(tableConglom)){
+                        SpliceUtilities.deleteTable(admin,table);
+                    }
+                }catch(NumberFormatException nfe){
+                                        /*
 										 * This is either TEMP, TRANSACTIONS, SEQUENCES, or something
 										 * that's not managed by splice. Ignore it
 										 */

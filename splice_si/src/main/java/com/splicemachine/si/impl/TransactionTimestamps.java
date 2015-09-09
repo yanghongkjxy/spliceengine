@@ -13,8 +13,7 @@ import com.splicemachine.utils.ZkUtils;
  */
 public class TransactionTimestamps {
 
-    @ThreadSafe
-    private static volatile TimestampSource timestampSource;
+    @ThreadSafe private static volatile TimestampSource timestampSource;
 
     public static TimestampSource getTimestampSource() {
         TimestampSource ts = timestampSource; //do just a single volatile read, unless initializing
