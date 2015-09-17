@@ -2,30 +2,29 @@ package com.splicemachine.derby.utils;
 
 import com.carrotsearch.hppc.BitSet;
 import com.carrotsearch.hppc.ObjectArrayList;
+import com.splicemachine.constants.FixedSpliceConstants;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.constants.bytes.BytesUtil;
-import com.splicemachine.derby.impl.sql.execute.operations.QualifierUtils;
-import com.splicemachine.derby.impl.store.access.hbase.HBaseRowLocation;
-import com.splicemachine.hbase.AbstractSkippingScanFilter;
-import com.splicemachine.si.api.Txn;
-import com.splicemachine.si.api.TxnView;
-import com.splicemachine.pipeline.exception.Exceptions;
-import com.splicemachine.storage.AndPredicate;
-import com.splicemachine.storage.EntryPredicateFilter;
-import com.splicemachine.storage.OrPredicate;
-import com.splicemachine.storage.Predicate;
-
 import com.splicemachine.db.iapi.error.StandardException;
 import com.splicemachine.db.iapi.services.io.FormatableBitSet;
 import com.splicemachine.db.iapi.store.access.Qualifier;
 import com.splicemachine.db.iapi.types.DataValueDescriptor;
 import com.splicemachine.db.iapi.types.DataValueFactory;
+import com.splicemachine.derby.impl.sql.execute.operations.QualifierUtils;
+import com.splicemachine.derby.impl.store.access.hbase.HBaseRowLocation;
+import com.splicemachine.hbase.AbstractSkippingScanFilter;
+import com.splicemachine.pipeline.exception.Exceptions;
+import com.splicemachine.si.api.Txn;
+import com.splicemachine.si.api.TxnView;
+import com.splicemachine.storage.AndPredicate;
+import com.splicemachine.storage.EntryPredicateFilter;
+import com.splicemachine.storage.OrPredicate;
+import com.splicemachine.storage.Predicate;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
-import org.apache.log4j.Logger;
 
 import java.io.IOException;
 
@@ -38,9 +37,7 @@ import java.io.IOException;
  *         Created: 1/24/13 10:50 AM
  */
 public class Scans extends SpliceUtils {
-    private static Logger LOG = Logger.getLogger(Scans.class);
-    private Scans() {
-    } //can't construct me
+    private Scans() { } //can't construct me
 
 
     /**
@@ -93,7 +90,7 @@ public class Scans extends SpliceUtils {
         scan.setCaching(caching);
         scan.setStartRow(startRow);
         scan.setStopRow(stopRow);
-        scan.addFamily(SpliceConstants.DEFAULT_FAMILY_BYTES);
+        scan.addFamily(FixedSpliceConstants.DEFAULT_FAMILY_BYTES);
         return scan;
     }
 
@@ -125,13 +122,12 @@ public class Scans extends SpliceUtils {
      * @return a transactionally aware scan from {@code startKeyValue} to {@code stopKeyValue}, with appropriate
      * filters aas specified by {@code qualifiers}
      */
-    public static Scan setupScan(DataValueDescriptor[] startKeyValue, int startSearchOperator,
-                                 DataValueDescriptor[] stopKeyValue, DataValueDescriptor[] stopKeyPrefix, int stopSearchOperator,
+    public static Scan setupScan(DataValueDescriptor[] startKeyValue,int startSearchOperator,
+                                 DataValueDescriptor[] stopKeyValue,DataValueDescriptor[] stopKeyPrefix,int stopSearchOperator,
                                  Qualifier[][] qualifiers,
                                  boolean[] sortOrder,
                                  FormatableBitSet scanColumnList,
                                  TxnView txn,
-                                 boolean sameStartStopPosition,
                                  int[] formatIds,
                                  int[] startScanKeys,
                                  int[] keyDecodingMap,
@@ -142,9 +138,10 @@ public class Scans extends SpliceUtils {
         assert dataValueFactory != null;
         Scan scan = SpliceUtils.createScan(txn, scanColumnList != null && scanColumnList.anySetBit() == -1); // Here is the count(*) piece
         scan.setCaching(DEFAULT_CACHE_SIZE);
+        scan.setBatch(SpliceConstants.scannerBatchSize);
         try {
             if (rowIdKey) {
-                DataValueDescriptor[] dvd = null;
+                DataValueDescriptor[] dvd;
                 if (startKeyValue != null && startKeyValue.length > 0) {
                     dvd = new DataValueDescriptor[1];
                     dvd[0] = new HBaseRowLocation(BytesUtil.fromHex(startKeyValue[0].getString()));
@@ -173,13 +170,12 @@ public class Scans extends SpliceUtils {
         return scan;
     }
 
-    public static Scan setupScan(DataValueDescriptor[] startKeyValue, int startSearchOperator,
-                                 DataValueDescriptor[] stopKeyValue, int stopSearchOperator,
+    public static Scan setupScan(DataValueDescriptor[] startKeyValue,int startSearchOperator,
+                                 DataValueDescriptor[] stopKeyValue,int stopSearchOperator,
                                  Qualifier[][] qualifiers,
                                  boolean[] sortOrder,
                                  FormatableBitSet scanColumnList,
                                  TxnView txn,
-                                 boolean sameStartStopPosition,
                                  int[] formatIds,
                                  int[] keyDecodingMap,
                                  int[] keyTablePositionMap,
@@ -208,7 +204,7 @@ public class Scans extends SpliceUtils {
                                             int[] keyColumnEncodingOrder) throws StandardException, IOException {
         EntryPredicateFilter pqf = getPredicates(qualifiers,
                 scanColumnList, pb, keyColumnEncodingOrder);
-        scan.setAttribute(SpliceConstants.ENTRY_PREDICATE_LABEL, pqf.toBytes());
+        scan.setAttribute(FixedSpliceConstants.ENTRY_PREDICATE_LABEL, pqf.toBytes());
     }
 
     public static EntryPredicateFilter getPredicates(Qualifier[][] qualifiers,
@@ -261,7 +257,7 @@ public class Scans extends SpliceUtils {
         }
 
 
-        ObjectArrayList<Predicate> andedOrPreds = new ObjectArrayList<Predicate>();
+        ObjectArrayList<Predicate> andedOrPreds =new ObjectArrayList<>();
         for (int i = 1; i < qualifiers.length; i++) {
             Qualifier[] orQuals = qualifiers[i];
             ObjectArrayList<Predicate> orPreds = ObjectArrayList.newInstanceWithCapacity(orQuals.length);

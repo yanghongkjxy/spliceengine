@@ -54,9 +54,9 @@ public class StatisticsAdminIT {
     public static void createSharedTables() throws Exception {
 
         Connection conn = spliceClassWatcher.getOrCreateConnection();
-        doCreateSharedTables(conn);
+//        doCreateSharedTables(conn);
         Connection conn2 = spliceClassWatcher2.getOrCreateConnection();
-        doCreateSharedTables(conn2);
+//        doCreateSharedTables(conn2);
     }
 
     private static void doCreateSharedTables(Connection conn) throws Exception {

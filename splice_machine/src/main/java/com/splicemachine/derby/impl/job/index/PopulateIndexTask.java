@@ -2,8 +2,8 @@ package com.splicemachine.derby.impl.job.index;
 
 import com.carrotsearch.hppc.BitSet;
 import com.carrotsearch.hppc.ObjectArrayList;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
 import com.splicemachine.constants.SIConstants;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.db.iapi.services.io.ArrayUtil;
@@ -14,6 +14,7 @@ import com.splicemachine.derby.impl.job.operation.OperationJob;
 import com.splicemachine.derby.impl.job.scheduler.SchedulerPriorities;
 import com.splicemachine.derby.impl.sql.execute.index.IndexTransformer;
 import com.splicemachine.derby.impl.sql.execute.operations.SpliceBaseOperation;
+import com.splicemachine.derby.impl.sql.execute.operations.scanner.MergingReader;
 import com.splicemachine.derby.metrics.OperationMetric;
 import com.splicemachine.derby.metrics.OperationRuntimeStats;
 import com.splicemachine.derby.utils.SpliceUtils;
@@ -28,18 +29,22 @@ import com.splicemachine.metrics.Timer;
 import com.splicemachine.pipeline.api.CallBuffer;
 import com.splicemachine.pipeline.api.RecordingCallBuffer;
 import com.splicemachine.pipeline.api.WriteStats;
-import com.splicemachine.si.api.TransactionalRegion;
-import com.splicemachine.si.api.Txn;
-import com.splicemachine.si.api.TxnLifecycleManager;
-import com.splicemachine.si.api.TxnView;
+import com.splicemachine.si.api.*;
+import com.splicemachine.si.api.SIFilter;
 import com.splicemachine.si.data.api.SDataLib;
+import com.splicemachine.si.data.hbase.HDataLib;
+import com.splicemachine.si.data.hbase.HRowAccumulator;
 import com.splicemachine.si.impl.*;
+import com.splicemachine.storage.EntryDecoder;
 import com.splicemachine.storage.EntryPredicateFilter;
 import com.splicemachine.storage.Predicate;
+import com.splicemachine.utils.ByteSlice;
 import com.splicemachine.utils.SpliceLogUtils;
 import com.splicemachine.utils.SpliceZooKeeperManager;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -47,7 +52,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -68,7 +72,6 @@ public class PopulateIndexTask extends ZkTask{
     private int[] columnOrdering;
     private int[] format_ids;
     private long demarcationPoint;
-    private static SDataLib dataLib=SIFactoryDriver.siFactory.getDataLib();
     private HRegion region;
 
     //performance improvement
@@ -204,12 +207,9 @@ public class PopulateIndexTask extends ZkTask{
             //backfill the index with previously committed data
 
             EntryPredicateFilter predicateFilter=new EntryPredicateFilter(indexedColumns,ObjectArrayList.<Predicate>newInstance(),true);
-            MeasuredRegionScanner brs=getRegionScanner(predicateFilter,regionScan,metricFactory);
-
-            RecordingCallBuffer<KVPair> writeBuffer=null;
-            try{
-                List nextRow=Lists.newArrayListWithExpectedSize(mainColToIndexPosMap.length);
-                boolean shouldContinue=true;
+            HRowAccumulator<Cell> accumulator=new HRowAccumulator<>(dataLib,predicateFilter,new EntryDecoder(),false);
+            SIFilter<Cell> siFilter = buildSIFilter(accumulator);
+            try(MeasuredRegionScanner<Cell> brs=getRegionScanner(dataLib,siFilter,regionScan,metricFactory)){
                 IndexTransformer transformer=new IndexTransformer(isUnique,
                         isUniqueWithDuplicateNulls,
                         null,
@@ -221,26 +221,27 @@ public class PopulateIndexTask extends ZkTask{
                         indexedColumns);
 
                 byte[] indexTableLocation=Bytes.toBytes(Long.toString(indexConglomId));
-                writeBuffer=SpliceDriver.driver().getTableWriter().writeBuffer(indexTableLocation,getTxn(),metricFactory);
-                try{
-                    while(shouldContinue){
-                        SpliceBaseOperation.checkInterrupt(numRecordsRead,SpliceConstants.interruptLoopCheck);
-                        nextRow.clear();
-                        shouldContinue=brs.internalNextRaw(nextRow);
-                        numRecordsRead++;
-                        translateResult(nextRow,transformer,writeBuffer,transformationTimer);
-                    }
-                }finally{
-                    transformationTimer.startTiming();
-                    writeBuffer.flushBuffer();
-                    writeBuffer.close();
-                    transformationTimer.stopTiming();
-                }
-            }finally{
-                brs.close();
-            }
 
-            reportStats(startTime,brs,writeBuffer,transformationTimer.getTime());
+
+                SDataLib dataLib = new HDataLib();
+                MergingReader<Cell> mr = new MergingReader<>(accumulator,
+                        brs,
+                        dataLib,
+                        MergingReader.RowKeyFilter.NOOPFilter,
+                        Suppliers.ofInstance(siFilter),
+                        metricFactory);
+                try(RecordingCallBuffer<KVPair> writeBuffer =
+                            SpliceDriver.driver().getTableWriter().writeBuffer(indexTableLocation,getTxn(),metricFactory)){
+                    while(mr.readNext()){
+                        numRecordsRead++;
+                        SpliceBaseOperation.checkInterrupt(numRecordsRead,SpliceConstants.interruptLoopCheck);
+                        translateResult(mr.currentRowKey(),accumulator.result(),transformer,writeBuffer,transformationTimer);
+                    }
+                    writeBuffer.flushBufferAndWait();
+
+                    reportStats(startTime,mr,writeBuffer.getWriteStats(),transformationTimer.getTime());
+                }
+            }
 
         }catch(IOException e){
             SpliceLogUtils.error(LOG,e);
@@ -251,26 +252,41 @@ public class PopulateIndexTask extends ZkTask{
         }
     }
 
-    protected MeasuredRegionScanner getRegionScanner(EntryPredicateFilter predicateFilter,Scan regionScan,MetricFactory metricFactory) throws IOException{
+    private SIFilter<Cell> buildSIFilter(RowAccumulator<Cell> accumulator) throws IOException{
         //manually create the SIFilter
         DDLTxnView demarcationPoint=new DDLTxnView(getTxn(),this.demarcationPoint);
         TransactionalRegion transactionalRegion=TransactionalRegions.get(region);
-        TxnFilter packed=transactionalRegion.packedFilter(demarcationPoint,predicateFilter,false);
+        TxnFilter unpacked = transactionalRegion.unpackedFilter(demarcationPoint);
         transactionalRegion.close();
-        regionScan.setFilter(new SIFilterPacked(packed));
-        RegionScanner sourceScanner=region.getScanner(regionScan);
-        return SpliceConstants.useReadAheadScanner?new ReadAheadRegionScanner(region,SpliceConstants.DEFAULT_CACHE_SIZE,sourceScanner,metricFactory,HTransactorFactory.getTransactor().getDataLib())
-                :new BufferedRegionScanner(region,sourceScanner,regionScan,SpliceConstants.DEFAULT_CACHE_SIZE,SpliceConstants.DEFAULT_CACHE_SIZE,metricFactory,HTransactorFactory.getTransactor().getDataLib());
+        //noinspection unchecked
+        return new PackedTxnFilter<Cell>(unpacked, accumulator){
+            @Override
+            public Filter.ReturnCode doAccumulate(Cell dataKeyValue) throws IOException {
+                if (!accumulator.isFinished() && accumulator.isOfInterest(dataKeyValue)) {
+                    if (!accumulator.accumulate(dataKeyValue)) {
+                        return Filter.ReturnCode.NEXT_ROW;
+                    }
+                    return Filter.ReturnCode.INCLUDE;
+                }else return Filter.ReturnCode.INCLUDE;
+            }
+        };
     }
 
-    protected void reportStats(long startTime,MeasuredRegionScanner brs,RecordingCallBuffer<KVPair> writeBuffer,TimeView manipulationTime) throws IOException{
+    protected MeasuredRegionScanner<Cell> getRegionScanner(SDataLib dataLib,SIFilter<Cell> siFilter,Scan regionScan,MetricFactory metricFactory) throws IOException{
+        TxnFilter<Cell> unpacked = siFilter.unwrapFilter();
+        regionScan.setFilter(new CheckpointFilter(unpacked,SIConstants.checkpointSeekThreshold));
+        RegionScanner sourceScanner=region.getScanner(regionScan);
+        return SpliceConstants.useReadAheadScanner?new ReadAheadRegionScanner(region,SpliceConstants.DEFAULT_CACHE_SIZE,sourceScanner,metricFactory,dataLib)
+                :new BufferedRegionScanner(region,sourceScanner,regionScan,SpliceConstants.DEFAULT_CACHE_SIZE,SpliceConstants.DEFAULT_CACHE_SIZE,metricFactory,dataLib);
+    }
+
+    protected void reportStats(long startTime,MergingReader brs,WriteStats writeStats,TimeView manipulationTime) throws IOException{
         if(isTraced){
             //record some stats
             OperationRuntimeStats stats=new OperationRuntimeStats(statementId,operationId,Bytes.toLong(taskId),region.getRegionNameAsString(),12);
             stats.addMetric(OperationMetric.STOP_TIMESTAMP,System.currentTimeMillis());
 
-            WriteStats writeStats=writeBuffer.getWriteStats();
-            TimeView readTime=brs.getReadTime();
+            TimeView readTime=brs.getTime();
             stats.addMetric(OperationMetric.START_TIMESTAMP,startTime);
             stats.addMetric(OperationMetric.TASK_QUEUE_WAIT_WALL_TIME,waitTimeNs);
             stats.addMetric(OperationMetric.OUTPUT_ROWS,writeStats.getRowsWritten());
@@ -294,28 +310,23 @@ public class PopulateIndexTask extends ZkTask{
         }
     }
 
-    private void translateResult(List result,
+    private void translateResult(ByteSlice rowKey,
+                                 byte[] rowValue,
                                  IndexTransformer transformer,
                                  CallBuffer<KVPair> writeBuffer,
                                  Timer manipulationTimer) throws Exception{
         //we know that there is only one KeyValue for each row
         manipulationTimer.startTiming();
-        for(Object kv : result){
-            //ignore SI CF
-            if(dataLib.getDataQualifierBuffer(kv)[dataLib.getDataQualifierOffset(kv)]!=SIConstants.PACKED_COLUMN_BYTES[0])
-                continue;
-            byte[] row=dataLib.getDataRow(kv);
-            byte[] data=dataLib.getDataValue(kv);
-            if(mainPair==null)
-                mainPair=new KVPair(row,data);
-            else{
-                mainPair.setKey(row);
-                mainPair.setValue(data);
-            }
-            KVPair pair=transformer.translate(mainPair);
-
-            writeBuffer.add(pair);
+        if(mainPair==null)
+            mainPair=new KVPair(rowKey.array(),rowKey.offset(),rowKey.length(),
+                    rowValue,0,rowValue.length);
+        else{
+            mainPair.setKey(rowKey.array(),rowKey.offset(),rowKey.length());
+            mainPair.setValue(rowValue);
         }
+        KVPair pair=transformer.translate(mainPair);
+
+        writeBuffer.add(pair);
         manipulationTimer.tick(1);
     }
 

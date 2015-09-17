@@ -114,7 +114,7 @@ public abstract class SpliceBaseOperationRegionScanner<Data> implements RegionSc
 								 */
                                 rowsRead++;
 								RowLocation location = topOperation.getCurrentRowLocation();
-								if(location!=null){
+								if(location!=null && location.getLength()>0){
 										ByteSlice slice = ((HBaseRowLocation) location).getSlice();
 										rowKey = slice.data(false);
 								}else {

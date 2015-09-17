@@ -21,7 +21,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class DDLWatchRefresherTest{
 
-    private static final WritableTxn txn=new WritableTxn(1l,1l,Txn.IsolationLevel.SNAPSHOT_ISOLATION,Txn.ROOT_TRANSACTION,null,true);
+    private static final WritableTxn txn=new WritableTxn(1l,1l,Txn.IsolationLevel.SNAPSHOT_ISOLATION,Txn.ROOT_TRANSACTION,null,null,true);
 
     @Test
     public void picksUpNonTentativeChange() throws Exception{

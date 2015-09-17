@@ -1,6 +1,7 @@
 package com.splicemachine.derby.impl.sql.execute.operations.scanner;
 
 import com.splicemachine.si.api.SIFilter;
+import com.splicemachine.si.data.hbase.HRowAccumulator;
 import com.splicemachine.storage.EntryAccumulator;
 import com.splicemachine.storage.EntryDecoder;
 import com.splicemachine.storage.EntryPredicateFilter;
@@ -12,8 +13,13 @@ import java.io.IOException;
  *         Date: 4/10/14
  */
 public interface SIFilterFactory<Data> {
-				SIFilter<Data> newFilter(EntryPredicateFilter predicateFilter,
-													 EntryDecoder rowEntryDecoder,
-													 EntryAccumulator accumulator,
-													 boolean isCountStar) throws IOException;
+	SIFilter<Data> newFilter(EntryPredicateFilter predicateFilter,
+							 EntryDecoder rowEntryDecoder,
+							 EntryAccumulator accumulator,
+							 boolean isCountStar) throws IOException;
+
+	SIFilter<Data> newFilter(EntryPredicateFilter predicateFilter,
+							 EntryDecoder rowEntryDecoder,
+							 HRowAccumulator<Data> accumulator,
+							 boolean isCountStar) throws IOException;
 }

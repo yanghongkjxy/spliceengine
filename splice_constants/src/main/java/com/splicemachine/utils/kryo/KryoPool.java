@@ -17,12 +17,12 @@ import java.util.concurrent.BlockingQueue;
  */
 public class KryoPool {
     private final BlockingQueue<Kryo> instances;
-    private static final KryoPool DEFAULT_POOL = new KryoPool(SpliceConstants.kryoPoolSize);
+    private static volatile KryoPool DEFAULT_POOL = null;
 
     private volatile KryoRegistry kryoRegistry;
 
     public KryoPool(int poolSize) {
-        this.instances = new ArrayBlockingQueue<Kryo>(poolSize);
+        this.instances =new ArrayBlockingQueue<>(poolSize);
     }
 
     public void setKryoRegistry(KryoRegistry kryoRegistry){
@@ -50,10 +50,18 @@ public class KryoPool {
     }
 
     public static KryoPool defaultPool() {
-        return DEFAULT_POOL;
+        KryoPool kp = DEFAULT_POOL;
+        if(kp==null){
+            synchronized(KryoPool.class){
+                kp = DEFAULT_POOL;
+                if(kp==null)
+                    kp = DEFAULT_POOL = new KryoPool(SpliceConstants.kryoPoolSize);
+            }
+        }
+        return kp;
     }
 
-    public static interface KryoRegistry{
-        public void register(Kryo instance);
+    public interface KryoRegistry{
+        void register(Kryo instance);
     }
 }

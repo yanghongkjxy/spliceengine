@@ -28,7 +28,7 @@ import java.util.concurrent.locks.Condition;
  *         Date: 9/8/15
  */
 public class DDLCoordinationTest{
-    private static final WritableTxn txn=new WritableTxn(1l,1l,Txn.IsolationLevel.SNAPSHOT_ISOLATION,Txn.ROOT_TRANSACTION,null,true);
+    private static final WritableTxn txn=new WritableTxn(1l,1l,Txn.IsolationLevel.SNAPSHOT_ISOLATION,Txn.ROOT_TRANSACTION,null,null,true);
 
 
     @Test

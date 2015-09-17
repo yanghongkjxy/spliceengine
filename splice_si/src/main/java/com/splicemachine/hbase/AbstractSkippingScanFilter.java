@@ -1,12 +1,10 @@
 package com.splicemachine.hbase;
 
 import com.google.common.collect.Lists;
-import com.splicemachine.constants.SIConstants;
-import com.splicemachine.constants.SpliceConstants;
+import com.splicemachine.constants.FixedSIConstants;
+import com.splicemachine.constants.FixedSpliceConstants;
 import com.splicemachine.si.data.api.SDataLib;
 import com.splicemachine.si.impl.SIFactoryDriver;
-import com.splicemachine.utils.SpliceLogUtils;
-
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -23,7 +21,7 @@ import java.util.List;
  *         Date: 7/22/14
  */
 public abstract class AbstractSkippingScanFilter<Data> extends FilterBase implements Writable {
-	private static final SDataLib dataLib = SIFactoryDriver.siFactory.getDataLib();
+    private final SDataLib dataLib;
     protected List<Pair<byte[], byte[]>> startStopKeys;
     protected List<byte[]> predicates;
 
@@ -37,9 +35,17 @@ public abstract class AbstractSkippingScanFilter<Data> extends FilterBase implem
     //serialization filter, DO NOT USE
     @Deprecated
     public AbstractSkippingScanFilter() {
+        this.dataLib = SIFactoryDriver.siFactory.getDataLib();
     }
 
     public AbstractSkippingScanFilter(List<Pair<byte[], byte[]>> startStopKeys, List<byte[]> predicates) {
+        this.dataLib = SIFactoryDriver.siFactory.getDataLib();
+        this.startStopKeys = startStopKeys;
+        this.predicates = predicates;
+    }
+
+    public AbstractSkippingScanFilter(List<Pair<byte[], byte[]>> startStopKeys, List<byte[]> predicates,SDataLib dataLib) {
+        this.dataLib = dataLib;
         this.startStopKeys = startStopKeys;
         this.predicates = predicates;
     }
@@ -85,7 +91,7 @@ public abstract class AbstractSkippingScanFilter<Data> extends FilterBase implem
 
     @Override
     public KeyValue getNextKeyHint(KeyValue currentKV) {
-        return new KeyValue(currentStartKey, SpliceConstants.DEFAULT_FAMILY_BYTES, SIConstants.SNAPSHOT_ISOLATION_COMMIT_TIMESTAMP_COLUMN_BYTES);
+        return new KeyValue(currentStartKey, FixedSpliceConstants.DEFAULT_FAMILY_BYTES, FixedSIConstants.SNAPSHOT_ISOLATION_COMMIT_TIMESTAMP_COLUMN_BYTES);
     }
 
     @Override

@@ -344,7 +344,7 @@ public class DerbyScanInformation implements ScanInformation<ExecRow>, Externali
                 qualifiers,
                 conglomerate.getAscDescInfo(),
                 getAccessedColumns(),
-                txn, sameStartStop,
+                txn,
                 conglomerate.getFormat_ids(),
                 startScanKeys,
                 keyDecodingMap,

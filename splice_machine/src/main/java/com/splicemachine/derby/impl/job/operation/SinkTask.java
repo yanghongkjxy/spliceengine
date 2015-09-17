@@ -118,6 +118,7 @@ public class SinkTask extends ZkTask{
     public void prepareTask(byte[] start,byte[] end,RegionCoprocessorEnvironment rce,SpliceZooKeeperManager zooKeeper) throws ExecutionException{
         //make sure that our task id is properly set
         adjustScan(start,end);
+        scan.setMaxVersions();
 
         this.region=rce.getRegion();
         super.prepareTask(start,end,rce,zooKeeper);

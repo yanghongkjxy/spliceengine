@@ -698,7 +698,7 @@ public class SpliceConstants {
      * Maximum fixed duration (in millisecomds) that should be allowed to lapse
      * before the optimizer can determine that it should stop trying to find
      * the best plan due to plan time taking longer than the expected
-     * query execution time. By default, this is {@link Long.MAX_VALUE}, which means
+     * query execution time. By default, this is {@link Long#MAX_VALUE}, which means
      * there is no fixed maximum, and the determination is made
      * using cost estimates alone. Default value should generally
      * be left alone, and would only need to be changed as a workaround
@@ -878,6 +878,10 @@ public class SpliceConstants {
      */
     public static final int DEFAULT_CACHE_SIZE = (1<<10);
 
+    @SpliceConstants.Parameter private static final String SCANNER_BATCH_SIZE = "splice.scanner.batchSize";
+    @DefaultValue(SCANNER_BATCH_SIZE) public static final int DEFAULT_SCANNER_BATCH_SIZE = 128;
+    public static int scannerBatchSize;
+
 
     /*
      * Setting the cache update interval <0 indicates that caching is to be turned off.
@@ -1011,31 +1015,31 @@ public class SpliceConstants {
 
 
     // Splice Internal Tables
-    public static final String TEMP_TABLE = "SPLICE_TEMP";
-    public static final String TEST_TABLE = "SPLICE_TEST";
-    public static final String TRANSACTION_TABLE = "SPLICE_TXN";
-    public static final String TENTATIVE_TABLE = "TENTATIVE_DDL";
-    public static final int TRANSACTION_TABLE_BUCKET_COUNT = 16; //must be a power of 2
-    public static final String CONGLOMERATE_TABLE_NAME = "SPLICE_CONGLOMERATE";
-    public static final String SEQUENCE_TABLE_NAME = "SPLICE_SEQUENCES";
-    public static final String RESTORE_TABLE_NAME = "SPLICE_RESTORE";
-    public static final String SYSSCHEMAS_CACHE = "SYSSCHEMAS_CACHE";
-    public static final String SYSSCHEMAS_INDEX1_ID_CACHE = "SYSSCHEMAS_INDEX1_ID_CACHE";
+    public static final String TEMP_TABLE = FixedSpliceConstants.TEMP_TABLE;
+    public static final String TEST_TABLE = FixedSpliceConstants.TEST_TABLE;
+    public static final String TRANSACTION_TABLE = FixedSpliceConstants.TRANSACTION_TABLE;
+    public static final String TENTATIVE_TABLE = FixedSpliceConstants.TENTATIVE_TABLE;
+    public static final int TRANSACTION_TABLE_BUCKET_COUNT = FixedSpliceConstants.TRANSACTION_TABLE_BUCKET_COUNT; //must be a power of 2
+    public static final String CONGLOMERATE_TABLE_NAME = FixedSpliceConstants.CONGLOMERATE_TABLE_NAME;
+    public static final String SEQUENCE_TABLE_NAME = FixedSpliceConstants.SEQUENCE_TABLE_NAME;
+    public static final String RESTORE_TABLE_NAME = FixedSpliceConstants.RESTORE_TABLE_NAME;
+    public static final String SYSSCHEMAS_CACHE = FixedSpliceConstants.SYSSCHEMAS_CACHE;
+    public static final String SYSSCHEMAS_INDEX1_ID_CACHE = FixedSpliceConstants.SYSSCHEMAS_INDEX1_ID_CACHE;
     public static final String[] SYSSCHEMAS_CACHES = {SYSSCHEMAS_CACHE,SYSSCHEMAS_INDEX1_ID_CACHE};
 
-    public static byte[] TEMP_TABLE_BYTES = Bytes.toBytes(TEMP_TABLE);
-    public static final byte[] TRANSACTION_TABLE_BYTES = Bytes.toBytes(TRANSACTION_TABLE);
-    public static final byte[] TENTATIVE_TABLE_BYTES = Bytes.toBytes(TENTATIVE_TABLE);
-    public static final byte[] CONGLOMERATE_TABLE_NAME_BYTES = Bytes.toBytes(CONGLOMERATE_TABLE_NAME);
-    public static final byte[] SEQUENCE_TABLE_NAME_BYTES = Bytes.toBytes(SEQUENCE_TABLE_NAME);
-    public static final byte[] RESTORE_TABLE_NAME_BYTES = Bytes.toBytes(RESTORE_TABLE_NAME);
+    public static byte[] TEMP_TABLE_BYTES = FixedSpliceConstants.TEMP_TABLE_BYTES;
+    public static final byte[] TRANSACTION_TABLE_BYTES =FixedSpliceConstants.TRANSACTION_TABLE_BYTES;
+    public static final byte[] TENTATIVE_TABLE_BYTES = FixedSpliceConstants.TENTATIVE_TABLE_BYTES;
+    public static final byte[] CONGLOMERATE_TABLE_NAME_BYTES = FixedSpliceConstants.CONGLOMERATE_TABLE_NAME_BYTES;
+    public static final byte[] SEQUENCE_TABLE_NAME_BYTES = FixedSpliceConstants.SEQUENCE_TABLE_NAME_BYTES;
+    public static final byte[] RESTORE_TABLE_NAME_BYTES = FixedSpliceConstants.RESTORE_TABLE_NAME_BYTES;
 
     // The column in which splice stores encoded/packed user data.
-    public static final byte[] PACKED_COLUMN_BYTES = Bytes.toBytes("7");
+    public static final byte[] PACKED_COLUMN_BYTES = FixedSpliceConstants.PACKED_COLUMN_BYTES;
 
-    public static final byte[] DEFAULT_FAMILY_BYTES = Bytes.toBytes("V");
+    public static final byte[] DEFAULT_FAMILY_BYTES = FixedSpliceConstants.DEFAULT_FAMILY_BYTES;
 
-    public static final String SI_PERMISSION_FAMILY = "P";
+    public static final String SI_PERMISSION_FAMILY =FixedSpliceConstants.SI_PERMISSION_FAMILY;
 
     //TEMP Table task column--used for filtering out failed tasks from the temp
     //table
@@ -1047,13 +1051,13 @@ public class SpliceConstants {
     public static final String DEFAULT_BLOOMFILTER = HColumnDescriptor.DEFAULT_BLOOMFILTER;
 
     // Default Constants
-    public static final String SUPPRESS_INDEXING_ATTRIBUTE_NAME = "iu";
-    public static final byte[] SUPPRESS_INDEXING_ATTRIBUTE_VALUE = new byte[]{};
-    public static final String CHECK_BLOOM_ATTRIBUTE_NAME = "cb";
-    public static final String SPLICE_DB = "splicedb";
-    public static final String SPLICE_USER = "SPLICE";
+    public static final String SUPPRESS_INDEXING_ATTRIBUTE_NAME = FixedSpliceConstants.SUPPRESS_INDEXING_ATTRIBUTE_NAME;
+    public static final byte[] SUPPRESS_INDEXING_ATTRIBUTE_VALUE = FixedSpliceConstants.SUPPRESS_INDEXING_ATTRIBUTE_VALUE;
+    public static final String CHECK_BLOOM_ATTRIBUTE_NAME = FixedSpliceConstants.CHECK_BLOOM_ATTRIBUTE_NAME;
+    public static final String SPLICE_DB = FixedSpliceConstants.SPLICE_DB;
+    public static final String SPLICE_USER = FixedSpliceConstants.SPLICE_USER;
 
-    public static final String ENTRY_PREDICATE_LABEL= "p";
+    public static final String ENTRY_PREDICATE_LABEL= FixedSpliceConstants.ENTRY_PREDICATE_LABEL;
 
     // Default Configuration Options
 
@@ -1094,7 +1098,7 @@ public class SpliceConstants {
     public static final String TEMP_MAX_FILE_SIZE = "splice.temp.maxFileSize";
     public static long tempTableMaxFileSize;
 
-    public static enum TableEnv {
+    public enum TableEnv {
         TRANSACTION_TABLE,
         ROOT_TABLE,
         META_TABLE,
@@ -1315,6 +1319,8 @@ public class SpliceConstants {
         batchOnceBatchSize = config.getInt(BATCH_ONCE_BATCH_SIZE, DEFAULT_BATCH_ONCE_BATCH_SIZE);
 
         enableImportStatusLogging = config.getBoolean(ENABLE_IMPORT_STATUS_LOGGING,DEFAULT_ENABLE_IMPORT_STATUS_LOGGING);
+
+        scannerBatchSize = config.getInt(SCANNER_BATCH_SIZE, DEFAULT_SCANNER_BATCH_SIZE);
     }
 
     public static void reloadConfiguration(Configuration configuration) {

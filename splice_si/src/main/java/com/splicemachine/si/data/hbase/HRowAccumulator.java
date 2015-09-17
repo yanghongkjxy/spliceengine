@@ -17,11 +17,18 @@ public class HRowAccumulator<Data> implements RowAccumulator<Data> {
     private final SDataLib dataLib;
     private boolean countStar;
     private long bytesAccumulated = 0l;
-    public HRowAccumulator(SDataLib dataLib, EntryPredicateFilter predicateFilter, EntryDecoder decoder, boolean countStar) {
+
+    public HRowAccumulator(SDataLib dataLib,
+                           EntryPredicateFilter predicateFilter,
+                           EntryDecoder decoder, boolean countStar) {
         this(dataLib, predicateFilter, decoder, predicateFilter.newAccumulator(),countStar);
     }
 
-    public HRowAccumulator(SDataLib dataLib, EntryPredicateFilter predicateFilter, EntryDecoder decoder,EntryAccumulator accumulator, boolean countStar) {
+    public HRowAccumulator(SDataLib dataLib,
+                           EntryPredicateFilter predicateFilter,
+                           EntryDecoder decoder,
+                           EntryAccumulator accumulator,
+                           boolean countStar) {
         this.predicateFilter = predicateFilter;
         this.entryAccumulator = accumulator;
         this.decoder = decoder;
@@ -63,6 +70,11 @@ public class HRowAccumulator<Data> implements RowAccumulator<Data> {
     }
 
     @Override
+    public boolean hasAccumulated(){
+        return entryAccumulator.hasAccumulated();
+    }
+
+    @Override
     public byte[] result() {
         final byte[] result = entryAccumulator.finish();
         entryAccumulator.reset();
@@ -79,4 +91,10 @@ public class HRowAccumulator<Data> implements RowAccumulator<Data> {
     public void reset() {
         entryAccumulator.reset();
     }
+
+    @Override
+    public EntryAccumulator getEntryAccumulator(){
+        return entryAccumulator;
+    }
+
 }

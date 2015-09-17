@@ -7,43 +7,32 @@ import com.splicemachine.storage.index.BitIndex;
  * @author Scott Fines
  *         Created on: 7/9/13
  */
-public interface EntryAccumulator<T extends EntryAccumulator<T>> {
+public interface EntryAccumulator<T extends EntryAccumulator<T>>{
 
-		void add(int position, byte[] data, int offset,int length);
+    void add(int position,byte[] data,int offset,int length);
 
-		void addScalar(int position, byte[] data, int offset, int length);
+    void addScalar(int position,byte[] data,int offset,int length);
 
-		void addFloat(int position, byte[] data, int offset,int length);
+    void addFloat(int position,byte[] data,int offset,int length);
 
-		void addDouble(int position, byte[] data, int offset, int length);
+    void addDouble(int position,byte[] data,int offset,int length);
 
-		BitSet getRemainingFields();
+    BitSet getRemainingFields();
 
-		boolean isFinished();
+    boolean isFinished();
 
     byte[] finish();
 
+    boolean checkFilterAfter();
+
     void reset();
 
-    boolean fieldsMatch(T oldKeyAccumulator);
+    boolean isInteresting(BitIndex potentialIndex);
 
-    boolean hasField(int myFields);
+    void complete();
 
-//		ByteSlice getFieldSlice(int myField);
-
-//		ByteSlice getField(int myField, boolean create);
-
-		long getFinishCount();
-
-		void markOccupiedScalar(int position);
-
-		void markOccupiedFloat(int position);
-
-		void markOccupiedDouble(int position);
-
-		void markOccupiedUntyped(int position);
-
-		boolean isInteresting(BitIndex potentialIndex);
-
-		void complete();
+    /**
+     * @return true if the accumulator has added any fields
+     */
+    boolean hasAccumulated();
 }

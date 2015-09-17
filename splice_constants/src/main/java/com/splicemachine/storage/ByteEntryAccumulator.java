@@ -54,7 +54,8 @@ public class ByteEntryAccumulator extends BaseEntryAccumulator<ByteEntryAccumula
         return dataBytes;
     }
 
-    protected boolean checkFilterAfter() {
+    @Override
+    public boolean checkFilterAfter() {
         if(predicateFilter!=null){
             predicateFilter.reset();
             BitSet checkColumns = predicateFilter.getCheckedColumns();

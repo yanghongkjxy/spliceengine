@@ -7,6 +7,7 @@ import com.splicemachine.db.iapi.services.io.FormatableBitSet;
 import com.splicemachine.db.iapi.sql.execute.ExecRow;
 import com.splicemachine.db.iapi.types.DataValueDescriptor;
 import com.splicemachine.derby.utils.marshall.dvd.DescriptorSerializer;
+import com.splicemachine.derby.utils.marshall.dvd.SerializerMap;
 import com.splicemachine.derby.utils.marshall.dvd.VersionedSerializers;
 import com.splicemachine.storage.ByteEntryAccumulator;
 import com.splicemachine.storage.EntryPredicateFilter;
@@ -49,7 +50,7 @@ public class ExecRowAccumulator extends ByteEntryAccumulator {
                                                     int[] columnMap,
                                                     boolean[] columnSortOrder,
                                                     FormatableBitSet cols,
-                                                    String tableVersion){
+                                                    SerializerMap serializerMap){
         DataValueDescriptor[] dvds = row.getRowArray();
         BitSet fieldsToCollect = new BitSet(dvds.length);
         boolean hasColumns = false;
@@ -76,7 +77,7 @@ public class ExecRowAccumulator extends ByteEntryAccumulator {
         }
         if(!hasColumns) return NOOP_ACCUMULATOR;
 
-        DescriptorSerializer[] serializers = VersionedSerializers.forVersion(tableVersion,false).getSerializers(row);
+        DescriptorSerializer[] serializers = serializerMap.getSerializers(row);
         if(columnSortOrder!=null)
             return new Ordered(predicateFilter,returnIndex,fieldsToCollect,dvds,columnMap,serializers,columnSortOrder);
         else
@@ -89,7 +90,7 @@ public class ExecRowAccumulator extends ByteEntryAccumulator {
                                                     int[] columnMap,
                                                     FormatableBitSet cols,
                                                     String tableVersion){
-        return newAccumulator(predicateFilter,returnIndex,row,columnMap,null,cols,tableVersion);
+        return newAccumulator(predicateFilter,returnIndex,row,columnMap,null,cols,VersionedSerializers.forVersion(tableVersion,false));
     }
 
     public static ExecRowAccumulator newAccumulator(EntryPredicateFilter predicateFilter,
@@ -97,7 +98,15 @@ public class ExecRowAccumulator extends ByteEntryAccumulator {
                                                     ExecRow row,
                                                     int[] keyColumns,
                                                     String tableVersion){
-        return newAccumulator(predicateFilter,returnIndex,row,keyColumns,null,tableVersion);
+        return newAccumulator(predicateFilter,returnIndex,row,keyColumns,VersionedSerializers.forVersion(tableVersion,false));
+    }
+
+    public static ExecRowAccumulator newAccumulator(EntryPredicateFilter predicateFilter,
+                                                    boolean returnIndex,
+                                                    ExecRow row,
+                                                    int[] keyColumns,
+                                                    SerializerMap serializerMap){
+        return newAccumulator(predicateFilter,returnIndex,row,keyColumns,null,null,serializerMap);
     }
 
     @Override
@@ -134,6 +143,16 @@ public class ExecRowAccumulator extends ByteEntryAccumulator {
     public int getCurrentLength(int position){
         int colPos = columnMap[position];
         return columnLengths[colPos];
+    }
+
+    @Override
+    public void reset(){
+        for(int i=0;i<columnMap.length;i++){
+            if(columnMap[i]<0) continue;
+            DataValueDescriptor dvd = dvds[columnMap[i]];
+            if(dvd!=null) dvd.setToNull();
+        }
+        super.reset();
     }
 
     protected void decode(int position, byte[] data, int offset, int length) {

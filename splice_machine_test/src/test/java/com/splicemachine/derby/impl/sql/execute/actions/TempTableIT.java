@@ -342,7 +342,7 @@ public class TempTableIT {
      *
      * @throws Exception
      */
-    @Test
+    @Test(expected=SQLException.class)
     public void testCreateDropCreateTempTableSimpleDerby() throws Exception {
         final String tmpCreate = "DECLARE GLOBAL TEMPORARY TABLE %s.%s %s not logged on commit preserve rows";
         try (Connection connection = methodWatcher.createConnection()) {
@@ -739,16 +739,10 @@ public class TempTableIT {
             connection.commit();
 
             try {
-                SQLClosures.execute(connection, new SQLClosures.SQLAction<Statement>() {
-                    @Override
-                    public void execute(Statement statement) throws Exception {
-                        statement.execute(String.format("create view %s.%s ",
-                                                        tableSchema.schemaName, EMP_NAME_PRIV_VIEW) + viewDef);
-                        fail("Expected exception trying to create a view that depends on a temp table.");
-                    }
-                });
-            } catch (Exception e) {
-                // expected
+                s.execute(String.format("create view %s.%s ",tableSchema.schemaName,EMP_NAME_PRIV_VIEW)+viewDef);
+                fail("Expected exception trying to create a view that depends on a temp table.");
+            } catch (SQLException e) {
+                Assert.assertEquals("Incorrect SQLState",ErrorState.LANG_TEMP_TABLES_CANNOT_BE_IN_VIEWS.getSqlState(),e.getSQLState());
                 Assert.assertTrue(e.getLocalizedMessage().startsWith("Attempt to add temporary table"));
             }
         } finally {
@@ -816,15 +810,10 @@ public class TempTableIT {
         String tempConglomID;
         boolean hbaseTempExists;
         final String tmpCreate = "DECLARE GLOBAL TEMPORARY TABLE %s.%s %s not logged on commit preserve rows";
-        try (Connection connection = methodWatcher.createConnection()) {
-            SQLClosures.execute(connection, new SQLClosures.SQLAction<Statement>() {
-                @Override
-                public void execute(Statement statement) throws Exception {
-                    statement.execute(String.format(tmpCreate, tableSchema.schemaName, SIMPLE_TEMP_TABLE, simpleDef));
-                    SpliceUnitTest.loadTable(statement, tableSchema.schemaName + "." + SIMPLE_TEMP_TABLE, empNameVals);
-                }
-            });
-            connection.commit();
+        try (Statement s = conn.createStatement()) {
+            s.execute(String.format(tmpCreate,tableSchema.schemaName,SIMPLE_TEMP_TABLE,simpleDef));
+            SpliceUnitTest.loadTable(s, tableSchema.schemaName + "." + SIMPLE_TEMP_TABLE, empNameVals);
+
             tempConglomID = TestUtils.lookupConglomerateNumber(tableSchema.schemaName, SIMPLE_TEMP_TABLE, methodWatcher);
             hbaseTempExists = hBaseAdmin.tableExists(tempConglomID);
             Assert.assertTrue("HBase temp table ["+tempConglomID+"] does not exist.", hbaseTempExists);
@@ -834,10 +823,60 @@ public class TempTableIT {
         hbaseTempExists = hBaseAdmin.tableExists(tempConglomID);
         if (hbaseTempExists) {
             // HACK: wait a sec, try again.  It's going away, just takes some time.
-            Thread.sleep(1000);
+            Thread.sleep(2000);
             hbaseTempExists = hBaseAdmin.tableExists(tempConglomID);
         }
         Assert.assertFalse("HBase temp table [" + tempConglomID + "] still exists.", hbaseTempExists);
         System.out.println("HBase Table check took: "+TestUtils.getDuration(start, System.currentTimeMillis()));
+    }
+
+    // ===============================================================
+    // Test Helpers
+    // ===============================================================
+
+    /**
+     * Help test temp table syntax parsing.
+     * @throws Exception
+     */
+    private void helpTestSyntax(final String sqlString, final String expectedExceptionMsg) throws Exception {
+        boolean expectExcepiton = (expectedExceptionMsg != null && ! expectedExceptionMsg.isEmpty());
+        try(Statement s = conn.createStatement()) {
+            s.executeUpdate(String.format(sqlString, tableSchema.schemaName, SIMPLE_TEMP_TABLE, simpleDef));
+            SpliceUnitTest.loadTable(s, tableSchema.schemaName + "." + SIMPLE_TEMP_TABLE, empNameVals);
+
+            try(ResultSet rs = s.executeQuery(String.format("select * from %s.%s", tableSchema.schemaName, SIMPLE_TEMP_TABLE))){
+                Assert.assertEquals(5, SpliceUnitTest.resultSetSize(rs));
+            }
+            if (expectExcepiton) {
+                fail("Expected exception '"+expectedExceptionMsg+"' but didn't get one.");
+            }
+        } catch (Exception e) {
+            if (! expectExcepiton) {
+                throw e;
+            }
+            assertEquals("Expected exception '"+expectedExceptionMsg+"' but got: "+e.getLocalizedMessage(),
+                    expectedExceptionMsg, e.getLocalizedMessage());
+        }
+    }
+
+    private void verifyCreateDrop(String tmpCreate,String tableName,String tableDef,List<String> data) throws Exception{
+        String qSql = String.format("select * from %s.%s",tableSchema.schemaName,tableName);
+        try(Statement s = conn.createStatement()) {
+            s.execute(String.format(tmpCreate, tableSchema.schemaName, tableName, tableDef));
+            SpliceUnitTest.loadTable(s,tableSchema.schemaName+"."+tableName,data);
+
+            try(ResultSet rs = s.executeQuery(qSql)){
+                Assert.assertEquals(5,SpliceUnitTest.resultSetSize(rs));
+            }
+
+            s.execute(String.format("drop table %s",tableSchema.schemaName+"."+tableName));
+
+            try(ResultSet rs = s.executeQuery(qSql)){
+                fail("Expected exception querying temp table that no longer should exist.");
+            }catch(SQLException se){
+                Assert.assertEquals("incorrect SQL state!",ErrorState.LANG_TABLE_NOT_FOUND.getSqlState(),se.getSQLState());
+                throw se;
+            }
+        }
     }
 }

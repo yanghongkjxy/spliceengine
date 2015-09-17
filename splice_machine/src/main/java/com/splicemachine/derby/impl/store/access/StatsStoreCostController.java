@@ -228,7 +228,7 @@ public class StatsStoreCostController extends GenericController implements Store
         double rc = 0d;
         if(missingStatsCount==partStats.size()){
             /*
-             * we have no statistics for this column, so fall back to an abitrarily configured
+             * we have no statistics for this column, so fall back to an arbitrarily configured
              * selectivity criteria
              */
             return SpliceConstants.extraQualifierMultiplier;

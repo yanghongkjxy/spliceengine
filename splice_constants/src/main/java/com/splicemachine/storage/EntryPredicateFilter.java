@@ -20,9 +20,9 @@ public class EntryPredicateFilter {
     private boolean returnIndex;
     private BitSet predicateColumns;
 
-		private long rowsFiltered = 0l;
+    private long rowsFiltered = 0l;
 
-		public static EntryPredicateFilter emptyPredicate(){ return EMPTY_PREDICATE; }
+    public static EntryPredicateFilter emptyPredicate(){ return EMPTY_PREDICATE; }
 
     public EntryPredicateFilter(BitSet fieldsToReturn, ObjectArrayList<Predicate> predicates){
         this(fieldsToReturn, predicates,true);
@@ -34,24 +34,25 @@ public class EntryPredicateFilter {
         this.returnIndex=returnIndex;
     }
 
-		public boolean match(Indexed index,
-												 Supplier<MultiFieldDecoder> decoderProvider,
-												 EntryAccumulator accumulator) throws IOException{
-				BitSet remainingFields = accumulator.getRemainingFields();
+    public boolean match(Indexed index,
+                         Supplier<MultiFieldDecoder> decoderProvider,
+                         EntryAccumulator accumulator) throws IOException{
+        BitSet remainingFields = accumulator.getRemainingFields();
 
-				MultiFieldDecoder decoder = decoderProvider.get();
-				for(int encodedPos =index.nextSetBit(0);
-						remainingFields.cardinality()>0 && encodedPos>=0&&encodedPos<=remainingFields.length();
-						encodedPos=index.nextSetBit(encodedPos + 1)){
-						if(!remainingFields.get(encodedPos)){
-								skipField(decoder,encodedPos,index);
-								continue;
-						}
+        MultiFieldDecoder decoder = decoderProvider.get();
+        for(int encodedPos =index.nextSetBit(0);
+            remainingFields.cardinality()>0 && encodedPos>=0&&encodedPos<=remainingFields.length();
+            encodedPos=index.nextSetBit(encodedPos + 1)){
+            int destPos = index.getPredicatePosition(encodedPos);
+            if(!remainingFields.get(encodedPos)){
+                skipField(decoder,encodedPos,index);
+                continue;
+            }
 
-						int offset = decoder.offset();
+            int offset = decoder.offset();
 
-						byte[] array = decoder.array();
-						if(offset>array.length){
+            byte[] array = decoder.array();
+            if(offset>array.length){
                 /*
                  * It may seem odd that this case can happen, but it occurs when the scan
                  * doesn't provide information about how many columns it expects back, and
@@ -62,40 +63,40 @@ public class EntryPredicateFilter {
                  * there actually IS data to add before adding. In that case, we've finished, so
                  * tell the accumulator
                  */
-								if(fieldsToReturn==null||fieldsToReturn.isEmpty())
-										accumulator.complete();
-								return true;
-						}
-						skipField(decoder, encodedPos, index);
+                if(fieldsToReturn==null||fieldsToReturn.isEmpty())
+                    accumulator.complete();
+                return true;
+            }
+            skipField(decoder, encodedPos, index);
 
 
-						int limit = decoder.offset()-1-offset;
-						if(limit<=0){
-								//we have an implicit null field
-								limit=0;
-						}else if(offset+limit>array.length){
-								limit = array.length-offset;
-						}
+            int limit = decoder.offset()-1-offset;
+            if(limit<=0){
+                //we have an implicit null field
+                limit=0;
+            }else if(offset+limit>array.length){
+                limit = array.length-offset;
+            }
 
-						Object[] buffer = valuePredicates.buffer;
-						int bufferSize = valuePredicates.size();
-						if(bufferSize>0){
-								int predicatePosition = index.getPredicatePosition(encodedPos);
-								for (int i =0; i<bufferSize; i++) {
-										if(((Predicate)buffer[i]).applies(predicatePosition) && !((Predicate)buffer[i]).match(predicatePosition,array, offset,limit)){
-												rowsFiltered++;
-												return false;
-										}
-								}
-						}
-						accumulate(index, encodedPos, accumulator, array, offset, limit);
-				}
-				return true;
-		}
+            Object[] buffer = valuePredicates.buffer;
+            int bufferSize = valuePredicates.size();
+            if(bufferSize>0){
+                int predicatePosition = index.getPredicatePosition(encodedPos);
+                for (int i =0; i<bufferSize; i++) {
+                    if(((Predicate)buffer[i]).applies(predicatePosition) && !((Predicate)buffer[i]).match(predicatePosition,array, offset,limit)){
+                        rowsFiltered++;
+                        return false;
+                    }
+                }
+            }
+            accumulate(index, encodedPos, accumulator, array, offset, limit);
+        }
+        return true;
+    }
 
 
-		public boolean match(EntryDecoder entry,EntryAccumulator accumulator) throws IOException {
-				return match(entry.getCurrentIndex(),entry, accumulator);
+    public boolean match(EntryDecoder entry,EntryAccumulator accumulator) throws IOException {
+        return match(entry.getCurrentIndex(),entry, accumulator);
     }
 
     public BitSet getCheckedColumns(){
@@ -138,8 +139,8 @@ public class EntryPredicateFilter {
         Object[] vpBuffer = valuePredicates.buffer;
         int ibuffer = valuePredicates.size();
         for (int i =0; i<ibuffer; i++) {
-        	((Predicate)vpBuffer[i]).reset();
-        	
+            ((Predicate)vpBuffer[i]).reset();
+
         }
     }
 
@@ -151,7 +152,7 @@ public class EntryPredicateFilter {
         return 0;
     }
 
-		public long getRowsFiltered(){ return rowsFiltered; }
+    public long getRowsFiltered(){ return rowsFiltered; }
 
     public byte[] toBytes() {
         //if we dont have any distinguishing information, just send over an empty byte array
@@ -183,7 +184,7 @@ public class EntryPredicateFilter {
         Pair<BitSet,Integer> fieldsToReturn = BytesUtil.fromByteArray(data,0);
         boolean returnIndex = data[fieldsToReturn.getSecond()] > 0;
         Pair<ObjectArrayList<Predicate>,Integer> predicates = Predicates.allFromBytes(data,fieldsToReturn.getSecond()+1);
-				return new EntryPredicateFilter(fieldsToReturn.getFirst(),predicates.getFirst(),returnIndex);
+        return new EntryPredicateFilter(fieldsToReturn.getFirst(),predicates.getFirst(),returnIndex);
     }
 
     public ObjectArrayList<Predicate> getValuePredicates() {
@@ -195,26 +196,26 @@ public class EntryPredicateFilter {
     }
 
     private void skipField(MultiFieldDecoder decoder, int position, Indexed index) {
-				if(index.isScalarType(position)){
-						decoder.skipLong();
-				}else if(index.isFloatType(position)){
-						decoder.skipFloat();
-				}else if(index.isDoubleType(position))
-						decoder.skipDouble();
-				else
-						decoder.skip();
-		}
+        if(index.isScalarType(position)){
+            decoder.skipLong();
+        }else if(index.isFloatType(position)){
+            decoder.skipFloat();
+        }else if(index.isDoubleType(position))
+            decoder.skipDouble();
+        else
+            decoder.skip();
+    }
 
-		private void accumulate(Indexed index, int position, EntryAccumulator accumulator, byte[] buffer, int offset, int length) {
-				if(index.isScalarType(position)){
-						accumulator.addScalar(position,buffer,offset,length);
-				}else if(index.isFloatType(position)){
-						accumulator.addFloat(position,buffer,offset,length);
-				}else if(index.isDoubleType(position))
-						accumulator.addDouble(position,buffer,offset,length);
-				else
-						accumulator.add(position,buffer,offset,length);
-		}
+    private void accumulate(Indexed index, int position, EntryAccumulator accumulator, byte[] buffer, int offset, int length) {
+        if(index.isScalarType(position)){
+            accumulator.addScalar(position,buffer,offset,length);
+        }else if(index.isFloatType(position)){
+            accumulator.addFloat(position,buffer,offset,length);
+        }else if(index.isDoubleType(position))
+            accumulator.addDouble(position,buffer,offset,length);
+        else
+            accumulator.add(position,buffer,offset,length);
+    }
 
     public boolean indexReturned() {
         return returnIndex;

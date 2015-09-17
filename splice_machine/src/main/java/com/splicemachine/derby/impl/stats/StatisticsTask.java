@@ -4,6 +4,7 @@ import com.carrotsearch.hppc.BitSet;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
 import com.splicemachine.SpliceKryoRegistry;
+import com.splicemachine.constants.FixedSpliceConstants;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.db.iapi.error.StandardException;
 import com.splicemachine.db.iapi.services.io.ArrayUtil;
@@ -253,7 +254,7 @@ public class StatisticsTask extends ZkTask{
         ArrayUtil.writeIntArray(out, keyColumnEncodingOrder);
         out.writeBoolean(keyColumnSortOrder!=null);
         if(keyColumnSortOrder!=null)
-            ArrayUtil.writeBooleanArray(out, keyColumnSortOrder);
+            ArrayUtil.writeBooleanArray(out,keyColumnSortOrder);
         ArrayUtil.writeIntArray(out, keyColumnTypes);
         ArrayUtil.writeIntArray(out,fieldLengths);
         out.writeObject(collectedKeyColumns);
@@ -265,6 +266,11 @@ public class StatisticsTask extends ZkTask{
     /*private helper methods*/
     private MeasuredRegionScanner getScanner() throws ExecutionException {
         partitionScan.setCacheBlocks(false);
+        int caching = partitionScan.getCaching();
+        if(caching<0){
+            caching =SpliceConstants.DEFAULT_CACHE_SIZE;
+            partitionScan.setCaching(caching);
+        }
         RegionScanner baseScanner;
         try {
             baseScanner = region.getCoprocessorHost().preScannerOpen(partitionScan);
@@ -274,11 +280,9 @@ public class StatisticsTask extends ZkTask{
         } catch (IOException e) {
             throw new ExecutionException(e);
         }
-        partitionScan.setCaching(SpliceConstants.DEFAULT_CACHE_SIZE);
 
         SDataLib dataLib = HTransactorFactory.getTransactor().getDataLib();
         MetricFactory metricFactory = Metrics.basicMetricFactory();
-        int caching = partitionScan.getCaching();
         if(SpliceConstants.useReadAheadScanner)
             return new ReadAheadRegionScanner(region, caching, baseScanner, metricFactory, dataLib);
         else

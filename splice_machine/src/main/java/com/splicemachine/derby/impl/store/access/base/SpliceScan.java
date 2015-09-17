@@ -155,8 +155,8 @@ public class SpliceScan implements ScanManager, ParallelScan, LazyScan {
 						boolean[] sortOrder = ((SpliceConglomerate)this.spliceConglomerate.getConglomerate()).getAscDescInfo();
 						boolean sameStartStop = isSameStartStop(startKeyValue,startSearchOperator,stopKeyValue,stopSearchOperator);						
 						scan = Scans.setupScan(startKeyValue, startSearchOperator, stopKeyValue, stopSearchOperator, qualifier,
-										sortOrder, scanColumnList, trans.getActiveStateTxn(),sameStartStop,
-										((SpliceConglomerate)this.spliceConglomerate.getConglomerate()).format_ids,
+										sortOrder, scanColumnList, trans.getActiveStateTxn(),
+								((SpliceConglomerate)this.spliceConglomerate.getConglomerate()).format_ids,
 										((SpliceConglomerate)this.spliceConglomerate.getConglomerate()).columnOrdering,
 										((SpliceConglomerate)this.spliceConglomerate.getConglomerate()).columnOrdering,
 										trans.getDataValueFactory(), "1.0", false);

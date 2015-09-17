@@ -28,12 +28,10 @@ public class EntryEncoder {
     private static final byte COMPRESSED_DATA_BIT = 0x20;
 
     private MultiFieldEncoder encoder;
-    private final KryoPool kryoPool;
 
-    private EntryEncoder(KryoPool kryoPool,BitIndex bitIndex){
+    private EntryEncoder(BitIndex bitIndex){
         this.bitIndex = bitIndex;
         this.encoder = MultiFieldEncoder.create(bitIndex.cardinality());
-        this.kryoPool = kryoPool;
     }
 
     public MultiFieldEncoder getEntryEncoder(){
@@ -143,11 +141,11 @@ public class EntryEncoder {
     public static EntryEncoder create(KryoPool kryoPool,int numCols, BitSet setCols,BitSet scalarFields,BitSet floatFields,BitSet doubleFields){
         //TODO -sf- return all full stuff as well
         BitIndex indexToUse = BitIndexing.getBestIndex(setCols, scalarFields, floatFields, doubleFields);
-        return new EntryEncoder(kryoPool,indexToUse);
+        return new EntryEncoder(indexToUse);
     }
 
     public static EntryEncoder create(KryoPool kryoPool,BitIndex newIndex){
-        return new EntryEncoder(kryoPool,newIndex);
+        return new EntryEncoder(newIndex);
     }
 
 

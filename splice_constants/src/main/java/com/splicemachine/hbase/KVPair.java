@@ -7,7 +7,7 @@ import com.splicemachine.utils.CachedByteSlice;
  * @author Scott Fines
  *         Created on: 8/8/13
  */
-public class KVPair implements Comparable<KVPair> {
+public class KVPair implements Comparable<KVPair>{
 
 
     public enum Type{
@@ -25,26 +25,25 @@ public class KVPair implements Comparable<KVPair> {
 
         private final byte typeCode;
 
-        private Type(byte typeCode) { this.typeCode = typeCode; }
-
-        public static Type decode(byte typeByte) {
-            for(Type type:values()){
-                if(type.typeCode==typeByte) return type;
-            }
-            throw new IllegalArgumentException("Incorrect typeByte "+ typeByte);
+        private Type(byte typeCode){
+            this.typeCode=typeCode;
         }
 
-        public byte asByte() {
+        public static Type decode(byte typeByte){
+            for(Type type : values()){
+                if(type.typeCode==typeByte) return type;
+            }
+            throw new IllegalArgumentException("Incorrect typeByte "+typeByte);
+        }
+
+        public byte asByte(){
             return typeCode;
         }
 
-        public boolean isForeignKeyExistenceCheck() {
+        public boolean isForeignKeyExistenceCheck(){
             return FOREIGN_KEY_CHILDREN_EXISTENCE_CHECK.equals(this) || FOREIGN_KEY_PARENT_EXISTENCE_CHECK.equals(this);
         }
 
-        public boolean isUpdateOrUpsert() {
-            return UPDATE.equals(this) || UPSERT.equals(this);
-        }
     }
 
     /*fields*/
@@ -53,43 +52,43 @@ public class KVPair implements Comparable<KVPair> {
     private final ByteSlice value;
 
     private transient int hashCode;
-    private transient boolean hashSet = false;
+    private transient boolean hashSet=false;
 
     /*Factory methods*/
-    public static KVPair delete(byte[] rowKey) {
-        return new KVPair(ByteSlice.cachedWrap(rowKey), ByteSlice.cachedEmpty(),Type.DELETE);
+    public static KVPair delete(byte[] rowKey){
+        return new KVPair(ByteSlice.cachedWrap(rowKey),ByteSlice.cachedEmpty(),Type.DELETE);
     }
 
     /*Constructors*/
-    public KVPair(byte[] rowKey, byte[] value){
+    public KVPair(byte[] rowKey,byte[] value){
         this(rowKey,value,Type.INSERT);
     }
 
-    public KVPair(byte[] rowKey, byte[] value, Type type){
+    public KVPair(byte[] rowKey,byte[] value,Type type){
         this(ByteSlice.cachedWrap(rowKey),ByteSlice.cachedWrap(value),type);
     }
 
     public KVPair(byte[] rowKeyBuffer,int rowKeyOffset,int rowKeyLength,
                   byte[] valueBuffer,int valueOffset,int valueLength){
-       this(rowKeyBuffer, rowKeyOffset, rowKeyLength, valueBuffer, valueOffset, valueLength,Type.INSERT);
+        this(rowKeyBuffer,rowKeyOffset,rowKeyLength,valueBuffer,valueOffset,valueLength,Type.INSERT);
     }
 
     public KVPair(byte[] rowKeyBuffer,int rowKeyOffset,int rowKeyLength,
-                  byte[] valueBuffer,int valueOffset,int valueLength, Type type){
-        this(ByteSlice.wrap(rowKeyBuffer, rowKeyOffset, rowKeyLength),
-                ByteSlice.wrap(valueBuffer, valueOffset, valueLength),type);
+                  byte[] valueBuffer,int valueOffset,int valueLength,Type type){
+        this(ByteSlice.wrap(rowKeyBuffer,rowKeyOffset,rowKeyLength),
+                ByteSlice.wrap(valueBuffer,valueOffset,valueLength),type);
     }
 
-    public KVPair() {
+    public KVPair(){
         this(ByteSlice.cachedEmpty(),ByteSlice.cachedEmpty(),Type.INSERT);
     }
 
-    public KVPair(ByteSlice rowKey,ByteSlice value,Type type) {
-        assert rowKey!=null: "Cannot create a KVPair without a row key!";
-        assert value!=null: "Cannot create a KVPair without a value!";
-        this.rowKey = rowKey;
-        this.value = value;
-        this.type = type;
+    public KVPair(ByteSlice rowKey,ByteSlice value,Type type){
+        assert rowKey!=null:"Cannot create a KVPair without a row key!";
+        assert value!=null:"Cannot create a KVPair without a value!";
+        this.rowKey=rowKey;
+        this.value=value;
+        this.type=type;
     }
 
     /**
@@ -97,7 +96,7 @@ public class KVPair implements Comparable<KVPair> {
      * move bytes out of any underlying byte arrays (if applicable)
      */
     public KVPair shallowClone(){
-       return new KVPair(new CachedByteSlice(rowKey),new CachedByteSlice(value),type);
+        return new KVPair(new CachedByteSlice(rowKey),new CachedByteSlice(value),type);
     }
 
     /**
@@ -105,7 +104,7 @@ public class KVPair implements Comparable<KVPair> {
      * the Heap Footprint of an individual KVPair, so use this method as a reasonable approximation
      * of how large this KVPair is on the network and the heap.
      */
-    public long getSize() {
+    public long getSize(){
         return rowKey.length()+value.length();
     }
 
@@ -113,13 +112,17 @@ public class KVPair implements Comparable<KVPair> {
      * @return a slice representing the value in this KVPair. This does not move any data,
      * so it is very cheap to call.
      */
-    public ByteSlice valueSlice(){ return value; }
+    public ByteSlice valueSlice(){
+        return value;
+    }
 
     /**
      * @return a slice representing the row key in this KVPair. Does not move any data, so
      * it's very cheap.
      */
-    public ByteSlice rowKeySlice(){ return rowKey; }
+    public ByteSlice rowKeySlice(){
+        return rowKey;
+    }
 
     /**
      * Get a <em>copy</em> of the value contained in this KVPair. Do NOT use this when
@@ -144,42 +147,56 @@ public class KVPair implements Comparable<KVPair> {
     /**
      * @return the type of this KVPair.
      */
-    public Type getType(){ return type; }
+    public Type getType(){
+        return type;
+    }
 
     /*setters*/
-    public void setValue(byte[] value){ this.value.set(value); }
-    public void setKey(byte[] key){ this.rowKey.set(key); }
-    public void setType(Type type) { this.type = type; }
+    public void setValue(byte[] value){
+        this.value.set(value);
+    }
+
+    public void setKey(byte[] key){
+        this.rowKey.set(key);
+    }
+
+    public void setKey(byte[] key,int offset,int length){
+        this.rowKey.set(key,offset,length);
+    }
+
+    public void setType(Type type){
+        this.type=type;
+    }
 
     @Override
-    public int compareTo(KVPair o) {
+    public int compareTo(KVPair o){
         if(o==null) return 1;
         return rowKey.compareTo(o.rowKey);
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof KVPair)) return false;
+    public boolean equals(Object o){
+        if(this==o) return true;
+        if(!(o instanceof KVPair)) return false;
 
-        KVPair kvPair = (KVPair) o;
+        KVPair kvPair=(KVPair)o;
 
-        return type == kvPair.type && rowKey.equals(kvPair.rowKey);
+        return type==kvPair.type && rowKey.equals(kvPair.rowKey);
     }
 
     @Override
-    public int hashCode() {
-        if(!hashSet) {
-            int result = rowKey.hashCode();
-            result = 31 * result + type.hashCode();
-            hashCode =  result;
+    public int hashCode(){
+        if(!hashSet){
+            int result=rowKey.hashCode();
+            result=31*result+type.hashCode();
+            hashCode=result;
             hashSet=true;
         }
         return hashCode;
     }
 
     @Override
-    public String toString() {
-    	return String.format("KVPair {rowKey=%s, type=%s}", rowKey, type);
+    public String toString(){
+        return String.format("KVPair {rowKey=%s, type=%s}",rowKey,type);
     }
 }
