@@ -151,42 +151,43 @@ public class HBaseRegionLoads {
     public static Map<String, RegionLoad> getCostWhenNoCachedRegionLoadsFound(String tableName){
         try{
             HConnection conn = SpliceConnectionPool.INSTANCE.getConnection();
-            HTableInterface t = conn.getTable(tableName);
+            try(HTableInterface t = conn.getTable(tableName)){
 
-            Map<byte[], Pair<String, Long>> ret = t.coprocessorService(SpliceMessage.SpliceDerbyCoprocessorService.class, HConstants.EMPTY_START_ROW,
-                    HConstants.EMPTY_END_ROW, new Batch.Call<SpliceMessage.SpliceDerbyCoprocessorService, Pair<String, Long>>() {
-                        @Override
-                        public Pair<String, Long> call(SpliceMessage.SpliceDerbyCoprocessorService inctance) throws IOException{
-                            SpliceRpcController controller = new SpliceRpcController();
-                            SpliceMessage.SpliceRegionSizeRequest message = SpliceMessage.SpliceRegionSizeRequest.newBuilder().build();
-                            BlockingRpcCallback<SpliceMessage.SpliceRegionSizeResponse> rpcCallback = new BlockingRpcCallback<>();
-                            inctance.computeRegionSize(controller, message, rpcCallback);
-                            if(controller.failed()){
-                                Throwable t =Throwables.getRootCause(controller.getThrowable());
-                                if(t instanceof IOException) throw (IOException)t;
-                                else throw new IOException(t);
+                Map<byte[], Pair<String, Long>> ret=t.coprocessorService(SpliceMessage.SpliceDerbyCoprocessorService.class,HConstants.EMPTY_START_ROW,
+                        HConstants.EMPTY_END_ROW,new Batch.Call<SpliceMessage.SpliceDerbyCoprocessorService, Pair<String, Long>>(){
+                            @Override
+                            public Pair<String, Long> call(SpliceMessage.SpliceDerbyCoprocessorService inctance) throws IOException{
+                                SpliceRpcController controller=new SpliceRpcController();
+                                SpliceMessage.SpliceRegionSizeRequest message=SpliceMessage.SpliceRegionSizeRequest.newBuilder().build();
+                                BlockingRpcCallback<SpliceMessage.SpliceRegionSizeResponse> rpcCallback=new BlockingRpcCallback<>();
+                                inctance.computeRegionSize(controller,message,rpcCallback);
+                                if(controller.failed()){
+                                    Throwable t=Throwables.getRootCause(controller.getThrowable());
+                                    if(t instanceof IOException) throw (IOException)t;
+                                    else throw new IOException(t);
+                                }
+                                SpliceMessage.SpliceRegionSizeResponse response=rpcCallback.get();
+
+                                return Pair.newPair(response.getEncodedName(),response.getSizeInBytes());
                             }
-                            SpliceMessage.SpliceRegionSizeResponse response = rpcCallback.get();
+                        });
+                Collection<Pair<String, Long>> collection=ret.values();
+                long factor=1024*1024;
+                Map<String, RegionLoad> retMap=new HashMap<>();
+                for(Pair<String, Long> info : collection){
+                    long sizeMB=info.getSecond()/factor;
+                    ClusterStatusProtos.RegionLoad.Builder rl=ClusterStatusProtos.RegionLoad.newBuilder();
+                    rl.setMemstoreSizeMB((int)(sizeMB/2));
+                    rl.setStorefileSizeMB((int)(sizeMB/2));
+                    rl.setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder()
+                            .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME).setValue(
+                                    SpliceZeroCopyByteString.copyFromUtf8(info.getFirst())).build());
+                    ClusterStatusProtos.RegionLoad load=rl.build();
+                    retMap.put(info.getFirst(),new RegionLoad(load));
+                }
 
-                            return Pair.newPair(response.getEncodedName(),response.getSizeInBytes());
-                        }
-                    });
-            Collection<Pair<String, Long>> collection = ret.values();
-            long factor = 1024 * 1024;
-            Map<String, RegionLoad> retMap = new HashMap<>();
-            for(Pair<String, Long> info : collection){
-                long sizeMB = info.getSecond() / factor;
-                ClusterStatusProtos.RegionLoad.Builder rl = ClusterStatusProtos.RegionLoad.newBuilder();
-                rl.setMemstoreSizeMB((int)(sizeMB / 2));
-                rl.setStorefileSizeMB((int) (sizeMB / 2));
-                rl.setRegionSpecifier(HBaseProtos.RegionSpecifier.newBuilder()
-                    .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME).setValue(
-                                        SpliceZeroCopyByteString.copyFromUtf8(info.getFirst())).build());
-                ClusterStatusProtos.RegionLoad load = rl.build();
-                retMap.put(info.getFirst(), new RegionLoad(load));
+                return retMap;
             }
-
-            return retMap;
         } catch (Throwable th){
             SpliceLogUtils.error(LOG,"Unable to fetch region load info",th);
         }

@@ -34,7 +34,7 @@ public class UpdateTransactionIT {
                 protected void starting(Description description) {
                     try {
                         Statement statement = classWatcher.getStatement();
-                        statement.execute("insert into "+table+" (a,b) values (1,1)");
+                        statement.execute("insert into "+table+" (a,b) values (1,1),(2,2),(2,3)");
                     }catch(Exception e){
                         throw new RuntimeException(e);
                     }
@@ -43,9 +43,6 @@ public class UpdateTransactionIT {
 
     private static TestConnection conn1;
     private static TestConnection conn2;
-
-    private long conn1Txn;
-    private long conn2Txn;
 
     @BeforeClass
     public static void setUpClass() throws Exception {
@@ -71,8 +68,6 @@ public class UpdateTransactionIT {
     public void setUp() throws Exception {
         conn1.setAutoCommit(false);
         conn2.setAutoCommit(false);
-        conn1Txn = conn1.getCurrentTransactionId();
-        conn2Txn = conn2.getCurrentTransactionId();
     }
 
     @Test
@@ -106,5 +101,95 @@ public class UpdateTransactionIT {
         selectRs = select.executeQuery();
         Assert.assertTrue("Did not find any rows!",selectRs.next());
         Assert.assertEquals("Incorrect value for a!",2,selectRs.getInt(1));
+    }
+
+    @Test
+    public void testUpdateInvisibleToConcurrentTransactionUntilCommit() throws Exception{
+        try(PreparedStatement select = conn2.prepareStatement("select a,b from "+table+" where b = ?");
+        PreparedStatement update = conn1.prepareStatement("update "+table+" set a = a+1 where b = ?")){
+            conn1.commit();
+            conn2.commit();
+
+
+            select.setInt(1,2);
+            try(ResultSet rs=select.executeQuery()){
+                Assert.assertTrue("Did not find any rows!",rs.next());
+                Assert.assertEquals("Incorrect value for a!",2,rs.getInt(1));
+            }
+
+            //issue the update
+            update.setInt(1,2);
+            int updateCount=update.executeUpdate();
+            Assert.assertEquals("Incorrect number of rows updated!",1,updateCount);
+
+            //make sure the change hasn't propagated
+            try(ResultSet rs=select.executeQuery()){
+                Assert.assertTrue("Did not find any rows!",rs.next());
+                Assert.assertEquals("Incorrect value for a!",2,rs.getInt(1));
+            }
+
+            //commit the other transaction
+            conn1.commit();
+
+            //the change should still not be propagated
+            try(ResultSet rs=select.executeQuery()){
+                Assert.assertTrue("Did not find any rows!",rs.next());
+                Assert.assertEquals("Incorrect value for a!",2,rs.getInt(1));
+            }
+
+            //move forward the other transaction
+            conn2.commit();
+
+            //now the change should be there
+            try(ResultSet rs=select.executeQuery()){
+                Assert.assertTrue("Did not find any rows!",rs.next());
+                Assert.assertEquals("Incorrect value for a!",3,rs.getInt(1));
+            }
+        }
+    }
+
+    @Test
+    public void testUpdateInvisibleToConcurrentTransactionAfterRollback() throws Exception{
+        try(PreparedStatement select = conn2.prepareStatement("select a,b from "+table+" where b = ?");
+            PreparedStatement update = conn1.prepareStatement("update "+table+" set a = a+1 where b = ?")){
+            conn1.commit();
+            conn2.commit();
+
+
+            select.setInt(1,3);
+            try(ResultSet rs=select.executeQuery()){
+                Assert.assertTrue("Did not find any rows!",rs.next());
+                Assert.assertEquals("Incorrect value for a!",2,rs.getInt(1));
+            }
+
+            //issue the update
+            update.setInt(1,3);
+            int updateCount=update.executeUpdate();
+            Assert.assertEquals("Incorrect number of rows updated!",1,updateCount);
+
+            //make sure the change hasn't propagated
+            try(ResultSet rs=select.executeQuery()){
+                Assert.assertTrue("Did not find any rows!",rs.next());
+                Assert.assertEquals("Incorrect value for a!",2,rs.getInt(1));
+            }
+
+            //rollback the update
+            conn1.rollback();
+
+            //the change should still not be propagated
+            try(ResultSet rs=select.executeQuery()){
+                Assert.assertTrue("Did not find any rows!",rs.next());
+                Assert.assertEquals("Incorrect value for a!",2,rs.getInt(1));
+            }
+
+            //move forward the other transaction
+            conn2.commit();
+
+            //still should be the other value, since we rolledback
+            try(ResultSet rs=select.executeQuery()){
+                Assert.assertTrue("Did not find any rows!",rs.next());
+                Assert.assertEquals("Incorrect value for a!",2,rs.getInt(1));
+            }
+        }
     }
 }

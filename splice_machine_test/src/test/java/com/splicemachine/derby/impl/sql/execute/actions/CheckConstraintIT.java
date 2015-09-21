@@ -151,6 +151,7 @@ public class CheckConstraintIT extends SpliceUnitTest {
             methodWatcher.executeUpdate(format("insert into %s values(10)", tableName));
             fail("Expected constraint violation");
         } catch (Exception e) {
+            System.out.println(e.getLocalizedMessage());
             assertTrue("Expected single ticks around table ref.", e.getLocalizedMessage().contains(format("'%s'", tableRef)));
         }
     }

@@ -249,9 +249,7 @@ public class DerbyFactoryImpl implements DerbyFactory<TxnMessage.TxnInfo> {
 		@Override
 		public void setMaxCardinalityBasedOnRegionLoad(String tableName,
 				LanguageConnectionContext lcc) {
-			  Collection<RegionLoad> regionLoads =
-		              HBaseRegionLoads
-		                     .getCachedRegionLoadsForTable(tableName);
+			  Collection<RegionLoad> regionLoads = HBaseRegionLoads.getCachedRegionLoadsForTable(tableName);
 		      if (regionLoads != null
 		              && regionLoads.size() > lcc.getStatementContext().getMaxCardinality()){
 		          lcc.getStatementContext().setMaxCardinality(regionLoads.size());

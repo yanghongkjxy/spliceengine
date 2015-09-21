@@ -1,5 +1,6 @@
 package com.splicemachine.pipeline.exception;
 
+import com.splicemachine.async.TableNotFoundException;
 import com.splicemachine.derby.hbase.DerbyFactory;
 import com.splicemachine.derby.hbase.ExceptionTranslator;
 import com.splicemachine.si.api.CannotCommitException;
@@ -707,6 +708,9 @@ public enum ErrorState {
     LANG_DB2_PARAMETER_NEEDS_MARKER							( "42886"),
     LANG_DB2_INVALID_DEFAULT_VALUE( "42894"),
 
+    LANG_TEMP_TABLE_NO_FOREIGN_KEYS("428C3"),
+    LANG_TEMP_TABLES_CANNOT_BE_IN_VIEWS("428C4"),
+
     LANG_NO_AGGREGATES_IN_WHERE_CLAUSE( "42903"),
     LANG_DB2_VIEW_REQUIRES_COLUMN_NAMES( "42908"),
     LANG_TABLE_REQUIRES_COLUMN_NAMES( "42909"),
@@ -1223,7 +1227,12 @@ public enum ErrorState {
 
     // EXECUTION EXCEPTIONS
     LANG_CANT_LOCK_TABLE( "X0X02.S"),
-    LANG_TABLE_NOT_FOUND_DURING_EXECUTION( "X0X05.S"),
+    LANG_TABLE_NOT_FOUND_DURING_EXECUTION( "X0X05.S"){
+        @Override
+        public boolean accepts(Throwable t){
+            return super.accepts(t) || t instanceof TableNotFoundException;
+        }
+    },
     LANG_CANT_DROP_JAR_ON_DB_CLASS_PATH_DURING_EXECUTION( "X0X07.S"),
     LANG_USING_CARDINALITY_VIOLATION_DURING_EXECUTION( "X0X10.S"),
     LANG_NO_ROWS_FROM_USING_DURING_EXECUTION( "X0X11.S"),

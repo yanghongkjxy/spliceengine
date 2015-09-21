@@ -528,4 +528,13 @@ public class JoinSelectionIT extends SpliceUnitTest  {
         }
         return cost;
     }
+
+    //DB-3865
+    @Test
+    public void testLeftJoin() throws Exception {
+        thirdRowContainsQuery(
+                format("explain select * from %s t1 left join %s t2 on t1.i=t2.i",
+                        spliceTableWatcher3, spliceTableWatcher3),
+                LO_BROADCAST_JOIN, methodWatcher);
+    }
 }
