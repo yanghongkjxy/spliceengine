@@ -287,7 +287,6 @@ public class MergeJoinStrategy extends HashableJoinStrategy{
             // No inner join columns, merge join is not feasible
             if (first >= innerToOuterJoinColumnMap.length)
                 return false;
-
             for (int i = 0; i < first; ++i) {
                 if (!innerColumns.get(i)) {
                     return false;

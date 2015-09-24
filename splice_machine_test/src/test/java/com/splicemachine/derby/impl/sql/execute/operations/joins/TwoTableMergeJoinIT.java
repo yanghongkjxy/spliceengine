@@ -205,13 +205,22 @@ public class TwoTableMergeJoinIT{
     }
 
     @Test
-    @Ignore("Ignore until we can pass the outer predicates to the join strategy as well as inner preds")
     public void testMatchingFirstPredicateAndEqualsOuterFirstColumn() throws Exception{
         /*
          * predicates: a.c2 = b.c3 and a.c1 = 1
          */
         String sql = "select * from "+a+" a,"+b+" b--SPLICE-PROPERTIES joinStrategy="+STRATEGY_REGEX+"\n"
                 +" where a.c1 = 1 and a.c2 = b.c3";
+        assertCorrect(sql);
+    }
+
+    @Test
+    public void testMatchingFirstPredicateAndGreaterEqualsOuterFirstColumn() throws Exception{
+        /*
+         * predicates: a.c2 = b.c3 and a.c1 = 1
+         */
+        String sql = "select * from "+a+" a,"+b+" b--SPLICE-PROPERTIES joinStrategy="+STRATEGY_REGEX+"\n"
+                +" where a.c1 >= 1 and a.c2 = b.c3";
         assertCorrect(sql);
     }
 
