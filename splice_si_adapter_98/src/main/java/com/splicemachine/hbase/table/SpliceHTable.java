@@ -135,8 +135,7 @@ public class SpliceHTable extends HTable {
 										 * pulled it from the cache, we first invalidate that cache
 										 */
                     wait(context.attemptCount); //wait for a bit to see if it clears up
-                    connection.clearRegionCache(tableName);
-                    regionCache.invalidate(tableNameBytes);
+                    regionCache.invalidate(tableNameBytes); // implicitly calls connection.clearRegionCache too
 
                     context.errors.add(ee);
                     Pair<byte[], byte[]> resubmitKeys = getContainingRegion(startKey, context.attemptCount + 1);
@@ -194,8 +193,7 @@ public class SpliceHTable extends HTable {
 										 */
                     ExecContext context = completedFuture.getKey();
                     wait(context.attemptCount); //wait for a bit to see if it clears up
-                    regionCache.invalidate(tableNameBytes);
-                    connection.clearRegionCache(tableName);
+                    regionCache.invalidate(tableNameBytes); // implicitly calls connection.clearRegionCache too
 
                     Pair<byte[], byte[]> failedKeys = context.keyBoundary;
                     context.errors.add(wrongRegionCause);
@@ -279,8 +277,7 @@ public class SpliceHTable extends HTable {
             if (LOG.isTraceEnabled())
                 SpliceLogUtils.error(LOG, "Keys to use miss");
             wait(attemptCount);
-            connection.clearRegionCache(tableName);
-            regionCache.invalidate(tableNameBytes);
+            regionCache.invalidate(tableNameBytes); // implicitly calls connection.clearRegionCache too
             return getKeys(startKey, endKey, attemptCount + 1);
         }
         //make sure all our regions are adjacent to the region below us
@@ -297,8 +294,7 @@ public class SpliceHTable extends HTable {
         if (!Arrays.equals(start.getFirst(), startKey)) {
             SpliceLogUtils.error(LOG, "First Key Miss, invalidate");
             wait(attemptCount);
-            connection.clearRegionCache(tableName);
-            regionCache.invalidate(tableNameBytes);
+            regionCache.invalidate(tableNameBytes); // implicitly calls connection.clearRegionCache too
             return getKeys(startKey, endKey, attemptCount + 1);
         }
         for (int i = 1; i < keysToUse.size(); i++) {
@@ -309,8 +305,7 @@ public class SpliceHTable extends HTable {
                     SpliceLogUtils.error(LOG, "Keys are not contiguous miss, invalidate");
                 wait(attemptCount);
                 //we are missing some data, so recursively try again
-                connection.clearRegionCache(tableName);
-                regionCache.invalidate(tableNameBytes);
+                regionCache.invalidate(tableNameBytes); // implicitly calls connection.clearRegionCache too
                 return getKeys(startKey, endKey, attemptCount + 1);
             }
         }
@@ -321,8 +316,7 @@ public class SpliceHTable extends HTable {
             if (LOG.isTraceEnabled())
                 SpliceLogUtils.error(LOG, "Last Key Miss, invalidate");
             wait(attemptCount);
-            connection.clearRegionCache(tableName);
-            regionCache.invalidate(tableNameBytes);
+            regionCache.invalidate(tableNameBytes); // implicitly calls connection.clearRegionCache too
             return getKeys(startKey, endKey, attemptCount + 1);
         }
 
@@ -384,16 +378,22 @@ public class SpliceHTable extends HTable {
         if (exception instanceof RemoteWithExtrasException) {
             // deal with RemoteWithExtras exception out of the protocol buffers.
             exception = ((RemoteWithExtrasException) exception).unwrapRemoteException();
-//            exception = Throwables.getRootCause(exception);
         }
         if (exception instanceof IncorrectRegionException ||
         	exception instanceof NotServingRegionException ||
         	exception instanceof ConnectException ||
         	isFailedServerException(exception)) {
+        // DB-3873: also need to catch ConnectException, because sometimes
+        // a region server has died but we still have cached region info
+        // pointing to that server. Unless we catch here, we end up
+        // with a runtime exception on the client and an unstable cluster.
+        // See RegionServerCallable.throwable() in HBase for similar pattern
+        // of updating caches when certain exceptions are encountered.
             return exception;
         }
+        // Consider also dealing with RegionServerStoppedException explicitly
         Throwable cause = exception.getCause();
-        if (cause != null) {
+        if (cause != null) { 
             if (LOG.isDebugEnabled())
                 SpliceLogUtils.debug(LOG, "The cause of exception %s is %s", exception, cause);
             if (cause != exception && ! cause.getMessage().equals(exception.getMessage())) {
