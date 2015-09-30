@@ -3,7 +3,6 @@ package com.splicemachine.pipeline.impl;
 import com.google.protobuf.SpliceZeroCopyByteString;
 import com.splicemachine.coprocessor.SpliceMessage;
 import com.splicemachine.hbase.NoRetryCoprocessorRpcChannel;
-import com.splicemachine.hbase.regioninfocache.HBaseRegionCache;
 import com.splicemachine.hbase.table.IncorrectRegionException;
 import com.splicemachine.hbase.table.SpliceRpcController;
 import com.splicemachine.pipeline.exception.Exceptions;
@@ -28,16 +27,16 @@ import java.net.ConnectException;
 public class BulkWriteChannelInvoker {
 	private static Logger LOG = Logger.getLogger(BulkWriteChannelInvoker.class);
     private final HConnection connection;
-    private final byte[] tableNameBytes;
+    private final byte[] tableName;
 
-    public BulkWriteChannelInvoker(HConnection connection, byte[] tableNameBytes) {
+    public BulkWriteChannelInvoker(HConnection connection, byte[] tableName) {
         this.connection = connection;
-        this.tableNameBytes = tableNameBytes;
+        this.tableName = tableName;
     }
 
     public BulkWritesResult invoke(BulkWrites write) throws IOException {
         NoRetryCoprocessorRpcChannel channel
-                = new NoRetryCoprocessorRpcChannel(connection, TableName.valueOf(tableNameBytes), write.getRegionKey());
+                = new NoRetryCoprocessorRpcChannel(connection, TableName.valueOf(tableName), write.getRegionKey());
 
         boolean cacheCheck = false;
         try {
