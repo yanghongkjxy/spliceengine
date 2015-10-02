@@ -96,7 +96,7 @@ public class StatisticsAdmin extends BaseAdminProcedures {
             columnName = columnName.toUpperCase();
         EmbedConnection conn = (EmbedConnection) SpliceAdmin.getDefaultConn();
         try {
-            TableDescriptor td = verifyTableExists(conn, schema, table);
+            TableDescriptor td = AdminUtilities.verifyTableExists(conn,schema,table);
             //verify that that column exists
             ColumnDescriptorList columnDescriptorList = td.getColumnDescriptorList();
             for (ColumnDescriptor descriptor : columnDescriptorList) {
@@ -136,7 +136,7 @@ public class StatisticsAdmin extends BaseAdminProcedures {
 
         EmbedConnection conn = (EmbedConnection) SpliceAdmin.getDefaultConn();
         try {
-            TableDescriptor td = verifyTableExists(conn, schema, table);
+            TableDescriptor td = AdminUtilities.verifyTableExists(conn,schema,table);
             //verify that that column exists
             ColumnDescriptorList columnDescriptorList = td.getColumnDescriptorList();
             for (ColumnDescriptor descriptor : columnDescriptorList) {
@@ -186,7 +186,7 @@ public class StatisticsAdmin extends BaseAdminProcedures {
             LanguageConnectionContext lcc = conn.getLanguageConnection();
             DataDictionary dd = lcc.getDataDictionary();
 
-            SchemaDescriptor sd = getSchemaDescriptor(schema, lcc, dd);
+            SchemaDescriptor sd = AdminUtilities.getSchemaDescriptor(schema,lcc,dd);
             //get a list of all the TableDescriptors in the schema
             List<TableDescriptor> tds = getAllTableDescriptors(sd, conn);
             if (tds.isEmpty()) {
@@ -194,7 +194,7 @@ public class StatisticsAdmin extends BaseAdminProcedures {
                 return;
             }
             authorize(tds);
-            ExecRow templateOutputRow = buildOutputTemplateRow();
+            ExecRow templateOutputRow = AdminUtilities.buildOutputTemplateRow(COLLECTED_STATS_OUTPUT_COLUMNS);
             List<StatsJob> jobs = new ArrayList<>(tds.size());
             TransactionController transactionExecute = lcc.getTransactionExecute();
             transactionExecute.elevate("statistics");
@@ -220,7 +220,7 @@ public class StatisticsAdmin extends BaseAdminProcedures {
                 LOG.trace(String.format("Took %.3f micros to complete %d collections", timeMicros, jobs.size()));
             }
 
-            IteratorNoPutResultSet results = wrapResults(conn, rows);
+            IteratorNoPutResultSet results = AdminUtilities.wrapResults(conn, rows,COLLECTED_STATS_OUTPUT_COLUMNS);
 
             outputResults[0] = new EmbedResultSet40(conn, results, false, null, true);
 
@@ -277,7 +277,7 @@ public class StatisticsAdmin extends BaseAdminProcedures {
             authorize(tableDescriptorList);
             List<StatsJob> collectionFutures = new LinkedList<>();
 
-            ExecRow outputRow = buildOutputTemplateRow();
+            ExecRow outputRow = AdminUtilities.buildOutputTemplateRow(COLLECTED_STATS_OUTPUT_COLUMNS);
             TransactionController transactionExecute = conn.getLanguageConnection().getTransactionExecute();
             transactionExecute.elevate("statistics");
             TxnView txn = ((SpliceTransactionManager) transactionExecute).getRawTransaction().getActiveStateTxn();
@@ -288,7 +288,7 @@ public class StatisticsAdmin extends BaseAdminProcedures {
                 rows.add(row.completeJob());
             }
 
-            IteratorNoPutResultSet resultsToWrap = wrapResults(conn, rows);
+            IteratorNoPutResultSet resultsToWrap = AdminUtilities.wrapResults(conn,rows,COLLECTED_STATS_OUTPUT_COLUMNS);
 
             outputResults[0] = new EmbedResultSet40(conn, resultsToWrap, false, null, true);
 
@@ -317,7 +317,7 @@ public class StatisticsAdmin extends BaseAdminProcedures {
             LanguageConnectionContext lcc = conn.getLanguageConnection();
             DataDictionary dd = lcc.getDataDictionary();
 
-            SchemaDescriptor sd = getSchemaDescriptor(schema, lcc, dd);
+            SchemaDescriptor sd = AdminUtilities.getSchemaDescriptor(schema,lcc,dd);
             List<TableDescriptor> tds = getAllTableDescriptors(sd, conn);
             authorize(tds);
 
@@ -483,24 +483,8 @@ public class StatisticsAdmin extends BaseAdminProcedures {
     }
 
 
-    private static IteratorNoPutResultSet wrapResults(EmbedConnection conn, List<ExecRow> rows) throws
-        StandardException {
-        Activation lastActivation = conn.getLanguageConnection().getLastActivation();
-        IteratorNoPutResultSet resultsToWrap = new IteratorNoPutResultSet(rows, COLLECTED_STATS_OUTPUT_COLUMNS,
-                                                                          lastActivation);
-        resultsToWrap.openCore();
-        return resultsToWrap;
-    }
 
-    private static ExecRow buildOutputTemplateRow() throws StandardException {
-        ExecRow outputRow = new ValueRow(COLLECTED_STATS_OUTPUT_COLUMNS.length);
-        DataValueDescriptor[] dvds = new DataValueDescriptor[COLLECTED_STATS_OUTPUT_COLUMNS.length];
-        for (int i = 0; i < dvds.length; i++) {
-            dvds[i] = COLLECTED_STATS_OUTPUT_COLUMNS[i].getType().getNull();
-        }
-        outputRow.setRowArray(dvds);
-        return outputRow;
-    }
+
 
     private static List<TableDescriptor> getAllTableDescriptors(SchemaDescriptor sd, EmbedConnection conn) throws
         SQLException {
@@ -706,26 +690,6 @@ public class StatisticsAdmin extends BaseAdminProcedures {
         return new StatisticsJob(regionBounds, table, baseTask, baseTxn);
     }
 
-    private static TableDescriptor verifyTableExists(Connection conn, String schema, String table) throws
-        SQLException, StandardException {
-        LanguageConnectionContext lcc = ((EmbedConnection) conn).getLanguageConnection();
-        DataDictionary dd = lcc.getDataDictionary();
-        SchemaDescriptor schemaDescriptor = getSchemaDescriptor(schema, lcc, dd);
-        TableDescriptor tableDescriptor = dd.getTableDescriptor(table, schemaDescriptor, lcc.getTransactionExecute());
-        if (tableDescriptor == null)
-            throw ErrorState.LANG_TABLE_NOT_FOUND.newException(schema + "." + table);
-
-        return tableDescriptor;
-    }
-
-    private static SchemaDescriptor getSchemaDescriptor(String schema,
-                                                        LanguageConnectionContext lcc,
-                                                        DataDictionary dd) throws StandardException {
-        SchemaDescriptor schemaDescriptor = dd.getSchemaDescriptor(schema, lcc.getTransactionExecute(), true);
-        if (schemaDescriptor == null)
-            throw ErrorState.LANG_TABLE_NOT_FOUND.newException(schema);
-        return schemaDescriptor;
-    }
 
     private static final Comparator<ColumnDescriptor> order = new Comparator<ColumnDescriptor>() {
         @Override

@@ -1,49 +1,68 @@
 package com.splicemachine.derby.utils;
 
 import com.carrotsearch.hppc.LongOpenHashSet;
+import com.google.common.io.Closeables;
 import com.splicemachine.constants.SpliceConstants;
-import com.splicemachine.derby.impl.sql.execute.actions.ActiveTransactionReader;
-import com.splicemachine.derby.impl.store.access.SpliceTransactionManager;
-import com.splicemachine.si.api.TxnView;
-import com.splicemachine.stream.Stream;
-import com.splicemachine.stream.StreamException;
-import com.splicemachine.pipeline.exception.ErrorState;
-import com.splicemachine.pipeline.exception.Exceptions;
-import com.splicemachine.utils.SpliceUtilities;
-
 import com.splicemachine.db.iapi.error.PublicAPI;
 import com.splicemachine.db.iapi.error.StandardException;
+import com.splicemachine.db.iapi.sql.dictionary.ConglomerateDescriptor;
+import com.splicemachine.db.iapi.sql.dictionary.ConglomerateDescriptorList;
+import com.splicemachine.db.iapi.sql.dictionary.TableDescriptor;
 import com.splicemachine.db.iapi.store.access.TransactionController;
 import com.splicemachine.db.impl.jdbc.EmbedConnection;
+import com.splicemachine.derby.hbase.SpliceDriver;
+import com.splicemachine.derby.impl.job.coprocessor.CoprocessorJob;
+import com.splicemachine.derby.impl.sql.execute.actions.ActiveTransactionReader;
+import com.splicemachine.derby.impl.store.access.SpliceAccessManager;
+import com.splicemachine.derby.impl.store.access.SpliceTransactionManager;
+import com.splicemachine.derby.stats.TaskStats;
+import com.splicemachine.job.JobFuture;
+import com.splicemachine.job.JobScheduler;
+import com.splicemachine.job.JobStats;
+import com.splicemachine.pipeline.exception.ErrorState;
+import com.splicemachine.pipeline.exception.Exceptions;
+import com.splicemachine.si.api.TxnView;
+import com.splicemachine.si.impl.TransactionLifecycle;
+import com.splicemachine.si.impl.TxnLifecycleObserver;
+import com.splicemachine.stream.Stream;
+import com.splicemachine.stream.StreamException;
+import com.splicemachine.utils.SpliceUtilities;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.log4j.Logger;
+
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Utility for Vacuuming Splice.
  *
  * @author Scott Fines
- * Date: 3/19/14
+ *         Date: 3/19/14
  */
-public class Vacuum {
+public class Vacuum{
     private static final Logger LOG=Logger.getLogger(Vacuum.class);
 
-		private final Connection connection;
-		private final HBaseAdmin admin;
+    private final Connection connection;
+    private final HBaseAdmin admin;
 
-		public Vacuum(Connection connection) throws SQLException {
-				this.connection = connection;
-				try {
-						this.admin = SpliceUtilities.getAdmin();
-				} catch (Exception e) {
-						throw PublicAPI.wrapStandardException(Exceptions.parseException(e));
-				} 
-		}
+    public Vacuum(Connection connection) throws SQLException{
+        this.connection=connection;
+        try{
+            this.admin=SpliceUtilities.getAdmin();
+        }catch(Exception e){
+            throw PublicAPI.wrapStandardException(Exceptions.parseException(e));
+        }
+    }
 
     public List<VacuumStats> vacuumTable(String schemaName,String tableName) throws StandardException{
         if(schemaName==null)
@@ -55,7 +74,8 @@ public class Vacuum {
 
         TableDescriptor td = AdminUtilities.verifyTableExists(connection,schemaName,tableName);
 
-        long mat = TransactionAdmin.minimumActiveTimestamp(true);
+        TxnLifecycleObserver tlo =TransactionLifecycle.getLifecycleObserver();
+        long mat = tlo.minimumActiveTransaction().getBeginTimestamp();
 
         ConglomerateDescriptorList congloms=td.getConglomerateDescriptorList();
         List<JobFuture> jobFutures = new ArrayList<>(congloms.size());
@@ -162,56 +182,59 @@ public class Vacuum {
 										 * This is either TEMP, TRANSACTIONS, SEQUENCES, or something
 										 * that's not managed by splice. Ignore it
 										 */
-								}
-						}
-				} catch (IOException e) {
-						throw PublicAPI.wrapStandardException(Exceptions.parseException(e));
-				}
-		}
+                }
+            }
+        }catch(IOException e){
+            throw PublicAPI.wrapStandardException(Exceptions.parseException(e));
+        }
+    }
 
-		/*
-		 * We have to make sure that all prior transactions complete. Once that happens, we know that the worldview
-		 * of all outstanding transactions is the same as ours--so if a conglomerate doesn't exist in sysconglomerates,
-		 * then it's not useful anymore.
-		 */
-		private void ensurePriorTransactionsComplete() throws SQLException {
-				EmbedConnection embedConnection = (EmbedConnection)connection;
+    /* ****************************************************************************************************************/
+    /*private helper methods*/
 
-        TransactionController transactionExecute = embedConnection.getLanguageConnection().getTransactionExecute();
-        TxnView activeStateTxn = ((SpliceTransactionManager) transactionExecute).getActiveStateTxn();
+    private void ensurePriorTransactionsComplete() throws SQLException{
+        /*
+         * We have to make sure that all prior transactions complete. Once that happens, we know that the worldview
+         * of all outstanding transactions is the same as ours--so if a conglomerate doesn't exist in sysconglomerates,
+         * then it's not useful anymore.
+         */
+        EmbedConnection embedConnection=(EmbedConnection)connection;
+
+        TransactionController transactionExecute=embedConnection.getLanguageConnection().getTransactionExecute();
+        TxnView activeStateTxn=((SpliceTransactionManager)transactionExecute).getActiveStateTxn();
 
 
-				//wait for all transactions prior to us to complete, but only wait for so long
-				try{
-						long activeTxn = waitForConcurrentTransactions(activeStateTxn);
-						if(activeTxn>0){
-								//we can't do anything, blow up
-								throw PublicAPI.wrapStandardException(
-												ErrorState.DDL_ACTIVE_TRANSACTIONS.newException("VACUUM", activeTxn));
-						}
+        //wait for all transactions prior to us to complete, but only wait for so long
+        try{
+            long activeTxn=waitForConcurrentTransactions(activeStateTxn);
+            if(activeTxn>0){
+                //we can't do anything, blow up
+                throw PublicAPI.wrapStandardException(
+                        ErrorState.DDL_ACTIVE_TRANSACTIONS.newException("VACUUM",activeTxn));
+            }
 
-				}catch(StandardException se){
-						throw PublicAPI.wrapStandardException(se);
-				}
-		}
+        }catch(StandardException se){
+            throw PublicAPI.wrapStandardException(se);
+        }
+    }
 
-    private long waitForConcurrentTransactions(TxnView txn) throws StandardException {
-        ActiveTransactionReader reader = new ActiveTransactionReader(0l,txn.getTxnId(),null);
-        long timeRemaining = SpliceConstants.ddlDrainingMaximumWait;
-        long pollPeriod = SpliceConstants.pause;
-        int tryNum = 1;
+    private long waitForConcurrentTransactions(TxnView txn) throws StandardException{
+        ActiveTransactionReader reader=new ActiveTransactionReader(0l,txn.getTxnId(),null);
+        long timeRemaining=SpliceConstants.ddlDrainingMaximumWait;
+        long pollPeriod=SpliceConstants.pause;
+        int tryNum=1;
         long activeTxn;
 
-        try {
-            do {
-                activeTxn = -1l;
+        try{
+            do{
+                activeTxn=-1l;
 
                 TxnView next;
-                try (Stream<TxnView> activeTransactions = reader.getActiveTransactions(10)){
-                    while((next = activeTransactions.next())!=null){
-                        long txnId = next.getTxnId();
+                try(Stream<TxnView> activeTransactions=reader.getActiveTransactions(10)){
+                    while((next=activeTransactions.next())!=null){
+                        long txnId=next.getTxnId();
                         if(txnId!=txn.getTxnId()){
-                            activeTxn = txnId;
+                            activeTxn=txnId;
                             break;
                         }
                     }
@@ -219,28 +242,81 @@ public class Vacuum {
 
                 if(activeTxn<0) return activeTxn; //no active transactions
 
-                long time = System.currentTimeMillis();
-					
-					try {
-						Thread.sleep(Math.min(tryNum*pollPeriod,timeRemaining));
-					} catch (InterruptedException e) {
-						throw new IOException(e);
-					}
-					timeRemaining-=(System.currentTimeMillis()-time);
-					tryNum++;
-				} while (timeRemaining>0);
-			} catch (IOException | StreamException e) {
-				throw Exceptions.parseException(e);
-			}
+                long time=System.currentTimeMillis();
+
+                try{
+                    Thread.sleep(Math.min(tryNum*pollPeriod,timeRemaining));
+                }catch(InterruptedException e){
+                    throw new IOException(e);
+                }
+                timeRemaining-=(System.currentTimeMillis()-time);
+                tryNum++;
+            }while(timeRemaining>0);
+        }catch(IOException|StreamException e){
+            throw Exceptions.parseException(e);
+        }
 
         return activeTxn;
-		} // end waitForConcurrentTransactions
+    } // end waitForConcurrentTransactions
 
-		public void shutdown() throws SQLException {
-				try {
-						admin.close();
-				} catch (IOException e) {
-						throw PublicAPI.wrapStandardException(Exceptions.parseException(e));
-				}
-		}
+    public void shutdown() throws SQLException{
+        try{
+            admin.close();
+        }catch(IOException e){
+            throw PublicAPI.wrapStandardException(Exceptions.parseException(e));
+        }
+    }
+
+    public static class VacuumStats{
+        private long conglomerateId;
+        private long collectionTimeNanos;
+        private long rowsRead;
+        private long rowsWritten;
+        private int taskCount;
+
+        public VacuumStats(long conglomerateId,long collectionTimeNanos,long rowsRead,long rowsWritten){
+            this.conglomerateId = conglomerateId;
+            this.collectionTimeNanos=collectionTimeNanos;
+            this.rowsRead=rowsRead;
+            this.rowsWritten=rowsWritten;
+        }
+
+        public long getConglomerateId(){ return conglomerateId;}
+
+        public double getCollectionTime(TimeUnit unit){
+            double time = collectionTimeNanos;
+            switch(unit){
+                case DAYS:
+                    time/=24d;
+                case HOURS:
+                    time/=60d;
+                case MINUTES:
+                    time/=60d;
+                case SECONDS:
+                    time/=1000d;
+                case MILLISECONDS:
+                    time/=1000d;
+                case MICROSECONDS:
+                    time=time/1000d;
+                default:
+                    return time;
+            }
+        }
+
+        public long getRowsProcessed(){
+            return rowsRead;
+        }
+
+        public long getRowsVacuumed(){
+            return rowsWritten;
+        }
+
+        public long getRowsDeleted(){
+            return rowsRead-rowsWritten;
+        }
+
+        public int getTaskCount(){
+            return taskCount;
+        }
+    }
 }

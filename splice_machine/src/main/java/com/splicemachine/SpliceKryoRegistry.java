@@ -10,6 +10,7 @@ import com.splicemachine.db.catalog.types.*;
 import com.splicemachine.db.iapi.sql.dictionary.TriggerDescriptor;
 import com.splicemachine.db.shared.common.udt.UDTBase;
 import com.splicemachine.derby.ddl.*;
+import com.splicemachine.derby.hbase.VacuumTask;
 import com.splicemachine.derby.impl.job.coprocessor.TaskFutureContext;
 import com.splicemachine.derby.impl.job.fk.FkTask;
 import com.splicemachine.derby.impl.sql.catalog.Splice_DD_Version;
@@ -871,5 +872,6 @@ public class SpliceKryoRegistry implements KryoPool.KryoRegistry{
         instance.register(UDTAliasInfo.class, EXTERNALIZABLE_SERIALIZER, 269);
         instance.register(UDTBase.class, EXTERNALIZABLE_SERIALIZER, 270);
         instance.register(LazyDate.class,EXTERNALIZABLE_SERIALIZER,271);
+        instance.register(VacuumTask.class, EXTERNALIZABLE_SERIALIZER, 272);
     }
 }

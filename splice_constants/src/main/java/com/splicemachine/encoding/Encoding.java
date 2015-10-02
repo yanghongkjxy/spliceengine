@@ -1,8 +1,10 @@
 package com.splicemachine.encoding;
 
 import com.splicemachine.constants.bytes.BytesUtil;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 
 /**
  * Utilities for encoding various values using a sort-order preserving encoding
@@ -724,11 +726,10 @@ public final class Encoding {
     public static int encodedNullFloatLength() {
         return DoubleEncoding.NULL_FLOAT_BYTES_LENGTH;
     }
-    
+
 
     public static void main(String... args) throws Exception{
-				byte b = (byte)0x01;
-				System.out.println(BytesUtil.toHex(new byte[]{(byte)(b^0xff)}));
+        System.out.println(BytesUtil.toHex(Bytes.toBytes(16385l)));
     }
 
 		public static boolean isNullDOuble(byte[] data, int offset, int length) {

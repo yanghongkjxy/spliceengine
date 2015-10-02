@@ -124,7 +124,7 @@ public class MergingReader<Data>{
         int batchSize;
         boolean rowProcessed=false;
         do{
-            hasNextRow=fetchNextBatch();
+            hasNextRow=fetchNextBatch(keyValues);
             batchSize=keyValues.size();
             if(batchSize<=0){
                 break;
@@ -222,11 +222,34 @@ public class MergingReader<Data>{
             return pCode;
     }
 
-    private void resetStateForNextRow(SIFilter<Data> filter){
+    protected boolean rowChanged(SIFilter<Data> filter,List<Data> kvs,boolean priorProcessed){
+        /*
+         * We have read a new row. We have a few scenarios:
+         *
+         * 1. The previous row was filtered out => just process this
+         * 2. The previous row was returned already => process this
+         * 3. The previous row was not yet done => push into priorKeyValues, then RETURN
+         */
+        if(priorProcessed && !shouldSkipBatch() &&!accumulator.getEntryAccumulator().checkFilterAfter()){
+            /*
+             * shouldSkip is indicated when we have either filtered out the row, or the row
+             * was returned due to the accumulator being finished. Therefore, we can treat this
+             * as understanding cases 1 and 2. If shouldSkipBatch()==true, then we should process,
+             * otherwise, return the row that we already have
+             */
+            pushIntoPriorKeyValues(kvs);
+            return true;
+        }else resetStateForNextRow(filter);
+        return false;
+    }
+
+    protected void resetStateForNextRow(SIFilter<Data> filter){
         /*
          * This is the start of the next read. By definition, this means that
          * we are at the start of a new row (i.e. we don't have any data to parse. Thus,
          * do all of our resets here, then process the next row.
+         *
+         * Classes which extend this should be sure to call the super method as well
          */
         accumulator.reset(); //reset the accumulator
         rowKeyFilter.reset();
@@ -240,21 +263,21 @@ public class MergingReader<Data>{
     }
 
 
-    private boolean fetchNextBatch() throws IOException{
+    protected boolean fetchNextBatch(List<Data> data) throws IOException{
         /*
          * We want to get the next batch of records. Sometimes, we saw the next batch while
          * still processing the last batch. When that happens, we will have stashed the results away
          * in priorKeyValues, so we want to read from that instead of from the region scanner.
          */
-        keyValues.clear();
+        data.clear();
         if(priorKeyValues!=null && priorKeyValues.size()>0){
             //fetch the prior batch out of cold storage
-            keyValues.addAll(priorKeyValues);
-            setRowKey(keyValues.get(0));
+            data.addAll(priorKeyValues);
+            setRowKey(data.get(0));
             priorKeyValues.clear();
             return true;
         }else{
-            return dataLib.regionScannerNext(regionScanner,keyValues);
+            return dataLib.regionScannerNext(regionScanner,data);
         }
     }
 

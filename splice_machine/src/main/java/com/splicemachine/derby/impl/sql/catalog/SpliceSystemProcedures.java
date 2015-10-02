@@ -653,6 +653,15 @@ public class SpliceSystemProcedures extends DefaultSystemProcedureGenerator {
                             .build();
                     procedures.add(vacuum);
 
+                    Procedure vacuumTable = Procedure.newBuilder().name("VACUUM_TABLE")
+                            .varchar("schemaName",128)
+                            .varchar("tableName",128)
+                            .numOutputParams(0)
+                            .numResultSets(1)
+                            .ownerClass(SpliceAdmin.class.getCanonicalName())
+                            .build();
+                    procedures.add(vacuumTable);
+
                     /*
                      * Procedure to print out a query execution plan for the specified statement
                      */

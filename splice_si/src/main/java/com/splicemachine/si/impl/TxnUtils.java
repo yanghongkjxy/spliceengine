@@ -22,4 +22,8 @@ public class TxnUtils {
 		public static long txnIdFromRowKey(byte[] buffer, int rowOffset, int rowLength) {
 				return Bytes.toLong(buffer, rowOffset + 1, rowLength - 1);
 		}
+
+	public static void main(String...args) throws Exception{
+		System.out.println(BytesUtil.toHex(getRowKey(16385l)));
+	}
 }

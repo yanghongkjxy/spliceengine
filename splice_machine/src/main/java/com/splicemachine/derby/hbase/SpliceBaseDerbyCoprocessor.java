@@ -2,6 +2,8 @@ package com.splicemachine.derby.hbase;
 
 import com.splicemachine.constants.SIConstants;
 import com.splicemachine.si.impl.ActionFactory;
+import com.splicemachine.derby.utils.TransactionAdmin;
+import com.splicemachine.pipeline.api.Service;
 import com.splicemachine.si.impl.TransactionalRegions;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -35,6 +37,19 @@ public class SpliceBaseDerbyCoprocessor {
 
         /* We used to only invoke start here if the table was not a hbase meta table, but this method only
          * has an effect once per JVM so it doesn't matter what table this particular coprocessor instance if for. */
+        SpliceDriver.driver().registerService(new Service(){
+            @Override
+            public boolean start(){
+                TransactionAdmin.initializeTransactionReader();
+                return true;
+            }
+
+            @Override
+            public boolean shutdown(){
+                TransactionAdmin.shutdownTransactionReader();
+                return true;
+            }
+        });
         SpliceDriver.driver().start(regionServerServices);
     }
 
