@@ -809,5 +809,4 @@ public class HdfsImportIT extends SpliceUnitTest {
         testImport(spliceSchemaWatcher.schemaName, TABLE_19, getResourceDirectory() + "test_data/salary_check_constraint.csv", "EMPNO,SALARY,BONUS,TAX");
     }
 
-
 }
