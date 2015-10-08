@@ -2,6 +2,7 @@ package com.splicemachine.si.impl;
 
 import com.splicemachine.si.api.RowAccumulator;
 import com.splicemachine.si.api.SIFilter;
+import com.splicemachine.si.api.TxnSupplier;
 import org.apache.hadoop.hbase.filter.Filter;
 
 import java.io.IOException;
@@ -40,15 +41,14 @@ public class PackedTxnFilter<Data> implements TxnFilter<Data>, SIFilter<Data>{
                     default:
                         throw new RuntimeException("unknown return code");
                 }
-            case TOMBSTONE:
-            case ANTI_TOMBSTONE:
-            case FOREIGN_KEY_COUNTER:
-            case OTHER:
-                return returnCode; // These are always skip...
-
             default:
-                throw new RuntimeException("unknown key value type");
+                return returnCode;
         }
+    }
+
+    @Override
+    public TxnFilter<Data> unwrapFilter(){
+        return simpleFilter;
     }
 
     protected Filter.ReturnCode skipRow(){
@@ -103,6 +103,16 @@ public class PackedTxnFilter<Data> implements TxnFilter<Data>, SIFilter<Data>{
     @Override
     public DataStore getDataStore(){
         return simpleFilter.getDataStore();
+    }
+
+    @Override
+    public boolean isPacked(){
+        return true;
+    }
+
+    @Override
+    public TxnSupplier getTxnSupplier(){
+        return simpleFilter.getTxnSupplier();
     }
 
 }

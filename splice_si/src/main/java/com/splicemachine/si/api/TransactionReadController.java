@@ -3,7 +3,7 @@ package com.splicemachine.si.api;
 import com.splicemachine.si.impl.DDLFilter;
 import com.splicemachine.si.impl.TxnFilter;
 import com.splicemachine.storage.EntryPredicateFilter;
-import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.OperationWithAttributes;import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.filter.Filter;
 import java.io.IOException;
 
@@ -15,11 +15,7 @@ import java.io.IOException;
  */
 public interface TransactionReadController<Data,Get,Scan> {
 
-		/**
-		 * Look at the operation and report back whether it has been flagged for SI treatment.
-		 */
-		boolean isFilterNeededGet(Get get);
-		boolean isFilterNeededScan(Scan scan);
+		SIReadRequest readRequest(OperationWithAttributes get);
 
 
 		/**

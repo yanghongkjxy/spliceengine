@@ -2,7 +2,6 @@ package com.splicemachine.constants;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.util.Bytes;
 
 import java.util.concurrent.TimeUnit;
 
@@ -11,6 +10,7 @@ import java.util.concurrent.TimeUnit;
  */
 
 public class SIConstants extends SpliceConstants {
+
 
     static {
         setParameters();
@@ -44,7 +44,7 @@ public class SIConstants extends SpliceConstants {
     public static final byte[] SNAPSHOT_ISOLATION_FK_COUNTER_COLUMN_BYTES = FixedSIConstants.SNAPSHOT_ISOLATION_FK_COUNTER_COLUMN_BYTES;
     public static final byte[] SNAPSHOT_ISOLATION_ANTI_TOMBSTONE_VALUE_BYTES = FixedSIConstants.SNAPSHOT_ISOLATION_ANTI_TOMBSTONE_VALUE_BYTES;
 
-    public static final byte[] SI_NEEDED_VALUE_BYTES = FixedSIConstants.SI_NEEDED_VALUE_BYTES;
+    public static final byte[] SI_NEEDED_VALUE_BYTES = FixedSIConstants.SI_PACKED;
 
     public static final String SI_TRANSACTION_ID_KEY = FixedSIConstants.SI_TRANSACTION_ID_KEY;
     public static final String SI_NEEDED = FixedSIConstants.SI_NEEDED;
@@ -153,6 +153,15 @@ public class SIConstants extends SpliceConstants {
     @Parameter public static final String MAT_WATCHER_REFRESH_RATE = "splice.txn.matWatcher.refreshInterval";
     @DefaultValue(MAT_WATCHER_REFRESH_RATE)public static final long DEFAULT_MAT_WATCHER_REFRESH_RATE = 60;
 
+    /*
+     * How many versions of a single row to skip before we switch to using SEEKs to navigate past checkpoint cells.
+     * By default, is set to the scanner batch size/2. In general, it is highly unlikely that this setting will
+     * ever be changed by a user, once a reasonable default has been determined.
+     */
+    @Parameter public static final String CHECKPOINT_SEEK_THRESHOLD = "splice.txn.checkpoint.seekThreshold";
+    @DefaultValue(CHECKPOINT_SEEK_THRESHOLD) public static final int DEFAULT_CHECKPOINT_SEEK_THRESHOLD=SpliceConstants.scannerBatchSize/2;
+    public static long checkpointSeekThreshold;
+
     public static long matWatcherRefreshMs;
     public static void setParameters(Configuration config){
         committingPause = config.getInt(COMMITTING_PAUSE,DEFAULT_COMMITTING_PAUSE);
@@ -194,5 +203,7 @@ public class SIConstants extends SpliceConstants {
         if(matRefresh<0) //TODO -sf- log a warning here
             matRefresh = DEFAULT_MAT_WATCHER_REFRESH_RATE;
         matWatcherRefreshMs = TimeUnit.SECONDS.toMillis(matRefresh);
+
+        checkpointSeekThreshold = config.getInt(CHECKPOINT_SEEK_THRESHOLD,DEFAULT_CHECKPOINT_SEEK_THRESHOLD);
     }
 }

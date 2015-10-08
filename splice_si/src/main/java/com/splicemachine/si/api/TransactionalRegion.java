@@ -7,6 +7,7 @@ import com.splicemachine.si.impl.SICompactionState;
 import com.splicemachine.si.impl.TxnFilter;
 import com.splicemachine.storage.EntryPredicateFilter;
 import com.splicemachine.utils.ByteSlice;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
 
@@ -31,9 +32,11 @@ public interface TransactionalRegion extends AutoCloseable{
      * @return a new transactional filter for the region
      * @throws IOException if something goes wrong.
      */
-    TxnFilter unpackedFilter(TxnView txn) throws IOException;
+    TxnFilter<Cell> unpackedFilter(TxnView txn) throws IOException;
 
-    TxnFilter packedFilter(TxnView txn, EntryPredicateFilter predicateFilter, boolean countStar) throws IOException;
+    TxnFilter<Cell> noOpFilter(TxnView txn) throws IOException;
+
+    TxnFilter<Cell> packedFilter(TxnView txn, EntryPredicateFilter predicateFilter, boolean countStar) throws IOException;
 
     DDLFilter ddlFilter(Txn ddlTxn) throws IOException;
 

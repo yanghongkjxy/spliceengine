@@ -67,7 +67,8 @@ public class SITransactorTest {
     @Test
     public void writeRead() throws IOException {
         Txn t1 = control.beginTransaction();
-        t1 = t1.elevateToWritable(Bytes.toBytes("t"));
+        byte[] ts=Bytes.toBytes("t");
+        t1 =elevate(t1,ts);
 //				Txn t1 = control.beginTransaction();
         Assert.assertEquals("joe9 absent", testUtility.read(t1, "joe9"));
         testUtility.insertAge(t1, "joe9", 20);
@@ -82,10 +83,22 @@ public class SITransactorTest {
         }
     }
 
+    private Txn elevate(Txn t1,byte[] ts) throws IOException{
+        Txn txn=t1.elevateToWritable(ts);
+        /*
+         * We have to manually remove the other transaction from the created parent
+         * transactions so that we don't accidentally keep the old ReadOnly transactions
+         * around and attempt to roll them back accidentally.
+         */
+        createdParentTxns.remove(t1);
+        createdParentTxns.add(txn);
+        return txn;
+    }
+
     @Test
     public void writeReadOverlap() throws IOException {
         Txn t1 = control.beginTransaction();
-        t1 = t1.elevateToWritable(Bytes.toBytes("t"));
+        t1 =elevate(t1,Bytes.toBytes("t"));
         Assert.assertEquals("joe8 absent", testUtility.read(t1, "joe8"));
         testUtility.insertAge(t1, "joe8", 20);
         Assert.assertEquals("joe8 age=20 job=null", testUtility.read(t1, "joe8"));
@@ -190,7 +203,7 @@ public class SITransactorTest {
 
         Txn t2 = control.beginTransaction();
         Assert.assertEquals("joe age=20 job=null", testUtility.read(t2, "joe"));
-        t2 = t2.elevateToWritable(DESTINATION_TABLE);
+        t2 =elevate(t2,DESTINATION_TABLE);
         testUtility.insertAge(t2, "joe", 30);
         Assert.assertEquals("joe age=30 job=null", testUtility.read(t2, "joe"));
         t2.commit();
@@ -200,14 +213,14 @@ public class SITransactorTest {
     public void writeWriteOverlap() throws IOException {
         Txn t1 = control.beginTransaction();
         Assert.assertEquals("joe012 absent", testUtility.read(t1, "joe012"));
-        t1 = t1.elevateToWritable(DESTINATION_TABLE);
+        t1 =elevate(t1,DESTINATION_TABLE);
         testUtility.insertAge(t1, "joe012", 20);
         Assert.assertEquals("joe012 age=20 job=null", testUtility.read(t1, "joe012"));
 
         Txn t2 = control.beginTransaction();
         Assert.assertEquals("joe012 age=20 job=null", testUtility.read(t1, "joe012"));
         Assert.assertEquals("joe012 absent", testUtility.read(t2, "joe012"));
-        t2 = t2.elevateToWritable(DESTINATION_TABLE);
+        t2 =elevate(t2,DESTINATION_TABLE);
         try {
             testUtility.insertAge(t2, "joe012", 30);
             Assert.fail();
@@ -227,14 +240,14 @@ public class SITransactorTest {
     public void writeWriteOverlapRecovery() throws IOException {
         Txn t1 = control.beginTransaction();
         Assert.assertEquals("joe142 absent", testUtility.read(t1, "joe142"));
-        t1 = t1.elevateToWritable(DESTINATION_TABLE);
+        t1 =elevate(t1,DESTINATION_TABLE);
         testUtility.insertAge(t1, "joe142", 20);
         Assert.assertEquals("joe142 age=20 job=null", testUtility.read(t1, "joe142"));
 
         Txn t2 = control.beginTransaction();
         Assert.assertEquals("joe142 age=20 job=null", testUtility.read(t1, "joe142"));
         Assert.assertEquals("joe142 absent", testUtility.read(t2, "joe142"));
-        t2 = t2.elevateToWritable(DESTINATION_TABLE);
+        t2 =elevate(t2,DESTINATION_TABLE);
         try {
             testUtility.insertAge(t2, "joe142", 30);
             Assert.fail();
@@ -272,7 +285,7 @@ public class SITransactorTest {
     @Test
     public void testRollingBackAfterCommittingDoesNothing() throws IOException {
         Txn t1 = control.beginTransaction();
-        t1 = t1.elevateToWritable(DESTINATION_TABLE);
+        t1 =elevate(t1,DESTINATION_TABLE);
         testUtility.insertAge(t1, "joe50", 20);
         t1.commit();
         t1.rollback();
@@ -397,7 +410,7 @@ public class SITransactorTest {
     public void multipleWritesSameTransaction() throws IOException {
         Txn t1 = control.beginTransaction();
         Assert.assertEquals("joe16 absent", testUtility.read(t1, "joe16"));
-        t1 = t1.elevateToWritable(DESTINATION_TABLE);
+        t1 =elevate(t1,DESTINATION_TABLE);
         testUtility.insertAge(t1, "joe16", 20);
         Assert.assertEquals("joe16 age=20 job=null", testUtility.read(t1, "joe16"));
 
@@ -469,7 +482,7 @@ public class SITransactorTest {
 
         Txn t2 = control.beginTransaction();
         Assert.assertEquals("joe10 age=20 job=null", testUtility.read(t2, "joe10"));
-        t2 = t2.elevateToWritable(DESTINATION_TABLE);
+        t2 =elevate(t2,DESTINATION_TABLE);
         testUtility.deleteRow(t2, "joe10");
         Assert.assertEquals("joe10 absent", testUtility.read(t2, "joe10"));
         t2.commit();
@@ -525,7 +538,7 @@ public class SITransactorTest {
     @Test(expected = CannotCommitException.class)
     public void writeDeleteOverlap() throws IOException {
         Txn t1 = control.beginTransaction();
-        t1 = t1.elevateToWritable(DESTINATION_TABLE);
+        t1 =elevate(t1,DESTINATION_TABLE);
         testUtility.insertAge(t1, "joe2", 20);
 
         Txn t2 = control.beginTransaction(DESTINATION_TABLE);
@@ -716,7 +729,7 @@ public class SITransactorTest {
     @Test
     public void writeManyDeleteOneScanWithIncludeSIColumnSameTransaction() throws IOException {
         Txn t1 = control.beginTransaction();
-        t1 = t1.elevateToWritable(DESTINATION_TABLE);
+        t1 =elevate(t1,DESTINATION_TABLE);
         testUtility.insertAge(t1, "143joe", 20);
         testUtility.insertAge(t1, "143toe", 30);
         testUtility.insertAge(t1, "143boe", 40);
@@ -924,7 +937,7 @@ public class SITransactorTest {
     @Test
     public void deleteWriteSameTransaction() throws IOException {
         Txn t0 = control.beginTransaction();
-        t0 = t0.elevateToWritable(DESTINATION_TABLE);
+        t0 =elevate(t0,DESTINATION_TABLE);
         testUtility.insertAge(t0, "joe82", 19);
         t0.commit();
 
@@ -1872,7 +1885,7 @@ public class SITransactorTest {
     public void writeAllNullsRead() throws IOException {
         Txn t1 = control.beginTransaction();
         Assert.assertEquals("joe113 absent", testUtility.read(t1, "joe113"));
-        t1 = t1.elevateToWritable(DESTINATION_TABLE);
+        t1 =elevate(t1,DESTINATION_TABLE);
         testUtility.insertAge(t1, "joe113", null);
         Assert.assertEquals("joe113 age=null job=null", testUtility.read(t1, "joe113"));
         t1.commit();
@@ -1885,7 +1898,7 @@ public class SITransactorTest {
     public void writeAllNullsReadOverlap() throws IOException {
         Txn t1 = control.beginTransaction();
         Assert.assertEquals("joe114 absent", testUtility.read(t1, "joe114"));
-        t1 = t1.elevateToWritable(DESTINATION_TABLE);
+        t1 =elevate(t1,DESTINATION_TABLE);
         testUtility.insertAge(t1, "joe114", null);
         Assert.assertEquals("joe114 age=null job=null", testUtility.read(t1, "joe114"));
 
@@ -1906,7 +1919,7 @@ public class SITransactorTest {
 
         Txn t2 = control.beginTransaction();
         Assert.assertEquals("joe115 age=null job=null", testUtility.read(t2, "joe115"));
-        t2 = t2.elevateToWritable(DESTINATION_TABLE);
+        t2 =elevate(t2,DESTINATION_TABLE);
         testUtility.insertAge(t2, "joe115", 30);
         Assert.assertEquals("joe115 age=30 job=null", testUtility.read(t2, "joe115"));
         t2.commit();
@@ -1916,14 +1929,14 @@ public class SITransactorTest {
     public void writeAllNullsWriteOverlap() throws IOException {
         Txn t1 = control.beginTransaction();
         Assert.assertEquals("joe116 absent", testUtility.read(t1, "joe116"));
-        t1 = t1.elevateToWritable(DESTINATION_TABLE);
+        t1 =elevate(t1,DESTINATION_TABLE);
         testUtility.insertAge(t1, "joe116", null);
         Assert.assertEquals("joe116 age=null job=null", testUtility.read(t1, "joe116"));
 
         Txn t2 = control.beginTransaction();
         Assert.assertEquals("joe116 age=null job=null", testUtility.read(t1, "joe116"));
         Assert.assertEquals("joe116 absent", testUtility.read(t2, "joe116"));
-        t2 = t2.elevateToWritable(DESTINATION_TABLE);
+        t2 =elevate(t2,DESTINATION_TABLE);
         try {
             testUtility.insertAge(t2, "joe116", 30);
             Assert.fail();

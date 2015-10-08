@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -88,80 +89,30 @@ public class VacuumTask extends ZkTask{
     @Override
     protected void doExecute() throws ExecutionException, InterruptedException{
         TxnView matTxn = new ActiveReadTxn(minimumActiveTimestamp);
-        HDataLib dataLib=new HDataLib();
-        RowAccumulator<Cell> accumulator =new HRowAccumulator<>(dataLib,
-                EntryPredicateFilter.EMPTY_PREDICATE,new EntryDecoder(),false);
-        SIFilter<Cell> siFilter = newSiFilter(matTxn,accumulator);
         MetricFactory mf = Metrics.basicMetricFactory();
+        HDataLib dataLib=new HDataLib();
+        RowAccumulator<Cell> accumulator =new HRowAccumulator<>(dataLib, EntryPredicateFilter.EMPTY_PREDICATE,new EntryDecoder(),false);
+        SIFilter<Cell> siFilter = newSiFilter(matTxn,accumulator);
         try(MeasuredRegionScanner<Cell> mrs = getRegionScanner(dataLib,mf)){
-
-            final long[] highestTimestamp = new long[]{0l};
-            MergingReader<Cell> mr = new MergingReader<Cell>(accumulator,
-                    mrs,
-                    dataLib,
-                    MergingReader.RowKeyFilter.NOOPFilter,
-                    Suppliers.ofInstance(siFilter),
-                    Metrics.basicMetricFactory()){
+            CheckpointReader cr = new CheckpointReader(minimumActiveTimestamp,new CheckpointReader.ReadHandler(){
                 @Override
-                protected void resetStateForNextRow(SIFilter<Cell> filter){
-                    highestTimestamp[0] = 0l;
-                    super.resetStateForNextRow(filter);
+                public void onDelete(ByteSlice rowKey){
+                    //TODO -sf- do stuff here
                 }
+            },accumulator,siFilter,dataLib,mrs,Metrics.basicMetricFactory());
 
-                @Override
-                protected boolean fetchNextBatch(List<Cell> data) throws IOException{
-                    boolean b= super.fetchNextBatch(data);
-                    if(data.size()<=0) return b;
-                    long currMaxTs = highestTimestamp[0];
-                    for(Cell c:data){
-                        long timestamp=c.getTimestamp();
-                        if(timestamp<=minimumActiveTimestamp){
-                            if(currMaxTs<timestamp){
-                                highestTimestamp[0] = timestamp;
-                            }
-                            break;
-                        }
-                    }
+            Checkpointer checkpointer = new BufferedCheckpointer(new Region(region),SpliceConstants.DEFAULT_CACHE_SIZE);
 
-                    return b;
-                }
-
-                @Override
-                protected boolean rowChanged(SIFilter<Cell> filter,List<Cell> kvs,boolean priorProcessed){
-                    if(!priorProcessed){
-                        //TODO -sf- issue a delete
-                        //there was nothing to process, so just delete all the old stuff
-                    }
-                    return super.rowChanged(filter,kvs,priorProcessed);
-                }
-            };
-
-            //TODO -sf- move this to its own class
-
-            //make a power of 2
-            int s = 1;
-            int writeBufferSize=SpliceConstants.DEFAULT_CACHE_SIZE;
-            while(s <writeBufferSize){
-                s<<=1;
-            }
-            Mutation[] writeBuffer = new Mutation[s];
-            int writeBufferPos = 0;
-            int shift = s-1;
-            while(mr.readNext()){
-                byte[] value = accumulator.result();
-                ByteSlice key = mr.currentRowKey();
-                int add = bufferWrite(writeBuffer,writeBufferPos,highestTimestamp[0],key,value);
-                writeBufferPos = (writeBufferPos+add) & shift;
-                if(writeBufferPos==0){
-                    flushBuffer(writeBuffer);
-                }
-            }
-            if(writeBufferPos>0){
-                writeBuffer = Arrays.copyOf(writeBuffer,writeBufferPos);
-                flushBuffer(writeBuffer);
+            long writtenRows =0;
+            while(cr.readNext()){
+                byte[] value = cr.currentCheckpointValue();
+                ByteSlice key = cr.currentRowKey();
+                TxnView highTxn = cr.currentMatTxn();
+                checkpointer.checkpoint(key,value,highTxn.getBeginTimestamp(),highTxn.getGlobalCommitTimestamp());
+                writtenRows++;
             }
 
-            TaskStats ts = new TaskStats(mrs.getReadTime().getWallClockTime(),mrs.getRowsVisited(),mrs.getRowsOutput());
+            TaskStats ts = new TaskStats(mrs.getReadTime().getWallClockTime(),cr.getRowsVisited(),writtenRows);
             status.setStats(ts);
         }catch(IOException e){
             throw new ExecutionException(e);
@@ -207,58 +158,4 @@ public class VacuumTask extends ZkTask{
         return new PackedTxnFilter<>(tf,accumulator);
     }
 
-    private int bufferWrite(Mutation[] mutations,int pos,long timestamp,ByteSlice key,byte[] value){
-        Put p = getCheckpointPut(timestamp,key,value);
-        mutations[pos] = p;
-        //delete everything < timestamp, since we are writing an entry at timestamp
-        Delete d = getCheckpointDelete(timestamp-1,key);
-        mutations[pos+1] = d;
-        return 2;
-    }
-
-    private Delete getCheckpointDelete(long timestamp,ByteSlice key){
-        Delete d = new Delete(key.array(),key.offset(),key.length());
-        d=d.deleteColumns(FixedSpliceConstants.DEFAULT_FAMILY_BYTES,FixedSIConstants.SNAPSHOT_ISOLATION_COMMIT_TIMESTAMP_COLUMN_BYTES,timestamp)
-                .deleteColumns(FixedSpliceConstants.DEFAULT_FAMILY_BYTES,FixedSIConstants.SNAPSHOT_ISOLATION_TOMBSTONE_COLUMN_BYTES,timestamp)
-                .deleteColumns(FixedSpliceConstants.DEFAULT_FAMILY_BYTES,FixedSpliceConstants.PACKED_COLUMN_BYTES,timestamp);
-        d.setAttribute(FixedSpliceConstants.SUPPRESS_INDEXING_ATTRIBUTE_NAME,FixedSpliceConstants.SUPPRESS_INDEXING_ATTRIBUTE_VALUE);
-        d.setDurability(Durability.SKIP_WAL);
-        return d;
-    }
-
-    private Put getCheckpointPut(long ts,ByteSlice key,byte[] value){
-        Put p = new Put(key.array(),key.offset(),key.length());
-        p.setAttribute(FixedSpliceConstants.SUPPRESS_INDEXING_ATTRIBUTE_NAME,FixedSpliceConstants.SUPPRESS_INDEXING_ATTRIBUTE_VALUE);
-        p.add(FixedSpliceConstants.DEFAULT_FAMILY_BYTES,SIConstants.PACKED_COLUMN_BYTES,ts,value);
-        p.setDurability(Durability.SKIP_WAL);
-        return p;
-    }
-
-    private void flushBuffer(Mutation[] writeBuffer) throws IOException{
-        OperationStatus[] operationStatuses=region.batchMutate(writeBuffer);
-        int successCount = 0;
-        int notRunCount = 0;
-        int failedCount = 0;
-        if(LOG.isTraceEnabled()){
-            //noinspection ForLoopReplaceableByForEach
-            for(int i=0;i<operationStatuses.length;i++){
-                OperationStatus operationStatuse=operationStatuses[i];
-                switch(operationStatuse.getOperationStatusCode()){
-                    case NOT_RUN:
-                        notRunCount++;
-                        break;
-                    case SUCCESS:
-                        successCount++;
-                        break;
-                    case BAD_FAMILY:
-                    case SANITY_CHECK_FAILURE:
-                    case FAILURE:
-                        failedCount++;
-                        break;
-                }
-            }
-
-            LOG.trace("Successfully checkpointed "+successCount+" rows, with "+failedCount+" failures and "+notRunCount+" not run");
-        }
-    }
 }

@@ -1,6 +1,5 @@
 package com.splicemachine.constants;
 
-import com.splicemachine.db.iapi.util.UTF8Util;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.util.Arrays;
@@ -38,6 +37,7 @@ public class FixedSIConstants{
     /**
      * Splice Columns
      *
+     * / = checkpoint column. Contents are either empty, or contain the global commit timestamp.
      * 0 = contains commit timestamp (optionally written after writing transaction is final)
      * 1 = tombstone (if value empty) or anti-tombstone (if value "0")
      * 7 = encoded user data
@@ -46,9 +46,21 @@ public class FixedSIConstants{
     public static final byte[] SNAPSHOT_ISOLATION_COMMIT_TIMESTAMP_COLUMN_BYTES = Bytes.toBytes("0");
     public static final byte[] SNAPSHOT_ISOLATION_TOMBSTONE_COLUMN_BYTES = Bytes.toBytes("1");
     public static final byte[] SNAPSHOT_ISOLATION_FK_COUNTER_COLUMN_BYTES = Bytes.toBytes("9");
+    public static final byte[] SNAPSHOT_ISOLATION_CHECKPOINT_COLUMN_BYTES=Bytes.toBytes("/");
+
     public static final byte[] SNAPSHOT_ISOLATION_ANTI_TOMBSTONE_VALUE_BYTES = Bytes.toBytes("0");
 
-    public static final byte[] SI_NEEDED_VALUE_BYTES = Bytes.toBytes((short) 0);
+    /**
+     * Used to represent when we want the SIFilter
+     */
+    public static final byte[] SI_PACKED = new byte[]{0x00};
+    /**
+     * Used to represent when we want the SIFilter to be automatically added, but we don't want to
+     * pack the underlying bytes. This is useful when you are going to perform the encoding/decoding yourself and
+     * want to navigate the predicate filter yourself, but you don't want to worry about checkpoints and tombstones
+     * and all that other business (or when you want that to be performed at a different layer).
+     */
+    public static final byte[] SI_NOPACK = new byte[]{0x01};
 
     public static final String SI_TRANSACTION_ID_KEY = "A";
     public static final String SI_NEEDED = "B";

@@ -21,6 +21,9 @@ public enum KeyValueType {
     /* Column "9" */
     FOREIGN_KEY_COUNTER,
 
+    /* Column "z" */
+    CHECKPOINT,
+
     /* Unrecognized column/column-value. */
     OTHER
 }

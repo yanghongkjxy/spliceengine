@@ -1,7 +1,7 @@
 package com.splicemachine.si.impl;
 
 import com.google.common.collect.Lists;
-import com.splicemachine.si.api.*;
+import com.splicemachine.constants.FixedSIConstants;import com.splicemachine.si.api.*;
 import com.splicemachine.si.data.api.SDataLib;
 import com.splicemachine.si.impl.store.IgnoreTxnCacheSupplier;
 import com.splicemachine.storage.EntryDecoder;
@@ -41,21 +41,11 @@ public class SITransactionReadController<Data,
 
 		@Override
 		@SuppressWarnings("unchecked")
-		public boolean isFilterNeededGet(Get get) {
-				return isFlaggedForSITreatment(get)
-								&& !dataStore.isSuppressIndexing(get);
-		}
+		public SIReadRequest readRequest(OperationWithAttributes get) {
+			if(dataStore.isSuppressIndexing(get)) return SIReadRequest.NO_SI;
 
-		@SuppressWarnings("unchecked")
-		private boolean isFlaggedForSITreatment(OperationWithAttributes op) {
-				return dataStore.getSINeededAttribute(op)!=null;
-		}
-
-		@Override
-		@SuppressWarnings("unchecked")
-		public boolean isFilterNeededScan(Scan scan) {
-				return isFlaggedForSITreatment(scan)
-								&& !dataStore.isSuppressIndexing(scan);
+			byte[] siNeededAttribute = dataStore.getSINeededAttribute(get);
+            return SIReadRequest.readRequest(siNeededAttribute);
 		}
 
 		@Override

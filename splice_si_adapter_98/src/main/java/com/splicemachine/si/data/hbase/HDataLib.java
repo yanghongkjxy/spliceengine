@@ -7,9 +7,7 @@ import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.constants.bytes.BytesUtil;
 import com.splicemachine.hbase.*;
 import com.splicemachine.metrics.MetricFactory;
-import com.splicemachine.si.coprocessors.SICompactionScanner;
 import com.splicemachine.si.data.api.SDataLib;
-import com.splicemachine.si.impl.SICompactionState;
 import com.splicemachine.si.impl.region.ActiveTxnFilter;
 import com.splicemachine.utils.ByteSlice;
 import org.apache.hadoop.hbase.Cell;
@@ -167,11 +165,6 @@ public class HDataLib implements SDataLib<Cell, Put, Delete, Get, Scan>{
     }
 
     @Override
-    public byte[] getGetRow(Get get){
-        return get.getRow();
-    }
-
-    @Override
     public void setGetTimeRange(Get get,long minTimestamp,long maxTimestamp){
         try{
             get.setTimeRange(minTimestamp,maxTimestamp);
@@ -191,18 +184,6 @@ public class HDataLib implements SDataLib<Cell, Put, Delete, Get, Scan>{
             get.setMaxVersions(max);
         }catch(IOException e){
             throw new RuntimeException(e);
-        }
-    }
-
-    @Override
-    public void addFamilyToGet(Get get,byte[] family){
-        get.addFamily(family);
-    }
-
-    @Override
-    public void addFamilyToGetIfNeeded(Get get,byte[] family){
-        if(get.hasFamilies()){
-            get.addFamily(family);
         }
     }
 
@@ -247,18 +228,6 @@ public class HDataLib implements SDataLib<Cell, Put, Delete, Get, Scan>{
     }
 
     @Override
-    public void addFamilyToScan(Scan scan,byte[] family){
-        scan.addFamily(family);
-    }
-
-    @Override
-    public void addFamilyToScanIfNeeded(Scan scan,byte[] family){
-        if(scan.hasFamilies()){
-            scan.addFamily(family);
-        }
-    }
-
-    @Override
     public Delete newDelete(byte[] rowKey){
         return new Delete(rowKey);
     }
@@ -283,12 +252,6 @@ public class HDataLib implements SDataLib<Cell, Put, Delete, Get, Scan>{
     }
 
     @Override
-    public KVPair toKVPair(Put put){
-        return new KVPair(put.getRow(),
-                put.get(SpliceConstants.DEFAULT_FAMILY_BYTES,SIConstants.PACKED_COLUMN_BYTES).get(0).getValue());
-    }
-
-    @Override
     public Put toPut(KVPair kvPair,byte[] family,byte[] column,long longTransactionId){
         ByteSlice rowKey=kvPair.rowKeySlice();
         ByteSlice val=kvPair.valueSlice();
@@ -310,24 +273,24 @@ public class HDataLib implements SDataLib<Cell, Put, Delete, Get, Scan>{
             throw new RuntimeException(ignored);
         }
 
-        if(kvPair.getType()==KVPair.Type.INSERT){
-            /*
-             * DB-3961: If we are an insert, then add the checkpoint cell to the bytes to ensure that we
-             * are properly reading insertion cells as final versions (and therefore checkpointed).
-             */
-            column = FixedSIConstants.SNAPSHOT_ISOLATION_CHECKPOINT_COLUMN_BYTES;
-            Cell checkpointKv = new KeyValue(rowKey.array(),rowKey.offset(),rowKey.length(),
-                    family,0,family.length,
-                    column,0,column.length,
-                    longTransactionId,
-                    KeyValue.Type.Put,
-                    SIConstants.EMPTY_BYTE_ARRAY,0,0);
-            try{
-                put.add(checkpointKv);
-            }catch(IOException ignored){
-                throw new RuntimeException(ignored);
-            }
-        }
+//        if(kvPair.getType()==KVPair.Type.INSERT){
+//            /*
+//             * DB-3961: If we are an insert, then add the checkpoint cell to the bytes to ensure that we
+//             * are properly reading insertion cells as final versions (and therefore checkpointed).
+//             */
+//            column = FixedSIConstants.SNAPSHOT_ISOLATION_CHECKPOINT_COLUMN_BYTES;
+//            Cell checkpointKv = new KeyValue(rowKey.array(),rowKey.offset(),rowKey.length(),
+//                    family,0,family.length,
+//                    column,0,column.length,
+//                    longTransactionId,
+//                    KeyValue.Type.Put,
+//                    SIConstants.EMPTY_BYTE_ARRAY,0,0);
+//            try{
+//                put.add(checkpointKv);
+//            }catch(IOException ignored){
+//                throw new RuntimeException(ignored);
+//            }
+//        }
         return put;
     }
 
@@ -340,11 +303,6 @@ public class HDataLib implements SDataLib<Cell, Put, Delete, Get, Scan>{
             throw new RuntimeException(e+"Exception setting max versions");
         }
         return get;
-    }
-
-    @Override
-    public void setWriteToWAL(Put put,boolean writeToWAL){
-        put.setWriteToWAL(writeToWAL);
     }
 
     @Override
@@ -377,16 +335,6 @@ public class HDataLib implements SDataLib<Cell, Put, Delete, Get, Scan>{
     @Override
     public boolean matchingValue(Cell element,byte[] value){
         return CellUtils.matchingValue(element,value);
-    }
-
-    @Override
-    public boolean matchingFamilyKeyValue(Cell element,Cell other){
-        return CellUtils.matchingFamilyKeyValue(element,other);
-    }
-
-    @Override
-    public boolean matchingQualifierKeyValue(Cell element,Cell other){
-        return CellUtils.matchingQualifierKeyValue(element,other);
     }
 
     @Override
@@ -456,6 +404,12 @@ public class HDataLib implements SDataLib<Cell, Put, Delete, Get, Scan>{
     @Override
     public long getValueToLong(Cell element){
         return Bytes.toLong(element.getValueArray(),element.getValueOffset(),element.getValueLength());
+    }
+
+    @Override
+    public long optionalValueToLong(Cell element,long defaultValue){
+        if(element.getValueLength()==0) return defaultValue;
+        return getValueToLong(element);
     }
 
     @Override
@@ -567,12 +521,6 @@ public class HDataLib implements SDataLib<Cell, Put, Delete, Get, Scan>{
     public Filter getActiveTransactionFilter(long beforeTs,long afterTs,
                                              byte[] destinationTable){
         return new ActiveTxnFilter(beforeTs,afterTs,destinationTable);
-    }
-
-    @Override
-    public InternalScanner getCompactionScanner(InternalScanner scanner,
-                                                SICompactionState state){
-        return new SICompactionScanner(state,scanner,this);
     }
 
     @Override

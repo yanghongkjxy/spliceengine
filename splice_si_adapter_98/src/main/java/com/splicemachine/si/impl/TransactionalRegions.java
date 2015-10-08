@@ -16,6 +16,7 @@ import com.splicemachine.storage.EntryPredicateFilter;
 import com.splicemachine.utils.ByteSlice;
 import com.splicemachine.utils.GreenLight;
 import com.splicemachine.utils.TrafficControl;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
@@ -149,6 +150,11 @@ public class TransactionalRegions {
         @Override
         public TxnFilter unpackedFilter(TxnView txn) throws IOException {
             return delegate.unpackedFilter(txn);
+        }
+
+        @Override
+        public TxnFilter<Cell> noOpFilter(TxnView txn) throws IOException{
+            return delegate.noOpFilter(txn);
         }
 
         @Override

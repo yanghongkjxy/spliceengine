@@ -1,14 +1,11 @@
 package com.splicemachine.si.impl;
 
 import com.carrotsearch.hppc.LongArrayList;
-import com.splicemachine.constants.SIConstants;
+import com.splicemachine.constants.FixedSIConstants;import com.splicemachine.constants.SIConstants;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.encoding.MultiFieldDecoder;
 import com.splicemachine.encoding.MultiFieldEncoder;
-import com.splicemachine.si.api.ReadOnlyModificationException;
-import com.splicemachine.si.api.Txn;
-import com.splicemachine.si.api.TxnOperationFactory;
-import com.splicemachine.si.api.TxnView;
+import com.splicemachine.si.api.*;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.*;
 
@@ -162,7 +159,9 @@ public class SimpleOperationFactory implements TxnOperationFactory{
     private void encodeForWrites(OperationWithAttributes op,TxnView txn){
         byte[] data=encode(txn);
         op.setAttribute(SIConstants.SI_TRANSACTION_ID_KEY,data);
-        op.setAttribute(SIConstants.SI_NEEDED,SIConstants.SI_NEEDED_VALUE_BYTES);
+        if(op.getAttribute(SIConstants.SI_EXEMPT)==null){
+            op.setAttribute(SIConstants.SI_NEEDED,SIReadRequest.SI_PACKED.encode());
+        }
     }
 
     private void encodeForReads(OperationWithAttributes op,TxnView txn,boolean isCountStar){
@@ -172,7 +171,9 @@ public class SimpleOperationFactory implements TxnOperationFactory{
         byte[] data=encode(txn);
 
         op.setAttribute(SIConstants.SI_TRANSACTION_ID_KEY,data);
-        op.setAttribute(SIConstants.SI_NEEDED,SIConstants.SI_NEEDED_VALUE_BYTES);
+        if(op.getAttribute(SIConstants.SI_EXEMPT)==null){
+            op.setAttribute(SIConstants.SI_NEEDED,SIReadRequest.SI_PACKED.encode());
+        }
     }
 
     private byte[] encodeParentIds(TxnView txn,LongArrayList parentTxnIds){

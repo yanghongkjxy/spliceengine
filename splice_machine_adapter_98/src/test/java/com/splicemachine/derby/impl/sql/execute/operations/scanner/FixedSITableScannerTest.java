@@ -17,6 +17,7 @@ import com.splicemachine.si.api.RowAccumulator;
 import com.splicemachine.si.api.SIFilter;
 import com.splicemachine.si.data.hbase.HDataLib;
 import com.splicemachine.si.data.hbase.HRowAccumulator;
+import com.splicemachine.si.impl.TxnFilter;
 import com.splicemachine.storage.EntryAccumulator;
 import com.splicemachine.storage.EntryDecoder;
 import com.splicemachine.storage.EntryPredicateFilter;
@@ -193,6 +194,8 @@ public class FixedSITableScannerTest{
                 return Filter.ReturnCode.INCLUDE;
             }else return Filter.ReturnCode.INCLUDE;
         }
+
+        @Override public TxnFilter<Data> unwrapFilter(){ return null; }
     }
 
     protected void testScansProperly(int[] keyDecodingMap,int[] keyColumnOrder) throws StandardException, IOException{

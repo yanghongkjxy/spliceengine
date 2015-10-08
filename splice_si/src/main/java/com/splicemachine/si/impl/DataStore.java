@@ -2,6 +2,7 @@ package com.splicemachine.si.impl;
 
 import com.carrotsearch.hppc.LongOpenHashSet;
 import com.carrotsearch.hppc.procedures.LongProcedure;
+import com.splicemachine.constants.FixedSIConstants;
 import com.splicemachine.constants.SIConstants;
 import com.splicemachine.si.data.api.SDataLib;
 import com.splicemachine.si.data.api.SRowLock;
@@ -125,6 +126,8 @@ public class DataStore<Data, Mutation, Put extends OperationWithAttributes, Dele
             }
         } else if (dataLib.singleMatchingQualifier(keyValue, SIConstants.SNAPSHOT_ISOLATION_FK_COUNTER_COLUMN_BYTES)) {
             return KeyValueType.FOREIGN_KEY_COUNTER;
+        }else if(dataLib.singleMatchingQualifier(keyValue,FixedSIConstants.SNAPSHOT_ISOLATION_CHECKPOINT_COLUMN_BYTES)){
+            return KeyValueType.CHECKPOINT;
         }
         return KeyValueType.OTHER;
     }

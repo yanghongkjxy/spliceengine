@@ -30,6 +30,7 @@ import com.splicemachine.si.data.api.SDataLib;
 import com.splicemachine.si.data.hbase.HDataLib;
 import com.splicemachine.si.data.hbase.HRowAccumulator;
 import com.splicemachine.si.impl.KeyValueType;
+import com.splicemachine.si.impl.TxnFilter;
 import com.splicemachine.storage.*;
 import com.splicemachine.storage.index.BitIndex;
 import com.splicemachine.utils.ByteSlice;
@@ -1067,6 +1068,11 @@ public class MergingReaderTest{
                         //TODO -sf- do better with this?
                         throw new AssertionError("Unexpected Data type: "+type);
                 }
+            }
+
+            @Override
+            public TxnFilter<Cell> unwrapFilter(){
+                return null;
             }
         };
     }

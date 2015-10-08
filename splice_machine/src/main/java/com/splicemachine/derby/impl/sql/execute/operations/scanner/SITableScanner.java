@@ -124,7 +124,7 @@ public class SITableScanner<Data> implements StandardIterator<ExecRow>,AutoClose
                                                 EntryDecoder rowEntryDecoder,
                                                 HRowAccumulator<Data> accumulator,
                                                 boolean isCountStar) throws IOException{
-                    TxnFilter<Data> txnFilter = region.unpackedFilter(txn);
+                    TxnFilter txnFilter = region.noOpFilter(txn);
 
                     //noinspection unchecked
                     return new PackedTxnFilter<Data>(txnFilter, accumulator){

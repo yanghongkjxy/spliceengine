@@ -73,13 +73,16 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
     @Override
     public Filter.ReturnCode filterKeyValue(Data element) throws IOException{
         KeyValueType type=dataStore.getKeyValueType(element);
-        if(type==KeyValueType.COMMIT_TIMESTAMP){
-            ensureTransactionIsCached(element);
-            return Filter.ReturnCode.SKIP;
-        }
-        if(type==KeyValueType.FOREIGN_KEY_COUNTER){
-                    /* Transactional reads always ignore this column, no exceptions. */
-            return Filter.ReturnCode.SKIP;
+        //deal with the short-circuits that don't require read resolving
+        switch(type){
+            case COMMIT_TIMESTAMP:
+                ensureTransactionIsCached(element);
+                return Filter.ReturnCode.SKIP;
+            case CHECKPOINT:
+                return checkpointVisibility(element);
+            case FOREIGN_KEY_COUNTER:
+                /* Transactional reads always ignore this column, no exceptions. */
+                return Filter.ReturnCode.SKIP;
         }
 
         readResolve(element);
@@ -93,8 +96,8 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
             case USER_DATA:
                 return checkVisibility(element);
             default:
-                //TODO -sf- do better with this?
                 throw new AssertionError("Unexpected Data type: "+type);
+
         }
     }
 
@@ -117,63 +120,90 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
         return false;
     }
 
-
-    private void readResolve(Data element) throws IOException{
-                /*
-				 * We want to resolve the transaction related
-				 * to this version of the data.
-				 *
-				 * The point of the commit timestamp column (and thus the read resolution)
-				 * is that the transaction is known to be committed, and requires NO FURTHER
-				 * information to ensure its visibility (e.g. that all we need to ensure visibility
-				 * is the commit timestamp itself).
-				 *
-				 * We only enter this method if we DO NOT have a commit timestamp for this version
-				 * of the data. In this case, we want to determine if we can or cannot resolve
-				 * this column as committed (and thus add a commit timestamp entry). If the data
-				 * was written by a dependent child transaction, the proper commit timestamp is
-				 * NOT the commit timestamp of the child, it is the commit timestamp of the parent,
-				 * which means that we'll need to use the effective commit timestamp and the effective
-				 * state to determine whether or not to read-resolve the entry.
-				 *
-				 * This means that we will NOT writes from dependent child transactions until their
-				 * parent transaction has been committed.
-				 */
-        long ts=dataStore.getDataLib().getTimestamp(element);
-        if(!visitedTxnIds.add(ts)){
-						/*
-						 * We've already visited this version of the row data, so there's no
-						 * point in read-resolving this entry. This saves us from a
-						 * potentially expensive transactionStore read.
-						 */
-            return;
-        }
-
-        TxnView t=fetchTransaction(ts);
-        assert t!=null:"Could not find a transaction for id "+ts;
-
-        //submit it to the resolver to resolve asynchronously
-        if(t.getEffectiveState().isFinal()){
-            doResolve(element,ts);
-        }
-    }
-
     protected void doResolve(Data data,long ts){
         //get the row data. This will allow efficient movement of the row key without copying byte[]s
         dataStore.getDataLib().setRowInSlice(data,rowKey);
         readResolver.resolve(rowKey,ts);
     }
 
+    @Override
+    public DataStore getDataStore(){
+        return dataStore;
+    }
+
+    @Override public boolean isPacked(){ return false; }
+
+    @Override
+    public TxnSupplier getTxnSupplier(){
+        return transactionStore;
+    }
+
+    /* ****************************************************************************************************************/
+    /*private helper methods*/
+    private Filter.ReturnCode checkpointVisibility(Data element) throws IOException{
+        long txnId = this.dataStore.getDataLib().getTimestamp(element);
+        visitedTxnIds.add(txnId);
+        TxnView txn;
+        long commitTs=dataStore.getDataLib().optionalValueToLong(element,-1l);
+        if(commitTs>0){
+            txn=new CommittedTxn(txnId,commitTs);
+            if(!transactionStore.transactionCached(txnId)){
+                transactionStore.cache(txn);
+            }
+            currentTxn = txn;
+        }else{
+            txn=transactionStore.getTransaction(txnId);
+        }
+
+        return myTxn.canSee(txn)?Filter.ReturnCode.INCLUDE:Filter.ReturnCode.SKIP;
+    }
+
+    private void ensureTransactionIsCached(Data data) throws IOException{
+        long txnId=this.dataStore.getDataLib().getTimestamp(data);
+        visitedTxnIds.add(txnId);
+        if(!transactionStore.transactionCached(txnId)){
+			/*
+			 * We do not have a cache entry for this transaction, so we want
+			 * to add it in. We have two possible scenarios:
+			 *
+			 * 1. The transaction is marked as "failed"--i.e. it's been rolled back
+			 * 2. The transaction has a commit timestamp.
+			 *
+			 * In case #1, we only care about the txnId, which we already have,
+			 * and in case #2, we only care about the commit timestamp (none of the read
+			 * isolation levels require information about the begin timestamp).
+			 *
+			 * This version of SI will physically remove entries associated
+			 * with rolled-back values, so case #1 isn't likely to happen--however,
+			 * older installations of SpliceMachine used the commit timestamp to indicate
+			 * a failure, so we have to check for it.
+			 */
+            TxnView toCache;
+            if(dataStore.isSIFail(data)){
+                //use the current read-resolver to remove the entry
+                doResolve(data,dataStore.getDataLib().getTimestamp(data));
+                toCache=new RolledBackTxn(txnId);
+            }else if(ignoreTxnCache.shouldIgnore(tableName,txnId)){
+                toCache=new RolledBackTxn(txnId);
+            } else{
+                long commitTs=dataStore.getDataLib().getValueToLong(data);
+                toCache=new CommittedTxn(txnId,commitTs);//since we don't care about the begin timestamp, just use the TxnId
+            }
+            transactionStore.cache(toCache);
+            currentTxn=toCache;
+        }
+    }
+
     private Filter.ReturnCode checkVisibility(Data data) throws IOException{
-				/*
-				 * First, we check to see if we are covered by a tombstone--that is,
-				 * if keyValue has a timestamp <= the timestamp of a tombstone AND our isolationLevel
-				 * allows us to see the tombstone, then this row no longer exists for us, and
-				 * we should just skip the column.
-				 *
-				 * Otherwise, we just look at the transaction of the entry's visibility to us--if
-				 * it matches, then we can see it.
-				 */
+		/*
+		 * First, we check to see if we are covered by a tombstone--that is,
+		 * if keyValue has a timestamp <= the timestamp of a tombstone AND our isolationLevel
+		 * allows us to see the tombstone, then this row no longer exists for us, and
+		 * we should just skip the column.
+		 *
+		 * Otherwise, we just look at the transaction of the entry's visibility to us--if
+		 * it matches, then we can see it.
+		 */
         long timestamp=dataStore.getDataLib().getTimestamp(data);
         long[] tombstones=tombstonedTxnRows.buffer;
         int tombstoneSize=tombstonedTxnRows.size();
@@ -233,42 +263,43 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
         }
     }
 
-    private void ensureTransactionIsCached(Data data) throws IOException{
-        long txnId=this.dataStore.getDataLib().getTimestamp(data);
-        visitedTxnIds.add(txnId);
-        if(!transactionStore.transactionCached(txnId)){
-						/*
-						 * We do not have a cache entry for this transaction, so we want
-						 * to add it in. We have two possible scenarios:
-						 *
-						 * 1. The transaction is marked as "failed"--i.e. it's been rolled back
-						 * 2. The transaction has a commit timestamp.
-						 *
-						 * In case #1, we only care about the txnId, which we already have,
-						 * and in case #2, we only care about the commit timestamp (none of the read
-						 * isolation levels require information about the begin timestamp).
-						 *
-						 * This version of SI will physically remove entries associated
-						 * with rolled-back values, so case #1 isn't likely to happen--however,
-						 * older installations of SpliceMachine used the commit timestamp to indicate
-						 * a failure, so we have to check for it.
-						 */
-            TxnView toCache;
-            if(dataStore.isSIFail(data) || ignoreTxnCache.shouldIgnore(tableName,txnId)){
-                //use the current read-resolver to remove the entry
-                doResolve(data,dataStore.getDataLib().getTimestamp(data));
-                toCache=new RolledBackTxn(txnId);
-            }else{
-                long commitTs=dataStore.getDataLib().getValueToLong(data);
-                toCache=new CommittedTxn(txnId,commitTs);//since we don't care about the begin timestamp, just use the TxnId
-            }
-            transactionStore.cache(toCache);
-            currentTxn=toCache;
+    private void readResolve(Data element) throws IOException{
+        /*
+		 * We want to resolve the transaction related
+		 * to this version of the data.
+		 *
+		 * The point of the commit timestamp column (and thus the read resolution)
+		 * is that the transaction is known to be committed, and requires NO FURTHER
+		 * information to ensure its visibility (e.g. that all we need to ensure visibility
+		 * is the commit timestamp itself).
+		 *
+		 * We only enter this method if we DO NOT have a commit timestamp for this version
+		 * of the data. In this case, we want to determine if we can or cannot resolve
+		 * this column as committed (and thus add a commit timestamp entry). If the data
+		 * was written by a dependent child transaction, the proper commit timestamp is
+		 * NOT the commit timestamp of the child, it is the commit timestamp of the parent,
+		 * which means that we'll need to use the effective commit timestamp and the effective
+		 * state to determine whether or not to read-resolve the entry.
+		 *
+		 * This means that we will NOT writes from dependent child transactions until their
+		 * parent transaction has been committed.
+		 */
+        long ts=dataStore.getDataLib().getTimestamp(element);
+        if(!visitedTxnIds.add(ts)){
+			/*
+			 * We've already visited this version of the row data, so there's no
+			 * point in read-resolving this entry. This saves us from a
+			 * potentially expensive transactionStore read.
+			 */
+            return;
         }
-    }
 
-    @Override
-    public DataStore getDataStore(){
-        return dataStore;
+        TxnView t=fetchTransaction(ts);
+        assert t!=null:"Could not find a transaction for id "+ts;
+
+        //submit it to the resolver to resolve asynchronously
+        if(t.getEffectiveState().isFinal()){
+            doResolve(element,ts);
+        }
     }
 }

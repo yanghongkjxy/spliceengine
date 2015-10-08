@@ -115,6 +115,7 @@ public class TxnLifecycleObserver{
      * @param txn the transaction
      */
     public void txnFinished(Txn txn){
+        if(txn.getParentTxnId()!=Txn.ROOT_TRANSACTION.getTxnId()) return; //nothing to do
         if(txns.first()==txn){
             lastActiveTxn.set(txn);
         }
