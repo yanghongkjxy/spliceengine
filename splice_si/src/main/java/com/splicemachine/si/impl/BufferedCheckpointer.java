@@ -10,6 +10,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -143,12 +144,24 @@ public class BufferedCheckpointer implements Checkpointer{
     private Mutation getCheckpointPut(Checkpoint checkpoint){
         ByteSlice key = checkpoint.rowKey;
         long ts = checkpoint.timestamp;
-        byte[] value = checkpoint.checkpointValue;
 
         Put p = new Put(key.array(),key.offset(),key.length());
         p.setAttribute(FixedSpliceConstants.SUPPRESS_INDEXING_ATTRIBUTE_NAME,FixedSpliceConstants.SUPPRESS_INDEXING_ATTRIBUTE_VALUE);
-        p.add(FixedSpliceConstants.DEFAULT_FAMILY_BYTES,FixedSpliceConstants.PACKED_COLUMN_BYTES,ts,value);
         p.setDurability(Durability.SKIP_WAL);
+
+        //add the data field
+        p.add(FixedSpliceConstants.DEFAULT_FAMILY_BYTES,FixedSpliceConstants.PACKED_COLUMN_BYTES,ts,checkpoint.checkpointValue);
+
+        long cTs = checkpoint.commitTimestamp;
+        byte[] checkpointCellValue;
+        if(cTs>0){
+            checkpointCellValue = Bytes.toBytes(cTs);
+        }else{
+            checkpointCellValue = FixedSpliceConstants.EMPTY_BYTE_ARRAY;
+        }
+
+        //add the checkpoint field
+        p.add(FixedSpliceConstants.DEFAULT_FAMILY_BYTES,FixedSIConstants.SNAPSHOT_ISOLATION_CHECKPOINT_COLUMN_BYTES,ts,checkpointCellValue);
         return p;
     }
 

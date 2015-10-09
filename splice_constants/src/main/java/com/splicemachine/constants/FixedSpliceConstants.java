@@ -49,4 +49,5 @@ public class FixedSpliceConstants{
     public static final String SPLICE_USER = "SPLICE";
 
     public static final String ENTRY_PREDICATE_LABEL= "p";
+    public static final byte[] EMPTY_BYTE_ARRAY= new byte[]{};
 }

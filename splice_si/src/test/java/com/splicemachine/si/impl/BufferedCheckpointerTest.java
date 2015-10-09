@@ -14,6 +14,7 @@ import org.junit.Test;
  * @author Scott Fines
  *         Date: 10/2/15
  */
+@SuppressWarnings("deprecation")
 public class BufferedCheckpointerTest{
 
     @Test
