@@ -1321,6 +1321,7 @@ public class SpliceConstants {
         enableImportStatusLogging = config.getBoolean(ENABLE_IMPORT_STATUS_LOGGING,DEFAULT_ENABLE_IMPORT_STATUS_LOGGING);
 
         scannerBatchSize = config.getInt(SCANNER_BATCH_SIZE, DEFAULT_SCANNER_BATCH_SIZE);
+        enableImportStatusLogging = config.getBoolean(ENABLE_IMPORT_STATUS_LOGGING,DEFAULT_ENABLE_IMPORT_STATUS_LOGGING);
     }
 
     public static void reloadConfiguration(Configuration configuration) {
