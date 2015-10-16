@@ -13,26 +13,42 @@ import java.io.ObjectOutput;
  */
 public class ActiveReadTxn extends AbstractTxnView{
     private TxnView parentTxn;
+    private boolean additive;
 
     public ActiveReadTxn(long beginTimestamp){
        this(beginTimestamp,Txn.IsolationLevel.SNAPSHOT_ISOLATION);
     }
 
-    public ActiveReadTxn(long beginTimestamp,Txn.IsolationLevel isolationLevel){
+    public ActiveReadTxn(long beginTimestamp,
+                         Txn.IsolationLevel isolationLevel){
         this(beginTimestamp, beginTimestamp,isolationLevel);
     }
 
-    public ActiveReadTxn(long txnId,long beginTimestamp,Txn.IsolationLevel isolationLevel){
+    public ActiveReadTxn(long txnId,
+                         long beginTimestamp,
+                         Txn.IsolationLevel isolationLevel){
         this(txnId, beginTimestamp, isolationLevel,Txn.ROOT_TRANSACTION);
     }
 
-    public ActiveReadTxn(long txnId,long beginTimestamp,Txn.IsolationLevel isolationLevel,TxnView parentTxn){
+    public ActiveReadTxn(long txnId,
+                         long beginTimestamp,
+                         Txn.IsolationLevel isolationLevel,
+                         TxnView parentTxn){
+        this(txnId, beginTimestamp, isolationLevel, parentTxn,false);
+    }
+
+    public ActiveReadTxn(long txnId,
+                         long beginTimestamp,
+                         Txn.IsolationLevel isolationLevel,
+                         TxnView parentTxn,
+                         boolean additive){
         super(txnId,beginTimestamp,isolationLevel);
         this.parentTxn  = parentTxn;
+        this.additive = additive;
     }
 
     @Override public long getCommitTimestamp(){ return -1l; }
-    @Override public boolean isAdditive(){ return false; }
+    @Override public boolean isAdditive(){ return additive; }
     @Override public long getGlobalCommitTimestamp(){ return -1l; }
 
     @Override

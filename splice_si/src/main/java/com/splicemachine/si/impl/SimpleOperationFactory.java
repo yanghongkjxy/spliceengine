@@ -146,12 +146,12 @@ public class SimpleOperationFactory implements TxnOperationFactory{
             if(allowsWrites)
                 parent=new ActiveWriteTxn(id,id,parent,additive,level);
             else
-                parent=new ActiveReadTxn(id,id,level,parent);
+                parent=new ActiveReadTxn(id,id,level,parent,additive);
         }
         if(allowsWrites)
             return new ActiveWriteTxn(beginTs,beginTs,parent,additive,level);
         else
-            return new ActiveReadTxn(beginTs,beginTs,level,parent);
+            return new ActiveReadTxn(beginTs,beginTs,level,parent,additive);
     }
 
     /******************************************************************************************************************/

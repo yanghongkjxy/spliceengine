@@ -75,6 +75,7 @@ public class CompletedTxnCacheSupplierTest{
         });
         TxnLifecycleObserver tcObserver=new TxnLifecycleObserver(NoopKeepAliveScheduler.INSTANCE);
         Txn txn=new WritableTxn(1,1,Txn.IsolationLevel.SNAPSHOT_ISOLATION,Txn.ROOT_TRANSACTION,tc,tcObserver,false);
+        tcObserver.txnBegun(txn);
         txn.rollback();
 
         final boolean[] called=new boolean[]{false};
@@ -116,6 +117,7 @@ public class CompletedTxnCacheSupplierTest{
         });
         TxnLifecycleObserver tcObserver=new TxnLifecycleObserver(NoopKeepAliveScheduler.INSTANCE);
         Txn txn=new WritableTxn(1,1,Txn.IsolationLevel.SNAPSHOT_ISOLATION,Txn.ROOT_TRANSACTION,tc,tcObserver,false);
+        tcObserver.txnBegun(txn);
         txn.commit();
 
         final boolean[] called=new boolean[]{false};

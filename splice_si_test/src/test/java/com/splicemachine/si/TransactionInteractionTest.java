@@ -89,7 +89,16 @@ public class TransactionInteractionTest {
         ConstraintChecker uniqueConstraint=new ConstraintChecker(){
             @Override
             public OperationStatus checkConstraint(KVPair mutation,Result existingRow) throws IOException{
-                boolean failure=existingRow!=null && mutation.getType()==KVPair.Type.INSERT;
+                boolean failure=existingRow!=null;
+                if(failure){
+                    switch(mutation.getType()){
+                        case INSERT:
+                        case UPSERT:
+                            break;
+                        default:
+                            failure = false;
+                    }
+                }
                 if(failure)
                     return new OperationStatus(HConstants.OperationStatusCode.FAILURE,"UniqueConstraint violation");
                 else
@@ -123,6 +132,7 @@ public class TransactionInteractionTest {
         Txn insertTxn3 = control.beginTransaction(DESTINATION_TABLE);
         Txn insertChild3 = control.beginChildTransaction(insertTxn3,DESTINATION_TABLE);
         try{
+            Assert.assertEquals("Incorrect row!","scott age=29 job=null",testUtility.read(insertChild3,"scott"));
             testUtility.insertAge(insertChild3,"scott",30,uniqueConstraint);
             Assert.fail("Did not throw the constraint violation");
         }catch(IOException ioe){

@@ -42,11 +42,6 @@ public class SITransactorHBasePackedTest extends SITransactorTest {
         // temporarily mask test in parent class
     }
 
-    @Test
-    public void writeWriteRead() throws IOException {
-        super.writeWriteRead();
-    }
-
     @Override
     public void testGetActiveTransactionsFiltersOutChildrenCommit() throws Exception {
         /*

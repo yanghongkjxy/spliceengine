@@ -68,7 +68,7 @@ public class SIObserver extends SIBaseObserver{
                 columnMap=Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
                 familyMap.put(family,columnMap);
             }
-            columnMap.put(column,new KVPair(row,value,isDelete?KVPair.Type.DELETE:KVPair.Type.INSERT));
+            columnMap.put(column,new KVPair(row,value,isDelete?KVPair.Type.DELETE:KVPair.Type.UPSERT));
         }
         if(isSIDataOnly){
             byte[] family=SpliceConstants.DEFAULT_FAMILY_BYTES;

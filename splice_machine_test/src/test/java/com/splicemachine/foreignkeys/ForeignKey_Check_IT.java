@@ -9,6 +9,7 @@ import org.junit.*;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+
 import java.sql.Statement;
 import java.util.regex.Pattern;
 
@@ -100,6 +101,7 @@ public class ForeignKey_Check_IT {
     @Test
     public void childRowsCannotReferenceDeletedRowsInParent() throws Exception {
         // given -- C -> P
+        Connection conn = methodWatcher.getOrCreateConnection();
         try(Statement s = conn.createStatement()){
             s.executeUpdate("create table P(a int primary key)");
             s.executeUpdate("create table C(a int references P(a))");

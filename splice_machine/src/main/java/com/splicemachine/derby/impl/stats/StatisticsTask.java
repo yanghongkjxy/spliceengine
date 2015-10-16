@@ -5,6 +5,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
 import com.splicemachine.SpliceKryoRegistry;
 import com.splicemachine.constants.FixedSpliceConstants;
+import com.splicemachine.constants.SIConstants;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.db.iapi.error.StandardException;
 import com.splicemachine.db.iapi.services.io.ArrayUtil;
@@ -35,12 +36,15 @@ import com.splicemachine.si.api.Txn;
 import com.splicemachine.si.api.TxnLifecycleManager;
 import com.splicemachine.si.api.TxnView;
 import com.splicemachine.si.data.api.SDataLib;
+import com.splicemachine.si.impl.CheckpointFilter;
 import com.splicemachine.si.impl.HTransactorFactory;
 import com.splicemachine.si.impl.TransactionalRegions;
+import com.splicemachine.si.impl.TxnFilter;
 import com.splicemachine.stats.ColumnStatistics;
 import com.splicemachine.storage.EntryEncoder;
 import com.splicemachine.utils.SpliceZooKeeperManager;
 import com.splicemachine.utils.kryo.KryoObjectOutput;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -144,6 +148,8 @@ public class StatisticsTask extends ZkTask{
         Txn txn = getTxn();
         long[] statsTableIds = getStatsConglomerateIds();
         try(TransactionalRegion txnRegion = TransactionalRegions.get(region)) {
+            TxnFilter<Cell> cellTxnFilter=txnRegion.unpackedFilter(txn);
+            partitionScan.setFilter(new CheckpointFilter(cellTxnFilter,SIConstants.checkpointSeekThreshold));
             markCollectionInProgress(txnRegion,statsTableIds[0]);
             StatisticsCollector collector;
             if(baseTableConglomerateId<0) {
@@ -189,6 +195,8 @@ public class StatisticsTask extends ZkTask{
 
             TaskStats ts = new TaskStats(end-start,collected.rowCount(),3l);
             status.setStats(ts);
+        }catch(IOException e){
+            throw new ExecutionException(e);
         }
     }
 

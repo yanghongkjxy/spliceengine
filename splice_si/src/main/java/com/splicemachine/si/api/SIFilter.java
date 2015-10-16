@@ -1,6 +1,7 @@
 package com.splicemachine.si.api;
 
 import com.splicemachine.si.impl.TxnFilter;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.filter.Filter;
 
 import java.io.IOException;
@@ -31,4 +32,5 @@ public interface SIFilter<Data>{
     Filter.ReturnCode filterKeyValue(Data kv) throws IOException;
 
     TxnFilter<Data> unwrapFilter();
+
 }

@@ -273,24 +273,24 @@ public class HDataLib implements SDataLib<Cell, Put, Delete, Get, Scan>{
             throw new RuntimeException(ignored);
         }
 
-//        if(kvPair.getType()==KVPair.Type.INSERT){
-//            /*
-//             * DB-3961: If we are an insert, then add the checkpoint cell to the bytes to ensure that we
-//             * are properly reading insertion cells as final versions (and therefore checkpointed).
-//             */
-//            column = FixedSIConstants.SNAPSHOT_ISOLATION_CHECKPOINT_COLUMN_BYTES;
-//            Cell checkpointKv = new KeyValue(rowKey.array(),rowKey.offset(),rowKey.length(),
-//                    family,0,family.length,
-//                    column,0,column.length,
-//                    longTransactionId,
-//                    KeyValue.Type.Put,
-//                    SIConstants.EMPTY_BYTE_ARRAY,0,0);
-//            try{
-//                put.add(checkpointKv);
-//            }catch(IOException ignored){
-//                throw new RuntimeException(ignored);
-//            }
-//        }
+        if(kvPair.getType()==KVPair.Type.INSERT){
+            /*
+             * DB-3961: If we are an insert, then add the checkpoint cell to the bytes to ensure that we
+             * are properly reading insertion cells as final versions (and therefore checkpointed).
+             */
+            column = FixedSIConstants.SNAPSHOT_ISOLATION_CHECKPOINT_COLUMN_BYTES;
+            Cell checkpointKv = new KeyValue(rowKey.array(),rowKey.offset(),rowKey.length(),
+                    family,0,family.length,
+                    column,0,column.length,
+                    longTransactionId,
+                    KeyValue.Type.Put,
+                    SIConstants.EMPTY_BYTE_ARRAY,0,0);
+            try{
+                put.add(checkpointKv);
+            }catch(IOException ignored){
+                throw new RuntimeException(ignored);
+            }
+        }
         return put;
     }
 

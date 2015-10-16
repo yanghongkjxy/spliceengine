@@ -333,9 +333,10 @@ public class SITableScanner<Data> implements StandardIterator<ExecRow>,AutoClose
                     currentRowLocation.setValue(loc);
             }
         } else {
-            if(currentRowLocation==null)
-                currentRowLocation = new HBaseRowLocation(rowKey);
-            else
+            if(currentRowLocation==null){
+                //make a copy of the row key, so that we don't contaminate runs up the line
+                currentRowLocation=new HBaseRowLocation(new ByteSlice(rowKey));
+            }else
                 currentRowLocation.setValue(rowKey);
         }
     }

@@ -20,7 +20,6 @@ import com.splicemachine.si.impl.readresolve.NoOpReadResolver;
 import com.splicemachine.si.impl.store.IgnoreTxnCacheSupplier;
 import com.splicemachine.utils.SpliceLogUtils;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.OperationWithAttributes;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -81,11 +80,6 @@ public class SITransactor<Data, Table,
     // Operation pre-processing. These are to be called "server-side" when we are about to process an operation.
 
     // Process update operations
-
-    @Override
-    public boolean processPut(Table table, RollForward rollForwardQueue, Put put) throws IOException {
-        return processPut(table,rollForwardQueue,put,ConstraintChecker.NO_CONSTRAINT);
-    }
 
     @Override
     public boolean processPut(Table table,RollForward rollForwardQueue,Put put,ConstraintChecker constraintChecker) throws IOException{
@@ -178,7 +172,7 @@ public class SITransactor<Data, Table,
                     kvPairs = Lists.newArrayList();
                     columnMap.put(column, kvPairs);
                 }
-                kvPairs.add(new KVPair(row, value, isDelete ? KVPair.Type.DELETE : KVPair.Type.INSERT));
+                kvPairs.add(new KVPair(row, value, isDelete ? KVPair.Type.DELETE : KVPair.Type.UPSERT));
             }
             if (isSIDataOnly) {
                 /*
@@ -389,7 +383,7 @@ public class SITransactor<Data, Table,
                  */
                 //todo -sf remove the Row key copy here
                 Result possibleConflicts = dataStore.getCommitTimestampsAndTombstonesSingle(table, kvPair.getRowKey());
-                if (possibleConflicts != null) {
+                if (possibleConflicts != null && possibleConflicts.size()>0) {
                     //we need to check for write conflicts
                     conflictResults = ensureNoWriteConflict(transaction, writeType, possibleConflicts);
                 }

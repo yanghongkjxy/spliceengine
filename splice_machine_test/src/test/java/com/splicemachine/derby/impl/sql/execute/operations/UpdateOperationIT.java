@@ -105,12 +105,12 @@ public class UpdateOperationIT{
 
             //make sure that the update worked
             BigDecimal expected=new BigDecimal("11.10");
-            String[] queries = new String[]{
+            String[] queries=new String[]{
                     "select dc from dc",
                     "select dc from dc --SPLICE-PROPERTIES index=DIDX\n",
                     "select dc from dc --SPLICE-PROPERTIES index=DUNIQ\n"
             };
-            for(String query:queries){
+            for(String query : queries){
                 try(ResultSet actualRs=s.executeQuery(query)){
                     Assert.assertTrue("No response returned!",actualRs.next());
                     BigDecimal actualVal=actualRs.getBigDecimal(1);
@@ -457,7 +457,7 @@ public class UpdateOperationIT{
 						doTestUpdateOverJoin("NESTEDLOOP",conn);
         }
     public void testUpdateOverBroadcastJoin() throws Exception{
-            doTestUpdateOverJoin("BROADCAST",conn);
+        doTestUpdateOverJoin("BROADCAST",conn);
     }
 
     @Test

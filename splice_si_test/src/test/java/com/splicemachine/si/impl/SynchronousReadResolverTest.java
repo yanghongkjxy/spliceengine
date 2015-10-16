@@ -60,6 +60,7 @@ public class SynchronousReadResolverTest {
 
         Txn rolledBackTxn = new WritableTxn(1l, 1l, Txn.IsolationLevel.SNAPSHOT_ISOLATION, Txn.ROOT_TRANSACTION, tc,tcO, false);
         store.recordNewTransaction(rolledBackTxn);
+        tcO.txnBegun(rolledBackTxn);
         rolledBackTxn.rollback(); //ensure that it's rolled back
 
         byte[] rowKey = Encoding.encode("hello");
@@ -108,6 +109,7 @@ public class SynchronousReadResolverTest {
         }).when(tc).commit(anyLong());
         Txn committedTxn = new WritableTxn(1l, 1l, Txn.IsolationLevel.SNAPSHOT_ISOLATION, Txn.ROOT_TRANSACTION, tc,tcO, false);
         store.recordNewTransaction(committedTxn);
+        tcO.txnBegun(committedTxn);
         committedTxn.commit();
 
         byte[] rowKey = Encoding.encode("hello");

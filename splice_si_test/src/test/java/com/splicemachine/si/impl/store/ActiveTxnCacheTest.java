@@ -74,6 +74,7 @@ public class ActiveTxnCacheTest{
             }
         };
         backStore.recordNewTransaction(txn);
+        tcObserver.txnBegun(txn);
         txn.rollback();
 
         TxnSupplier store=new ActiveTxnCacheSupplier(backStore,16);

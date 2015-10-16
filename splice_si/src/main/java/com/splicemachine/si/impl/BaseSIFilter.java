@@ -59,4 +59,8 @@ public abstract class BaseSIFilter<Data> extends FilterBase implements Writable 
     public void write(DataOutput out) throws IOException {
         throw new UnsupportedOperationException("This filter should not be serializing");
     }
+
+    public TxnFilter<Data> unwrapTxnFilter(){
+        return filterState;
+    }
 }

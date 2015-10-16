@@ -62,7 +62,7 @@ public class CheckpointFilter extends FilterBase{
         }
     }
 
-    @Override public boolean hasFilterRow(){ return true; }
+    @Override public boolean hasFilterRow(){ return txnFilter.isPacked(); }
     @Override public boolean filterRow() throws IOException{ return txnFilter.getExcludeRow(); }
 
     /* ***************************************************************************************************************/

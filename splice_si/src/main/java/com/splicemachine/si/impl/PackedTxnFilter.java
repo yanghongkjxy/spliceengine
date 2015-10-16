@@ -9,7 +9,7 @@ import java.io.IOException;
 
 public class PackedTxnFilter<Data> implements TxnFilter<Data>, SIFilter<Data>{
     protected final TxnFilter simpleFilter;
-    public final RowAccumulator accumulator;
+    public final RowAccumulator<Data> accumulator;
     private Data lastValidKeyValue;
     protected boolean excludeRow=false;
 

@@ -17,11 +17,6 @@ import java.util.Collection;
  */
 public interface Transactor<Table,Mutation extends OperationWithAttributes,Put extends Mutation>{
 
-    /**
-     * Execute the put operation (with SI treatment) on the table. Send roll-forward notifications to the rollForwardQueue.
-     */
-    boolean processPut(Table table,RollForward rollForwardQueue,Put put) throws IOException;
-
     boolean processPut(Table table,RollForward rollForwardQueue,Put put,ConstraintChecker constraintChecker) throws IOException;
 
     OperationStatus[] processPutBatch(Table table,RollForward rollForwardQueue,Put[] mutations) throws IOException;
