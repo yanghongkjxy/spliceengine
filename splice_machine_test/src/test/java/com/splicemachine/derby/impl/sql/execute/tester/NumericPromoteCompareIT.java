@@ -1,21 +1,27 @@
 package com.splicemachine.derby.impl.sql.execute.tester;
 
+import com.splicemachine.derby.test.framework.SpliceTableWatcher;
 import com.splicemachine.derby.test.framework.SpliceWatcher;
 import com.splicemachine.derby.test.framework.SpliceSchemaWatcher;
 import com.splicemachine.derby.test.framework.SpliceWatcher;
 import com.splicemachine.homeless.TestUtils;
 
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import static java.lang.String.format;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 /**
@@ -30,16 +36,21 @@ public class NumericPromoteCompareIT {
     private static final String CLASS_NAME = NumericPromoteCompareIT.class.getSimpleName().toUpperCase();
     private static final SpliceWatcher spliceClassWatcher = new SpliceWatcher(CLASS_NAME);
 
-    @ClassRule
-    public static TestRule chain = RuleChain.outerRule(spliceClassWatcher)
-            .around(new SpliceSchemaWatcher(CLASS_NAME))
-            .around(TestUtils.createFileDataWatcher(spliceClassWatcher, "test_data/NumericPromoteCompareIT.sql", CLASS_NAME));
-
     @Rule
     public SpliceWatcher methodWatcher = new SpliceWatcher(CLASS_NAME);
 
     private static String tableName1 = "customer";
-    
+    private static String TABLE_NAME_2 = "tableA";
+
+    protected static SpliceSchemaWatcher spliceSchemaWatcher = new SpliceSchemaWatcher(CLASS_NAME);
+    protected static SpliceTableWatcher tableWatcher2 = new SpliceTableWatcher(TABLE_NAME_2, CLASS_NAME, "(id int, val decimal(12,2))");
+
+    @ClassRule
+    public static TestRule chain = RuleChain.outerRule(spliceClassWatcher)
+            .around(spliceSchemaWatcher)
+            .around(tableWatcher2)
+            .around(TestUtils.createFileDataWatcher(spliceClassWatcher, "test_data/NumericPromoteCompareIT.sql", CLASS_NAME));
+
     @Test
     public void testMultipleTypes() throws Exception {
     	// Compare INT to the rest
@@ -65,6 +76,44 @@ public class NumericPromoteCompareIT {
         assertCount(4, tableName1, "cust_id_num", "=", "cust_id_sml");
         assertCount(5, tableName1, "cust_id_num", "=", "cust_id_dec");
         assertCount(5, tableName1, "cust_id_num", "=", "cust_id_num");
+    }
+
+    // TODO move to proper place on refactoring
+    // SQLDecimal rounding ITs
+
+    @Test
+    public void testSQLDecimalRoundingInline() throws Exception {
+        ResultSet rs = methodWatcher.executeQuery("values cast (1.445 as DECIMAL(5,2))");
+        rs.next();
+        BigDecimal result = rs.getBigDecimal(1);
+        assertThat("Rounding must be half-up", result, equalTo(new BigDecimal(BigInteger.valueOf(145), 2)));
+    }
+
+    @Test
+    public void testSQLDecimalRoundingAdding() throws Exception {
+        methodWatcher.execute(format("insert into %s values (1, 4.4449 + 5.0001)", tableWatcher2));
+        ResultSet rs = methodWatcher.executeQuery(format("select val from %s where id = 1", tableWatcher2));
+        rs.next();
+        BigDecimal value = rs.getBigDecimal(1);
+        assertThat("Values must be rounded half-up", value, equalTo(new BigDecimal(BigInteger.valueOf(945), 2)));
+    }
+
+    @Test
+    public void testSQLDecimalRoundingDivision() throws Exception {
+        methodWatcher.execute(format("insert into %s values (2, 10.0/3)", tableWatcher2));
+        ResultSet rs = methodWatcher.executeQuery(format("select val from %s where id = 2", tableWatcher2));
+        rs.next();
+        BigDecimal value = rs.getBigDecimal(1);
+        assertThat("Values must be rounded half-up", value, equalTo(new BigDecimal(BigInteger.valueOf(333), 2)));
+    }
+
+    @Test
+    public void testSQLDecimalRoundingDivision2() throws Exception {
+        methodWatcher.execute(format("insert into %s values (3, 9.375/3)", tableWatcher2));
+        ResultSet rs = methodWatcher.executeQuery(format("select val from %s where id = 3", tableWatcher2));
+        rs.next();
+        BigDecimal value = rs.getBigDecimal(1);
+        assertThat("Values must be rounded half-up", value, equalTo(new BigDecimal(BigInteger.valueOf(313), 2)));
     }
 
     // The following were lifted form NumericConstantsIT.
