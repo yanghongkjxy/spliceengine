@@ -176,7 +176,7 @@ public class BufferedCheckpointer implements Checkpointer{
         return mutations;
     }
 
-    private class Checkpoint{
+    private static class Checkpoint{
         ByteSlice rowKey;
         byte[] checkpointValue;
         long timestamp;

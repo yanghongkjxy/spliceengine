@@ -119,9 +119,12 @@ public class InheritingTxnView extends AbstractTxnView {
 
 		@Override
 		public long getGlobalCommitTimestamp() {
-        if(state== Txn.State.ROLLEDBACK) return -1l; //can't have a global commit timestamp if we are rolled back
-				if(globalCommitTimestamp==-1l) return parentTxn.getGlobalCommitTimestamp();
-				return globalCommitTimestamp;
+			if(state== Txn.State.ROLLEDBACK) return -1l; //can't have a global commit timestamp if we are rolled back
+			else if(globalCommitTimestamp==-1l){
+				if(parentTxn!=Txn.ROOT_TRANSACTION)
+					return parentTxn.getGlobalCommitTimestamp();
+				return commitTimestamp;
+			}else return globalCommitTimestamp;
 		}
 
 		@Override

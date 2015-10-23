@@ -19,29 +19,53 @@ import java.util.concurrent.atomic.AtomicInteger;
  *         Date: 10/6/14
  */
 public class SpliceConnectionPool {
-    public static final SpliceConnectionPool INSTANCE = new SpliceConnectionPool(SpliceConstants.numHConnections);
+    private static volatile SpliceConnectionPool INSTANCE;
     private final HConnection[] connections;
     private final int numConnections;
     private static AtomicInteger counter = new AtomicInteger(0);
 
-    private SpliceConnectionPool(int numConnections) {
+    public SpliceConnectionPool(int numConnections) {
+        this(numConnections,SpliceConstants.config);
+    }
+
+    public SpliceConnectionPool(int numConnections,Configuration conf) {
         this.numConnections = numConnections;
         this.connections = new HConnection[numConnections];
 
-        initialize();
+        initialize(conf);
     }
 
-    private void initialize() {
-        Configuration config = SpliceConstants.config;
+    public static SpliceConnectionPool getDefaultPool(){
+        SpliceConnectionPool pool = INSTANCE;
+        if(pool==null){
+            synchronized(SpliceConnectionPool.class){
+                pool = INSTANCE;
+                if(pool==null){
+                    pool = INSTANCE = new SpliceConnectionPool(SpliceConstants.numHConnections);
+                }
+            }
+        }
+        return pool;
+    }
+
+    private void initialize(Configuration config) {
         ExecutorService connectionPool = createConnectionPool(config);
 
-        for (int i = 0; i< numConnections; i++) {
-            Configuration configuration = new Configuration(SpliceConstants.config);
-            configuration.setInt(HConstants.HBASE_CLIENT_INSTANCE_ID,i);
-            try {
-                connections[i] =HConnectionManager.createConnection(config, connectionPool);
-            }catch (IOException e) {
+        if(numConnections==1){
+            try{
+                connections[0] = HConnectionManager.createConnection(config,connectionPool);
+            }catch(IOException e){
                 throw new RuntimeException(e);
+            }
+        }else{
+            for(int i=0;i<numConnections;i++){
+                Configuration configuration=new Configuration(config);
+                configuration.setInt(HConstants.HBASE_CLIENT_INSTANCE_ID,i);
+                try{
+                    connections[i]=HConnectionManager.createConnection(config,connectionPool);
+                }catch(IOException e){
+                    throw new RuntimeException(e);
+                }
             }
         }
     }

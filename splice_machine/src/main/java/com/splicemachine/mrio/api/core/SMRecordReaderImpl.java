@@ -58,19 +58,15 @@ public class SMRecordReaderImpl extends RecordReader<RowLocation, ExecRow> {
 		String tableScannerAsString = config.get(MRConstants.SPLICE_SCAN_INFO);
         if (tableScannerAsString == null)
 			throw new IOException("splice scan info was not serialized to task, failing");
-		try {
-			builder = TableScannerBuilder.getTableScannerBuilderFromBase64String(tableScannerAsString);
-			if (LOG.isTraceEnabled())
-				SpliceLogUtils.trace(LOG, "config loaded builder=%s",builder);
-			TableSplit tSplit = ((SMSplit)split).getSplit();
-			Scan scan = builder.getScan();
-			scan.setStartRow(tSplit.getStartRow());
-			scan.setStopRow(tSplit.getEndRow());
-            this.scan = scan;
-			restart(tSplit.getStartRow());
-		} catch (StandardException e) {
-			throw new IOException(e);
-		}
+		builder = TableScannerBuilder.getTableScannerBuilderFromBase64String(tableScannerAsString);
+		if (LOG.isTraceEnabled())
+			SpliceLogUtils.trace(LOG, "config loaded builder=%s",builder);
+		TableSplit tSplit = ((SMSplit)split).getSplit();
+		Scan scan = builder.getScan();
+		scan.setStartRow(tSplit.getStartRow());
+		scan.setStopRow(tSplit.getEndRow());
+		this.scan = scan;
+		restart(tSplit.getStartRow());
 	}
 
 	@Override
@@ -152,7 +148,7 @@ public class SMRecordReaderImpl extends RecordReader<RowLocation, ExecRow> {
 				throw new RuntimeException("splice scan info was not serialized to task, failing");
 			try {
 				builder = TableScannerBuilder.getTableScannerBuilderFromBase64String(tableScannerAsString);
-			} catch (IOException | StandardException  e) {
+			} catch (IOException  e) {
 				throw new RuntimeException(e);
 			}
 			if (LOG.isTraceEnabled())

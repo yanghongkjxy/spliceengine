@@ -11,6 +11,7 @@ import com.splicemachine.si.impl.BaseSIFilterPacked;
 import com.splicemachine.si.impl.CheckpointFilter;
 import com.splicemachine.si.impl.SIFilterPacked;
 import com.splicemachine.si.impl.TxnFilter;
+import com.splicemachine.si.impl.compaction.CheckpointCompactionScanner;
 import com.splicemachine.storage.EntryPredicateFilter;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
@@ -30,6 +31,7 @@ import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static com.splicemachine.constants.SpliceConstants.SUPPRESS_INDEXING_ATTRIBUTE_NAME;
@@ -125,12 +127,50 @@ public class SIObserver extends SIBaseObserver{
     }
 
     @Override
+    public void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c,Store store,List<StoreFile> candidates) throws IOException{
+        super.preCompactSelection(c,store,candidates);
+    }
+
+    @Override
     public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,Store store,
                                       InternalScanner scanner,ScanType scanType,CompactionRequest compactionRequest) throws IOException{
         if(tableEnvMatch){
-            return region.compactionScanner(scanner);
+            /*
+             * We cannot perform transactional maintenance while Compactions are ongoing, because it can cause
+             * nasty race conditions like the following:
+             *
+             * 1. add tombstone cell for Read resolution
+             * 2. compaction
+             * 3. Since the tombstone occurs below the MinimumActiveTransaction, compaction is able to delete the row
+             * 4. Read off the queue, and add a commit timestamp cell.
+             *
+             * The end result is a commit timestamp cell with no associated user or tombstone cell, which is technically
+             * a corrupted store. In many cases our read pipeline can handle this particular situation, but there's no
+             * guarantee that that will always be the case, and this is not necessarily the only race condition of its
+             * type--you could also end up with phantom Checkpoint cells due to checkpointing, for example. Thus,
+             * in order to avoid this, we have to "pause" all region-level maintenance while compactions run,
+             * and re-enable them afterwards. In most cases this doesn't make much difference, since compaction
+             * will perform the same operation as all our background processors anyway.
+             */
+            region.pauseMaintenance();
+            return region.compactionScanner(scanner,compactionRequest);
         }else{
             return super.preCompact(e,store,scanner,scanType,compactionRequest);
+        }
+    }
+
+    @Override
+    public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e,Store store,StoreFile resultFile){
+        if(tableEnvMatch){
+            region.resumeMaintenance();
+        }
+        super.postCompact(e,store,resultFile);
+    }
+
+    @Override
+    public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e,Store store,StoreFile resultFile){
+        if(tableEnvMatch){
+            region.resumeMaintenance();
         }
     }
 

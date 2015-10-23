@@ -12,8 +12,11 @@ public class NoopRollForward implements RollForward{
 
 		private NoopRollForward(){}
 
-		@Override public void submitForResolution(byte[] rowKey, long txnId) {  }
-		@Override public void submitForResolution(ByteSlice rowKey, long txnId) {  }
+	@Override public void submitForResolution(ByteSlice rowKey, long txnId) {  }
 		@Override public void recordResolved(ByteSlice rowKey, long txnId) {  }
+	@Override public void recordResolved(byte[] array,int offset,int length,long txnId){ }
 
+	@Override public void pauseRollForward(){ }
+
+	@Override public void resumeRollForward(){ }
 }

@@ -33,4 +33,19 @@ public interface ReadResolver {
      * @param txnId the transaction id (version) of the row to resolve.
      */
     void resolve(ByteSlice rowKey, long txnId);
+
+    /**
+     * Indicate that this resolver should stop (temporarily) the resolution of records, because
+     * it may cause problems with some other concurrently running operation (such as Compaction) which
+     * would also affect the structure of the row.
+     *
+     * Multiple calls to this without calling {@link #resumeResolution()} will do nothing
+     */
+    void pauseResolution();
+
+    /**
+     * Indicate that this resolver should resume resolution of records. Calling this without first calling
+     * {@link #pauseResolution()}} will do nothing.
+     */
+    void resumeResolution();
 }

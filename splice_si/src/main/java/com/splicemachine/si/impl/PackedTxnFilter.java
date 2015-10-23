@@ -69,7 +69,7 @@ public class PackedTxnFilter<Data> implements TxnFilter<Data>, SIFilter<Data>{
     }
 
     @Override
-    public KeyValueType getType(Data data) throws IOException{
+    public CellType getType(Data data) throws IOException{
         return simpleFilter.getType(data);
     }
 

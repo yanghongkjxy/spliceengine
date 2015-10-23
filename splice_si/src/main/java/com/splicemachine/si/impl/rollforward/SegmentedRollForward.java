@@ -50,14 +50,13 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class SegmentedRollForward implements RollForward{
     private static final Logger LOG=Logger.getLogger(SegmentedRollForward.class);
+    private volatile boolean paused = false;
 
     public static class Context{
         private final RegionSegment segment;
-        private final RollForwardStatus status;
 
-        public Context(RegionSegment segment,RollForwardStatus status){
+        public Context(RegionSegment segment){
             this.segment=segment;
-            this.status=status;
         }
 
         public void rowResolved(){
@@ -87,6 +86,8 @@ public class SegmentedRollForward implements RollForward{
      */
     private final RegionSegment[] segments;
 
+    //not local to save on constantly re-computing a constant value
+    @SuppressWarnings("FieldCanBeLocal")
     private final long segmentCheckInterval=(1<<10)-1; //check every 1K updates
     private final long rollForwardRowThreshold;
     private final long rollForwardTransactionThreshold;
@@ -118,11 +119,12 @@ public class SegmentedRollForward implements RollForward{
             @Override
             public void run(){
                 if(region.isClosed() || region.isClosing()){
-										/*
-										 * The region is closing, we don't want to try roll forwards any more
-										 */
+					/*
+					 * The region is closing, we don't want to try roll forwards any more
+					 */
                     return;
                 }
+                if(paused) return; //if we are paused, nothing to do
 				/*
 				 * Select the segment with the largest number of rows to resolve,
 				 * and submit it
@@ -148,7 +150,7 @@ public class SegmentedRollForward implements RollForward{
                     if(LOG.isDebugEnabled())
                         SpliceLogUtils.debug(LOG,"Submitting task on segment %s as it has the largest size of %d",maxSegment,maxSize);
                     maxSegment.markInProgress();
-                    action.submitAction(region,maxSegment.getRangeStart(),maxSegment.getRangeEnd(),new Context(maxSegment,status));
+                    action.submitAction(region,maxSegment.getRangeStart(),maxSegment.getRangeEnd(),new Context(maxSegment));
                 }finally{
                     //reschedule us for future execution
                     rollForwardScheduler.schedule(this,rollForwardIntervalMs,TimeUnit.MILLISECONDS);
@@ -179,18 +181,6 @@ public class SegmentedRollForward implements RollForward{
         return segments;
     }
 
-    @Override
-    public void submitForResolution(byte[] rowKey,long txnId){
-        status.rowWritten();
-        RegionSegment regionSegment=getSegment(rowKey,0,segments.length);
-        regionSegment.update(txnId,1l);
-
-        long toResolveCount=updateCount.incrementAndGet();
-        if((toResolveCount&segmentCheckInterval)==0){
-            checkAndSubmit(regionSegment);
-        }
-    }
-
 
     @Override
     public void submitForResolution(ByteSlice rowKey,long txnId){
@@ -209,6 +199,24 @@ public class SegmentedRollForward implements RollForward{
     public void recordResolved(ByteSlice rowKey,long txnId){
         RegionSegment regionSegment=getSegment(rowKey,0,segments.length);
         regionSegment.rowResolved(); //mark it resolved so that we keep track
+        status.rowResolved();
+    }
+
+    @Override
+    public void recordResolved(byte[] data, int offset, int length,long txnId){
+        RegionSegment regionSegment=getSegment(data,offset,length,0,segments.length);
+        regionSegment.rowResolved(); //mark it resolved so that we keep track
+        status.rowResolved();
+    }
+
+    @Override
+    public void resumeRollForward(){
+        paused=false;
+    }
+
+    @Override
+    public void pauseRollForward(){
+       paused=true;
     }
 
     /*****************************************************************************************************************/
@@ -341,42 +349,35 @@ public class SegmentedRollForward implements RollForward{
 
 
     private RegionSegment getSegment(ByteSlice rowKey,int start,int stop){
+        return getSegment(rowKey.array(),rowKey.offset(),rowKey.length(),start,stop);
+    }
+
+    private RegionSegment getSegment(byte[] data, int dataOffset, int dataLen,int start,int stop){
         int pos=(stop+start)/2;
         RegionSegment segment=segments[pos];
-        int p=segment.position(rowKey);
+        int p=segment.position(data,dataOffset,dataLen);
         if(p==0) return segment;
         if(pos==start || pos==stop) return segment;
         if(p<0)
-            return getSegment(rowKey,start,pos);
+            return getSegment(data,dataOffset,dataLen,start,pos);
         else
-            return getSegment(rowKey,pos,stop);
-    }
-
-    private RegionSegment getSegment(byte[] rowKey,int start,int stop){
-        int pos=(stop+start)/2;
-        RegionSegment seg=segments[pos];
-        int p=seg.position(rowKey);
-        if(p==0)
-            return seg;
-        if(pos==start || pos==stop)
-            return seg; //this is as close are we're going to get--should never happen, but just in case
-        if(p<0) return getSegment(rowKey,start,pos);
-        else return getSegment(rowKey,pos,stop);
+            return getSegment(data,dataOffset,dataLen,pos,stop);
     }
 
     private void checkAndSubmit(RegionSegment regionSegment){
+        if(paused) return; //don't submit if we are paused
         if(regionSegment.isInProgress()) return; //don't submit more than one resolve action at a time
-				/*
-				 * We only want to submit a segment for rolling forward
-				 * if the following 2 criteria are met:
-				 *
-				 * 1. There are a considerable number of rows to roll forward (e.g. > rollForwardRowThreshold)
-				 * 2. There are a considerable number of committed transactions which wrote to this segment.
-				 *
-				 * We have no way of knowing for sure that criteria #2 is ever true, but we can use a heuristic
-				 * to guess--if the number of transactions which wrote to this segment is high (e.g. > rollForwardTransactionThreshold),
-				 * then it is likely that we have some committed/rolled back transactions.
-				 */
+		/*
+		 * We only want to submit a segment for rolling forward
+		 * if the following 2 criteria are met:
+		 *
+		 * 1. There are a considerable number of rows to roll forward (e.g. > rollForwardRowThreshold)
+		 * 2. There are a considerable number of committed transactions which wrote to this segment.
+		 *
+		 * We have no way of knowing for sure that criteria #2 is ever true, but we can use a heuristic
+		 * to guess--if the number of transactions which wrote to this segment is high (e.g. > rollForwardTransactionThreshold),
+		 * then it is likely that we have some committed/rolled back transactions.
+		 */
         long numRows=regionSegment.getToResolveCount();
         if(numRows>rollForwardRowThreshold){
             if(LOG.isTraceEnabled())
@@ -387,7 +388,7 @@ public class SegmentedRollForward implements RollForward{
                     SpliceLogUtils.trace(LOG,"segment %s has %d transactions, exceeding the threshold. Rolling forward",regionSegment,uniqueTxns);
                 //we've exceeded our thresholds, a RollForward action is a good option now
                 regionSegment.markInProgress();
-                action.submitAction(region,regionSegment.getRangeStart(),regionSegment.getRangeEnd(),new Context(regionSegment,status));
+                action.submitAction(region,regionSegment.getRangeStart(),regionSegment.getRangeEnd(),new Context(regionSegment));
             }
         }
     }

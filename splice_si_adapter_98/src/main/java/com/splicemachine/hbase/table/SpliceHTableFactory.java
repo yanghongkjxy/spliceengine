@@ -31,7 +31,7 @@ public class SpliceHTableFactory implements HTableInterfaceFactory {
     }
 
     public SpliceHTableFactory(boolean autoFlush){
-        this(autoFlush,SpliceConnectionPool.INSTANCE);
+        this(autoFlush,SpliceConnectionPool.getDefaultPool());
     }
 
     public SpliceHTableFactory(boolean autoFlush,SpliceConnectionPool connectionPool) {

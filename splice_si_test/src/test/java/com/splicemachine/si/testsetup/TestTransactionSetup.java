@@ -3,6 +3,7 @@ package com.splicemachine.si.testsetup;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.splicemachine.constants.SIConstants;
+import com.splicemachine.si.impl.DefaultCellTypeParser;
 import com.splicemachine.si.api.*;
 import com.splicemachine.si.data.api.SDataLib;
 import com.splicemachine.si.data.api.STableReader;
@@ -91,7 +92,8 @@ public class TestTransactionSetup {
                 SIConstants.EMPTY_BYTE_ARRAY,
                 SIConstants.SNAPSHOT_ISOLATION_ANTI_TOMBSTONE_VALUE_BYTES,
                 SIConstants.SNAPSHOT_ISOLATION_FAILED_TIMESTAMP,
-                SIConstants.DEFAULT_FAMILY_BYTES
+                SIConstants.DEFAULT_FAMILY_BYTES,
+                DefaultCellTypeParser.INSTANCE
         );
 
 

@@ -2,8 +2,8 @@ package com.splicemachine.derby.impl.sql.execute.operations.scanner;
 
 import com.carrotsearch.hppc.BitSet;
 import com.carrotsearch.hppc.ObjectArrayList;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
+import com.google.common.base.*;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.splicemachine.constants.FixedSIConstants;
 import com.splicemachine.constants.FixedSpliceConstants;
@@ -29,9 +29,11 @@ import com.splicemachine.si.api.SIFilter;
 import com.splicemachine.si.data.api.SDataLib;
 import com.splicemachine.si.data.hbase.HDataLib;
 import com.splicemachine.si.data.hbase.HRowAccumulator;
-import com.splicemachine.si.impl.KeyValueType;
+import com.splicemachine.si.impl.CellType;
+import com.splicemachine.si.impl.DefaultCellTypeParser;
 import com.splicemachine.si.impl.TxnFilter;
 import com.splicemachine.storage.*;
+import com.splicemachine.storage.Predicate;
 import com.splicemachine.storage.index.BitIndex;
 import com.splicemachine.utils.ByteSlice;
 import com.splicemachine.utils.kryo.KryoPool;
@@ -156,6 +158,60 @@ public class MergingReaderTest{
         accumulator = alwaysAcceptAccumulator();
         reader = buildReader(rows,accumulator);
         assertCorrectReads(row,tde,accumulator,reader);
+    }
+
+    @Test
+    public void singleRowKeyedNonFullBatchOnlyCommitTimestamps() throws Exception{
+        /*
+         * Tests that we properly read a row which
+         * A. does not fill a batch
+         * B. Has no keyed columns
+         * C. Has no updates
+         * D. has no commit timestamp
+         */
+        ExecRow row = new ValueRow(3);
+        row.setColumn(1, new SQLInteger(1));
+        row.setColumn(2,new SQLBoolean(true));
+        row.setColumn(3,new SQLVarchar("hello"));
+
+        int[] pks = new int[]{1,0};
+        int[] keyColumnTypes = new int[pks.length];
+        for(int i=0;i<pks.length;i++){
+            keyColumnTypes[i] = row.getRowArray()[pks[i]].getTypeFormatId();
+        }
+        TestDataEncoder tde = new TestDataEncoder().primaryKeyMap(pks,row,kp);
+        tde.encoder().insert(1,row).commit(2l,3l);
+
+        List<List<Cell>> rows = buildRowResults(10,tde);
+        List<Collection<Cell>> filtered = new ArrayList<>(rows.size());
+        for(List<Cell> r:rows){
+           filtered.add(Collections2.filter(r,new com.google.common.base.Predicate<Cell>(){
+               @Override
+               public boolean apply(Cell cell){
+                   return DefaultCellTypeParser.INSTANCE.parseCellType(cell)==CellType.COMMIT_TIMESTAMP;
+               }
+           }));
+        }
+        rows.clear();
+        for(Collection<Cell> filter:filtered){
+            rows.add(new ArrayList<>(filter));
+        }
+
+        //check the sparse accumulator
+        com.carrotsearch.hppc.BitSet bs = new BitSet(2);
+        bs.set(0,3);
+        RowAccumulator<Cell> accumulator=sparseAccumulator(bs);
+        MergingReader<Cell> reader=buildReader(rows,accumulator);
+        Assert.assertFalse("Read success when it shouldn't have!",reader.readNext());
+        Assert.assertFalse("Should not be finished!",accumulator.isFinished());
+        Assert.assertFalse("Should not have accumulated!",accumulator.hasAccumulated());
+
+        //check the always accept accumulator
+        accumulator = alwaysAcceptAccumulator();
+        reader = buildReader(rows,accumulator);
+        Assert.assertFalse("Read success when it shouldn't have!",reader.readNext());
+        Assert.assertFalse("Should not be finished!",accumulator.isFinished());
+        Assert.assertFalse("Should not have accumulated!",accumulator.hasAccumulated());
     }
 
     @Test
@@ -1034,11 +1090,11 @@ public class MergingReaderTest{
 
             @Override
             public Filter.ReturnCode filterKeyValue(Cell kv) throws IOException{
-                KeyValueType type=getKeyValueType(kv);
-                if(type==KeyValueType.COMMIT_TIMESTAMP){
+                CellType type=getKeyValueType(kv);
+                if(type==CellType.COMMIT_TIMESTAMP){
                     return Filter.ReturnCode.SKIP;
                 }
-                if(type==KeyValueType.FOREIGN_KEY_COUNTER){
+                if(type==CellType.FOREIGN_KEY_COUNTER){
                         /* Transactional reads always ignore this column, no exceptions. */
                     return Filter.ReturnCode.SKIP;
                 }
@@ -1081,20 +1137,20 @@ public class MergingReaderTest{
         return new IteratorRegionScanner(testData);
     }
 
-    private KeyValueType getKeyValueType(Cell keyValue) {
+    private CellType getKeyValueType(Cell keyValue) {
         if (CellUtils.singleMatchingQualifier(keyValue,FixedSIConstants.SNAPSHOT_ISOLATION_COMMIT_TIMESTAMP_COLUMN_BYTES)) {
-            return KeyValueType.COMMIT_TIMESTAMP;
+            return CellType.COMMIT_TIMESTAMP;
         } else if (CellUtils.singleMatchingQualifier(keyValue, FixedSpliceConstants.PACKED_COLUMN_BYTES)) {
-            return KeyValueType.USER_DATA;
+            return CellType.USER_DATA;
         } else if (CellUtils.singleMatchingQualifier(keyValue, FixedSIConstants.SNAPSHOT_ISOLATION_TOMBSTONE_COLUMN_BYTES)) {
             if (CellUtils.matchingValue(keyValue, FixedSIConstants.EMPTY_BYTE_ARRAY)) {
-                return KeyValueType.TOMBSTONE;
+                return CellType.TOMBSTONE;
             } else if (CellUtils.matchingValue(keyValue,FixedSIConstants.SNAPSHOT_ISOLATION_ANTI_TOMBSTONE_VALUE_BYTES)) {
-                return KeyValueType.ANTI_TOMBSTONE;
+                return CellType.ANTI_TOMBSTONE;
             }
         } else if (CellUtils.singleMatchingQualifier(keyValue,FixedSIConstants.SNAPSHOT_ISOLATION_FK_COUNTER_COLUMN_BYTES)) {
-            return KeyValueType.FOREIGN_KEY_COUNTER;
+            return CellType.FOREIGN_KEY_COUNTER;
         }
-        return KeyValueType.OTHER;
+        return CellType.OTHER;
     }
 }

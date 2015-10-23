@@ -76,19 +76,19 @@ public class TxnTestUtils {
 
 		public static DataStore getMockDataStore() {
 				DataStore ds = mock(DataStore.class);
-				when(ds.getKeyValueType(any(KeyValue.class))).thenAnswer(new Answer<KeyValueType>() {
+				when(ds.getKeyValueType(any(KeyValue.class))).thenAnswer(new Answer<CellType>() {
 						@Override
-						public KeyValueType answer(InvocationOnMock invocationOnMock) throws Throwable {
+						public CellType answer(InvocationOnMock invocationOnMock) throws Throwable {
 								KeyValue arg = (KeyValue)invocationOnMock.getArguments()[0];
 								if(Bytes.equals(SIConstants.SNAPSHOT_ISOLATION_COMMIT_TIMESTAMP_COLUMN_BYTES, arg.getQualifier()))
-										return KeyValueType.COMMIT_TIMESTAMP;
+										return CellType.COMMIT_TIMESTAMP;
 								else if(Bytes.equals(SIConstants.SNAPSHOT_ISOLATION_TOMBSTONE_COLUMN_BYTES,arg.getQualifier()))
-										return KeyValueType.TOMBSTONE;
+										return CellType.TOMBSTONE;
 								else if(Bytes.equals(SIConstants.SNAPSHOT_ISOLATION_ANTI_TOMBSTONE_VALUE_BYTES,arg.getQualifier()))
-										return KeyValueType.ANTI_TOMBSTONE;
+										return CellType.ANTI_TOMBSTONE;
 								else if(Bytes.equals(SpliceConstants.PACKED_COLUMN_BYTES,arg.getQualifier()))
-										return KeyValueType.USER_DATA;
-								else return KeyValueType.OTHER;
+										return CellType.USER_DATA;
+								else return CellType.OTHER;
 						}
 				});
 				when(ds.getDataLib()).thenReturn(new LDataLib()); 

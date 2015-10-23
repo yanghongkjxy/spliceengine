@@ -24,7 +24,7 @@ public class SICompactionScanner extends BaseSICompactionScanner<Cell,Put,Delete
 
     @Override
     public boolean next(List<Cell> results) throws IOException {
-        return nextDirect(results, -1);
+        return nextDirect(results);
     }
 
     @Override

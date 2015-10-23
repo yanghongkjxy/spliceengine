@@ -116,12 +116,8 @@ public class SMInputFormat extends InputFormat<RowLocation, ExecRow> implements 
         TableInputFormat tableInputFormat = new TableInputFormat();
         conf.set(TableInputFormat.INPUT_TABLE,conf.get(MRConstants.SPLICE_INPUT_CONGLOMERATE));
         tableInputFormat.setConf(conf);
-        try {
-            tableInputFormat.setScan(TableScannerBuilder.getTableScannerBuilderFromBase64String(conf.get(MRConstants.SPLICE_SCAN_INFO)).getScan());
-        } catch (StandardException e) {
-            SpliceLogUtils.error(LOG, e);
-            throw new IOException(e);
-        }
+        tableInputFormat.setScan(TableScannerBuilder.getTableScannerBuilderFromBase64String(conf.get(MRConstants.SPLICE_SCAN_INFO)).getScan());
+
         List<InputSplit> splits = tableInputFormat.getSplits(context);
         if (LOG.isDebugEnabled()) {
             SpliceLogUtils.debug(LOG, "getSplits " + splits);

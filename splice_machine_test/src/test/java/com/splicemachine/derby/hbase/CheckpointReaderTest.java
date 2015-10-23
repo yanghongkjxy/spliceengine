@@ -18,9 +18,8 @@ import com.splicemachine.si.api.SIFilter;
 import com.splicemachine.si.data.api.SDataLib;
 import com.splicemachine.si.data.hbase.HDataLib;
 import com.splicemachine.si.data.hbase.HRowAccumulator;
-import com.splicemachine.si.impl.KeyValueType;
+import com.splicemachine.si.impl.CellType;
 import com.splicemachine.si.impl.TxnFilter;
-import com.splicemachine.storage.EntryAccumulator;
 import com.splicemachine.storage.EntryDecoder;
 import com.splicemachine.storage.EntryPredicateFilter;
 import com.splicemachine.utils.ByteSlice;
@@ -187,11 +186,11 @@ public class CheckpointReaderTest{
 
             @Override
             public Filter.ReturnCode filterKeyValue(Cell kv) throws IOException{
-                KeyValueType type=getKeyValueType(kv);
-                if(type==KeyValueType.COMMIT_TIMESTAMP){
+                CellType type=getKeyValueType(kv);
+                if(type==CellType.COMMIT_TIMESTAMP){
                     return Filter.ReturnCode.SKIP;
                 }
-                if(type==KeyValueType.FOREIGN_KEY_COUNTER){
+                if(type==CellType.FOREIGN_KEY_COUNTER){
                         /* Transactional reads always ignore this column, no exceptions. */
                     return Filter.ReturnCode.SKIP;
                 }
@@ -233,21 +232,21 @@ public class CheckpointReaderTest{
         return new IteratorRegionScanner(testData);
     }
 
-    private KeyValueType getKeyValueType(Cell keyValue) {
+    private CellType getKeyValueType(Cell keyValue) {
         if (CellUtils.singleMatchingQualifier(keyValue,FixedSIConstants.SNAPSHOT_ISOLATION_COMMIT_TIMESTAMP_COLUMN_BYTES)) {
-            return KeyValueType.COMMIT_TIMESTAMP;
+            return CellType.COMMIT_TIMESTAMP;
         } else if (CellUtils.singleMatchingQualifier(keyValue, FixedSpliceConstants.PACKED_COLUMN_BYTES)) {
-            return KeyValueType.USER_DATA;
+            return CellType.USER_DATA;
         } else if (CellUtils.singleMatchingQualifier(keyValue, FixedSIConstants.SNAPSHOT_ISOLATION_TOMBSTONE_COLUMN_BYTES)) {
             if (CellUtils.matchingValue(keyValue, FixedSIConstants.EMPTY_BYTE_ARRAY)) {
-                return KeyValueType.TOMBSTONE;
+                return CellType.TOMBSTONE;
             } else if (CellUtils.matchingValue(keyValue,FixedSIConstants.SNAPSHOT_ISOLATION_ANTI_TOMBSTONE_VALUE_BYTES)) {
-                return KeyValueType.ANTI_TOMBSTONE;
+                return CellType.ANTI_TOMBSTONE;
             }
         } else if (CellUtils.singleMatchingQualifier(keyValue,FixedSIConstants.SNAPSHOT_ISOLATION_FK_COUNTER_COLUMN_BYTES)) {
-            return KeyValueType.FOREIGN_KEY_COUNTER;
+            return CellType.FOREIGN_KEY_COUNTER;
         }
-        return KeyValueType.OTHER;
+        return CellType.OTHER;
     }
 
     private List<List<Cell>> buildRowResults(int batchSize,TestDataEncoder tde){

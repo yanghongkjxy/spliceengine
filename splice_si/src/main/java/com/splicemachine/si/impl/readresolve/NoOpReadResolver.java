@@ -12,4 +12,8 @@ public class NoOpReadResolver implements ReadResolver {
 		public static final ReadResolver INSTANCE = new NoOpReadResolver();
 
     @Override public void resolve(ByteSlice rowKey, long txnId) {  }
+
+    //no-ops
+    @Override public void pauseResolution(){ }
+    @Override public void resumeResolution(){ }
 }

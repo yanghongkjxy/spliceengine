@@ -458,6 +458,12 @@ public class LDataLib implements SDataLib<KeyValue, LTuple, LTuple, LGet, LGet>{
     }
 
     @Override
+    public boolean internalScannerNext(InternalScanner internalScanner,
+                                       List<KeyValue> data,int limit) throws IOException{
+        throw new RuntimeException("Not Implemented");
+    }
+
+    @Override
     public boolean isDataInRange(KeyValue data,Pair<byte[], byte[]> range){
         return BytesUtil.isKeyValueInRange(data,range);
     }

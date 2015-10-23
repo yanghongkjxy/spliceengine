@@ -3,11 +3,12 @@ package com.splicemachine.si.impl;
 import com.carrotsearch.hppc.LongOpenHashSet;
 import com.carrotsearch.hppc.procedures.LongProcedure;
 import com.splicemachine.constants.FixedSIConstants;
-import com.splicemachine.constants.SIConstants;
+import com.splicemachine.constants.FixedSpliceConstants;
 import com.splicemachine.si.data.api.SDataLib;
 import com.splicemachine.si.data.api.SRowLock;
 import com.splicemachine.si.data.api.STableReader;
 import com.splicemachine.si.data.api.STableWriter;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.OperationWithAttributes;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
@@ -41,6 +42,7 @@ public class DataStore<Data, Mutation, Put extends OperationWithAttributes, Dele
     private final byte[] siFail;
     private final byte[] userColumnFamily;
 
+    private final CellTypeParser ctParser;
     public DataStore(SDataLib<Data, Put, Delete, Get, Scan> dataLib,
                      STableReader reader,
                      STableWriter writer,
@@ -51,10 +53,12 @@ public class DataStore<Data, Mutation, Put extends OperationWithAttributes, Dele
                      byte[] siNull,
                      byte[] siAntiTombstoneValue,
                      byte[] siFail,
-                     byte[] userColumnFamily) {
+                     byte[] userColumnFamily,
+                     CellTypeParser ctParser ) {
         this.dataLib = dataLib;
         this.reader = reader;
         this.writer = writer;
+        this.ctParser = ctParser;
         this.siNeededAttribute = siNeededAttribute;
         this.deletePutAttribute = deletePutAttribute;
         this.commitTimestampQualifier = siCommitQualifier;
@@ -66,8 +70,8 @@ public class DataStore<Data, Mutation, Put extends OperationWithAttributes, Dele
         this.userFamilyColumnList = Arrays.asList(
                 Arrays.asList(this.userColumnFamily, tombstoneQualifier),
                 Arrays.asList(this.userColumnFamily, commitTimestampQualifier),
-                Arrays.asList(this.userColumnFamily, SIConstants.PACKED_COLUMN_BYTES),
-                Arrays.asList(this.userColumnFamily, SIConstants.SNAPSHOT_ISOLATION_FK_COUNTER_COLUMN_BYTES)
+                Arrays.asList(this.userColumnFamily, FixedSpliceConstants.PACKED_COLUMN_BYTES),
+                Arrays.asList(this.userColumnFamily, FixedSIConstants.SNAPSHOT_ISOLATION_FK_COUNTER_COLUMN_BYTES)
         );
     }
 
@@ -109,27 +113,16 @@ public class DataStore<Data, Mutation, Put extends OperationWithAttributes, Dele
         operation.setAttribute(CHECK_BLOOM_ATTRIBUTE_NAME, userColumnFamily);
     }
 
+    public CellTypeParser cellTypeParser(){
+        return ctParser;
+    }
+
     boolean isAntiTombstone(Data keyValue) {
         return dataLib.isAntiTombstone(keyValue,siAntiTombstoneValue);
     }
 
-    public KeyValueType getKeyValueType(Data keyValue) {
-        if (dataLib.singleMatchingQualifier(keyValue, commitTimestampQualifier)) {
-            return KeyValueType.COMMIT_TIMESTAMP;
-        } else if (dataLib.singleMatchingQualifier(keyValue, SIConstants.PACKED_COLUMN_BYTES)) {
-            return KeyValueType.USER_DATA;
-        } else if (dataLib.singleMatchingQualifier(keyValue, tombstoneQualifier)) {
-            if (dataLib.matchingValue(keyValue, siNull)) {
-                return KeyValueType.TOMBSTONE;
-            } else if (dataLib.matchingValue(keyValue, siAntiTombstoneValue)) {
-                return KeyValueType.ANTI_TOMBSTONE;
-            }
-        } else if (dataLib.singleMatchingQualifier(keyValue, SIConstants.SNAPSHOT_ISOLATION_FK_COUNTER_COLUMN_BYTES)) {
-            return KeyValueType.FOREIGN_KEY_COUNTER;
-        }else if(dataLib.singleMatchingQualifier(keyValue,FixedSIConstants.SNAPSHOT_ISOLATION_CHECKPOINT_COLUMN_BYTES)){
-            return KeyValueType.CHECKPOINT;
-        }
-        return KeyValueType.OTHER;
+    public CellType getKeyValueType(Data keyValue) {
+        return ctParser.parseCellType((Cell)keyValue);
     }
 
     public boolean isSINull(Data keyValue) {

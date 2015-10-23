@@ -9,6 +9,8 @@ import com.splicemachine.si.data.api.IHTable;
 import com.splicemachine.si.data.api.SRowLock;
 import com.splicemachine.si.data.hbase.HRowAccumulator;
 import com.splicemachine.si.data.hbase.HbRegion;
+import com.splicemachine.si.impl.compaction.CheckpointCompactionScanner;
+import com.splicemachine.si.impl.store.ActiveTxnCacheSupplier;
 import com.splicemachine.si.impl.store.IgnoreTxnCacheSupplier;
 import com.splicemachine.storage.EntryDecoder;
 import com.splicemachine.storage.EntryPredicateFilter;
@@ -19,6 +21,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionUtil;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -176,9 +179,56 @@ public class TxnRegion implements TransactionalRegion{
     } //no-op
 
     @Override
-    public InternalScanner compactionScanner(InternalScanner scanner){
-        SICompactionState state=new SICompactionState(dataStore,txnSupplier,rollForward);
-        return new SICompactionScanner(state,scanner,dataStore.getDataLib());
+    public InternalScanner compactionScanner(InternalScanner scanner, CompactionRequest compactionRequest){
+        long mat;
+        MinimumTransactionWatcher matWatcher=TransactionLifecycle.getMatWatcher();
+        if(matWatcher==null) mat = 0; //don't remove anything
+        else
+            mat=matWatcher.minimumActiveTimestamp(false);
+
+        ActiveTxnCacheSupplier store=new ActiveTxnCacheSupplier(txnSupplier,SIConstants.activeTransactionCacheSize);
+
+        CheckpointCompactionScanner ccs;
+        CellTypeParser ctParser=dataStore.cellTypeParser();
+        if(compactionRequest.isMajor()){
+            /*
+             * We can perform accumulations and remove tombstoned records, because we know that there are no
+             * missing intermediate versions in a Major compaction.
+             */
+            ccs = CheckpointCompactionScanner.majorScanner(store,dataStore.getDataLib(),ctParser,scanner,rollForward,mat);
+        }else{
+            mat=0;
+            ccs=CheckpointCompactionScanner.minorScanner(store,ctParser,scanner,rollForward,mat);
+        }
+        return ccs;
     }
 
+    @Override
+    public CheckpointResolver getCheckpointResolver(){
+        return checkpointResolver;
+    }
+
+    @Override
+    public Partition unwrapPartition(){
+        return partition;
+    }
+
+    @Override
+    public RollForward getRollForward(){
+        return rollForward;
+    }
+
+    @Override
+    public void pauseMaintenance(){
+        readResolver.pauseResolution();
+        checkpointResolver.pauseCheckpointing();
+        rollForward.pauseRollForward();
+    }
+
+    @Override
+    public void resumeMaintenance(){
+        readResolver.resumeResolution();
+        checkpointResolver.resumeCheckpointing();
+        rollForward.resumeRollForward();
+    }
 }

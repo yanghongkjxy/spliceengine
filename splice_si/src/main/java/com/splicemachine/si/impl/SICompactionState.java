@@ -56,9 +56,9 @@ public class SICompactionState<Data,Mutation,
      * Apply SI mutation logic to an individual key-value. Return the "new" key-value.
      */
     private void mutate(Data element) throws IOException {
-        final KeyValueType keyValueType = dataStore.getKeyValueType(element);
+        final CellType cellType= dataStore.getKeyValueType(element);
         long timestamp = dataStore.dataLib.getTimestamp(element);
-        switch (keyValueType) {
+        switch (cellType) {
             case COMMIT_TIMESTAMP:
                 /*
                  * Older versions of SI code would put an "SI Fail" element in the commit timestamp

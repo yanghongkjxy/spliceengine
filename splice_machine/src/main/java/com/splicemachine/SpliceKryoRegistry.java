@@ -199,7 +199,7 @@ public class SpliceKryoRegistry implements KryoPool.KryoRegistry{
 			   * but that's the nature of the beast.
 	    	   */
     	instance.setReferences(false);
-        instance.setRegistrationRequired(true);
+        instance.setRegistrationRequired(false);
 
         instance.register(ValueRow.class,new ValueRowSerializer<ValueRow>(){
 						@Override

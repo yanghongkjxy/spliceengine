@@ -57,6 +57,16 @@ public class SynchronousReadResolver {
             public void resolve(ByteSlice rowKey, long txnId) {
                 SynchronousReadResolver.INSTANCE.resolve(region,rowKey,txnId,txnSupplier,status,failOnError,trafficControl);
             }
+
+            @Override
+            public void pauseResolution(){
+
+            }
+
+            @Override
+            public void resumeResolution(){
+
+            }
         };
     }
 

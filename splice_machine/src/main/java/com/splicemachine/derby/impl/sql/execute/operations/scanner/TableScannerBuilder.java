@@ -357,14 +357,14 @@ public class TableScannerBuilder implements Externalizable{
             }
 		}
 
-    public static TableScannerBuilder getTableScannerBuilderFromBase64String(String base64String) throws IOException, StandardException{
-        if(base64String==null)
-            throw new IOException("tableScanner base64 String is null");
-        return (TableScannerBuilder)SerializationUtils.deserialize(Base64.decode(base64String));
-    }
 
     public String getTableScannerBuilderBase64String() throws IOException, StandardException{
         return Base64.encodeBytes(SerializationUtils.serialize(this));
+    }
+    public static TableScannerBuilder getTableScannerBuilderFromBase64String(String b64) throws IOException{
+        //-sf- this got lost, doing my best to recreate it.
+        byte[] decode=Base64.decode(b64);
+        return (TableScannerBuilder)SerializationUtils.deserialize(decode);
     }
 
     public Scan getScan(){

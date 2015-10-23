@@ -192,8 +192,10 @@ public class DerbyScanInformation implements ScanInformation<ExecRow>, Externali
                 // accessed all columns
                 accessedCols = null;
             } else {
-                accessedCols = (FormatableBitSet) gsps.getSavedObject(colRefItem);
-                accessedCols.grow(getConglomerate().getFormat_ids().length);
+                FormatableBitSet fbt = (FormatableBitSet) gsps.getSavedObject(colRefItem);
+                accessedCols = new FormatableBitSet(Math.max(fbt.size(),getConglomerate().getFormat_ids().length));
+                accessedCols.or(fbt);
+//                accessedCols.grow(getConglomerate().getFormat_ids().length);
             }
         }
         return accessedCols;

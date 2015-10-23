@@ -53,6 +53,6 @@ public class AlwaysAcceptAccumulationSet extends EntryAccumulationSet{
 
     @Override
     public boolean isInteresting(int position){
-        return occupiedFields.get(position);
+        return !occupiedFields.get(position);
     }
 }

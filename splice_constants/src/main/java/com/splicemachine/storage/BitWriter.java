@@ -53,7 +53,7 @@ public class BitWriter {
         int byteSize = useContinuationBit?7:8;
         while(n>byteSize){
             byteAndBitOffset[0]++;
-            if(byteAndBitOffset[9]>=buffer.length) throw new IndexOutOfBoundsException();
+            if(byteAndBitOffset[1]>=buffer.length) throw new IndexOutOfBoundsException();
             buffer[byteAndBitOffset[0]] = (byte)0xff;
             n-=byteSize;
         }

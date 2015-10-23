@@ -64,6 +64,10 @@ public class TransactionAdmin{
         }
     },SIConstants.matWatcherRefreshMs);
 
+    static{
+       TransactionLifecycle.setTransactionWatcher(matWatcher);
+    }
+
     public static void killAllActiveTransactions(long maxTxnId) throws SQLException{
         ActiveTransactionReader reader=new ActiveTransactionReader(0l,maxTxnId,null);
         try(Stream<TxnView> activeTransactions=reader.getActiveTransactions()){

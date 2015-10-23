@@ -163,6 +163,8 @@ public interface SDataLib<Data,
 
     boolean internalScannerNext(InternalScanner internalScanner,List<Data> data) throws IOException;
 
+    boolean internalScannerNext(InternalScanner internalScanner,List<Data> data,int limit) throws IOException;
+
     boolean isDataInRange(Data data,Pair<byte[], byte[]> range);
 
     Data matchKeyValue(Iterable<Data> kvs,byte[] columnFamily,byte[] qualifier);

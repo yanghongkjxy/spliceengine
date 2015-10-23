@@ -289,24 +289,24 @@ public class CheckpointFilterTest{
         };
     }
 
-    private static KeyValueType getKeyValueType(Cell keyValue){
+    private static CellType getKeyValueType(Cell keyValue){
         if(CellUtil.matchingQualifier(keyValue,
                 FixedSIConstants.SNAPSHOT_ISOLATION_COMMIT_TIMESTAMP_COLUMN_BYTES)){
-            return KeyValueType.COMMIT_TIMESTAMP;
+            return CellType.COMMIT_TIMESTAMP;
         }else if(CellUtil.matchingQualifier(keyValue,
                 FixedSIConstants.SNAPSHOT_ISOLATION_TOMBSTONE_COLUMN_BYTES)){
-            return KeyValueType.TOMBSTONE;
+            return CellType.TOMBSTONE;
         }else if(CellUtil.matchingQualifier(keyValue,
                 FixedSpliceConstants.PACKED_COLUMN_BYTES)){
-            return KeyValueType.USER_DATA;
+            return CellType.USER_DATA;
         }else if(CellUtil.matchingQualifier(keyValue,
                 FixedSIConstants.SNAPSHOT_ISOLATION_FK_COUNTER_COLUMN_BYTES)){
-            return KeyValueType.FOREIGN_KEY_COUNTER;
+            return CellType.FOREIGN_KEY_COUNTER;
         }else if(CellUtil.matchingQualifier(keyValue,
                 FixedSIConstants.SNAPSHOT_ISOLATION_CHECKPOINT_COLUMN_BYTES)){
-            return KeyValueType.CHECKPOINT;
+            return CellType.CHECKPOINT;
         }else{
-            return KeyValueType.OTHER;
+            return CellType.OTHER;
         }
     }
 
@@ -319,7 +319,7 @@ public class CheckpointFilterTest{
 
         @Override public boolean getExcludeRow(){ return false; }
         @Override
-        public KeyValueType getType(Cell keyValue) throws IOException{
+        public CellType getType(Cell keyValue) throws IOException{
             return getKeyValueType(keyValue);
         }
     }

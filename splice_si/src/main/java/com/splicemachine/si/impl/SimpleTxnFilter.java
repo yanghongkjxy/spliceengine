@@ -56,8 +56,19 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
                            TxnView myTxn,
                            ReadResolver readResolver,
                            DataStore dataStore){
+        this(tableName, transactionStore, ignoreTxnStore, myTxn, readResolver, dataStore,SIConstants.activeTransactionCacheSize);
+    }
+
+    @SuppressWarnings("unchecked")
+    public SimpleTxnFilter(String tableName,
+                           TxnSupplier transactionStore,
+                           IgnoreTxnCacheSupplier ignoreTxnStore,
+                           TxnView myTxn,
+                           ReadResolver readResolver,
+                           DataStore dataStore,
+                           int cacheSize){
         this.tableName=tableName;
-        this.transactionStore=new ActiveTxnCacheSupplier(transactionStore,SIConstants.activeTransactionCacheSize); //cache active transactions, but only on this thread
+        this.transactionStore=new ActiveTxnCacheSupplier(transactionStore,cacheSize); //cache active transactions, but only on this thread
         this.myTxn=myTxn;
         assert readResolver!=null && dataStore!=null;
         this.readResolver=readResolver;
@@ -66,13 +77,13 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
     }
 
     @Override
-    public KeyValueType getType(Data element) throws IOException{
+    public CellType getType(Data element) throws IOException{
         return dataStore.getKeyValueType(element);
     }
 
     @Override
     public Filter.ReturnCode filterKeyValue(Data element) throws IOException{
-        KeyValueType type=dataStore.getKeyValueType(element);
+        CellType type=dataStore.getKeyValueType(element);
         //deal with the short-circuits that don't require read resolving
         switch(type){
             case COMMIT_TIMESTAMP:
@@ -209,7 +220,7 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
         int tombstoneSize=tombstonedTxnRows.size();
         for(int i=0;i<tombstoneSize;i++){
             long tombstone=tombstones[i];
-            if(isVisible(tombstone) && timestamp<=tombstone)
+            if(isVisible(tombstone) && timestamp<tombstone)
                 return Filter.ReturnCode.NEXT_COL;
         }
 

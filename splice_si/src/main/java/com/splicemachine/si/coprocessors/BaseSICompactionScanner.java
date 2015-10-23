@@ -32,9 +32,17 @@ Put extends OperationWithAttributes,Delete,Get extends OperationWithAttributes, 
     @SuppressWarnings("unchecked")
 	protected boolean nextDirect(List<Data> results, int limit) throws IOException {
         rawList.clear();
-        final boolean more = dataLib.internalScannerNext(delegate, rawList);
+        final boolean more = dataLib.internalScannerNext(delegate, rawList,limit);
 		compactionState.mutate(rawList, results);
 		return more;
+    }
+
+    @SuppressWarnings("unchecked")
+    protected boolean nextDirect(List<Data> results) throws IOException {
+        rawList.clear();
+        final boolean more = dataLib.internalScannerNext(delegate, rawList);
+        compactionState.mutate(rawList, results);
+        return more;
     }
 
     @Override

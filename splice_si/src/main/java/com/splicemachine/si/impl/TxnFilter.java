@@ -10,7 +10,7 @@ public interface TxnFilter<Data> {
     void nextRow();
     Data produceAccumulatedKeyValue();
     boolean getExcludeRow();
-	KeyValueType getType(Data keyValue) throws IOException;
+	CellType getType(Data keyValue) throws IOException;
 	DataStore getDataStore();
 
     boolean isPacked();

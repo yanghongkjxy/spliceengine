@@ -284,7 +284,7 @@ public class HDataLib implements SDataLib<Cell, Put, Delete, Get, Scan>{
                     column,0,column.length,
                     longTransactionId,
                     KeyValue.Type.Put,
-                    SIConstants.EMPTY_BYTE_ARRAY,0,0);
+                    FixedSIConstants.EMPTY_BYTE_ARRAY,0,0);
             try{
                 put.add(checkpointKv);
             }catch(IOException ignored){
@@ -527,6 +527,12 @@ public class HDataLib implements SDataLib<Cell, Put, Delete, Get, Scan>{
     public boolean internalScannerNext(InternalScanner internalScanner,
                                        List<Cell> data) throws IOException{
         return internalScanner.next(data);
+    }
+
+    @Override
+    public boolean internalScannerNext(InternalScanner internalScanner,
+                                       List<Cell> data, int limit) throws IOException{
+        return internalScanner.next(data,limit);
     }
 
     @Override

@@ -18,7 +18,7 @@ public class CheckpointFilter extends FilterBase{
     private long checkpointVersion = -1l;
     private boolean seekColumns = false;
     private int checkpointCount; //the number of checkpoints that we've seen
-    private KeyValueType lastkvT;
+    private CellType lastkvT;
 
     public CheckpointFilter(TxnFilter<Cell> txnFilter,long seekThreshold){
         this.txnFilter=txnFilter;
@@ -29,7 +29,7 @@ public class CheckpointFilter extends FilterBase{
 
     @Override
     public ReturnCode filterKeyValue(Cell v) throws IOException{
-        KeyValueType type=txnFilter.getType(v);
+        CellType type=txnFilter.getType(v);
         boolean sameKvType = lastkvT!=null && type==lastkvT;
         lastkvT = type;
         switch(type){

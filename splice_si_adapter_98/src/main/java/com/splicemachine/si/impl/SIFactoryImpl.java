@@ -64,15 +64,16 @@ public class SIFactoryImpl implements SIFactory<TxnMessage.Txn> {
 
 	@Override
 	public DataStore getDataStore() {
-			return new DataStore(getDataLib(), getTableReader(),getTableWriter(),
-									SIConstants.SI_NEEDED,
-                SIConstants.SI_DELETE_PUT,
-									SIConstants.SNAPSHOT_ISOLATION_COMMIT_TIMESTAMP_COLUMN_BYTES,
-									SIConstants.SNAPSHOT_ISOLATION_TOMBSTONE_COLUMN_BYTES,
-									HConstants.EMPTY_BYTE_ARRAY,
-									SIConstants.SNAPSHOT_ISOLATION_ANTI_TOMBSTONE_VALUE_BYTES,
-									SIConstants.SNAPSHOT_ISOLATION_FAILED_TIMESTAMP,
-									SIConstants.DEFAULT_FAMILY_BYTES
+		return new DataStore(getDataLib(), getTableReader(),getTableWriter(),
+				SIConstants.SI_NEEDED,
+				SIConstants.SI_DELETE_PUT,
+				SIConstants.SNAPSHOT_ISOLATION_COMMIT_TIMESTAMP_COLUMN_BYTES,
+				SIConstants.SNAPSHOT_ISOLATION_TOMBSTONE_COLUMN_BYTES,
+				HConstants.EMPTY_BYTE_ARRAY,
+				SIConstants.SNAPSHOT_ISOLATION_ANTI_TOMBSTONE_VALUE_BYTES,
+				SIConstants.SNAPSHOT_ISOLATION_FAILED_TIMESTAMP,
+				SIConstants.DEFAULT_FAMILY_BYTES,
+				DefaultCellTypeParser.INSTANCE
 			);
 	}
 

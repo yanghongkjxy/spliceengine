@@ -20,6 +20,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -81,8 +82,9 @@ public class TransactionalRegions {
     /*private helper methods*/
     private static TransactionalRegion get(HRegion region,SegmentedRollForward.Action rollForwardAction){
 
-        RollForward rollForward = getRollForward(region, rollForwardAction);
-        ReadResolver resolver = getReadResolver(region, rollForward);
+        RollForward rollForward=getRollForward(region,rollForwardAction);
+        ReadResolver resolver=getReadResolver(region,rollForward);
+        CheckpointResolver checkpointResolver=NoOpCheckpointResolver.INSTANCE;//getCheckpointResolver(region);
         return new TxnRegion(region,
                 rollForward,
                 resolver,
@@ -216,8 +218,30 @@ public class TransactionalRegions {
         }
 
         @Override
-        public InternalScanner compactionScanner(InternalScanner scanner) {
-            return delegate.compactionScanner(scanner);
+        public InternalScanner compactionScanner(InternalScanner scanner,CompactionRequest compactionRequest) {
+            return delegate.compactionScanner(scanner,compactionRequest);
+        }
+
+        @Override
+        public CheckpointResolver getCheckpointResolver(){
+            return delegate.getCheckpointResolver();
+        }
+
+        @Override
+        public Partition unwrapPartition(){
+            return delegate.unwrapPartition();
+        }
+
+        @Override
+        public RollForward getRollForward(){
+            return delegate.getRollForward();
+        }
+
+        @Override public void pauseMaintenance(){ delegate.pauseMaintenance(); }
+
+        @Override
+        public void resumeMaintenance(){
+           delegate.resumeMaintenance();
         }
     }
 

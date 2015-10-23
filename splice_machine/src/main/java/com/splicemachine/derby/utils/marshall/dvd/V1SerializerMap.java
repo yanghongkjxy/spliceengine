@@ -15,7 +15,6 @@ public class V1SerializerMap implements SerializerMap, TypeProvider{
 
     public static final String VERSION="1.0";
 
-
     protected void populateFactories(boolean sparse,KryoPool kryoPool){
         factories[0]=NullDescriptorSerializer.nullFactory(BooleanDescriptorSerializer.INSTANCE_FACTORY,sparse);
         factories[1]=NullDescriptorSerializer.nullFactory(LazyDescriptorSerializer.factory(ScalarDescriptorSerializer.INSTANCE_FACTORY,VERSION),sparse);
@@ -29,6 +28,7 @@ public class V1SerializerMap implements SerializerMap, TypeProvider{
         factories[9]=NullDescriptorSerializer.nullFactory(UnsortedBinaryDescriptorSerializer.INSTANCE_FACTORY,sparse);
         factories[10]=NullDescriptorSerializer.nullFactory(LazyDescriptorSerializer.factory(DecimalDescriptorSerializer.INSTANCE_FACTORY,VERSION),sparse);
         factories[11]=NullDescriptorSerializer.nullFactory(RefDescriptorSerializer.INSTANCE_FACTORY,sparse);
+//				factories[12] = NullDescriptorSerializer.nullFactory(UDTDescriptorSerializer.INSTANCE_FACTORY, sparse);
 
         eagerFactories[0]=NullDescriptorSerializer.nullFactory(BooleanDescriptorSerializer.INSTANCE_FACTORY,sparse);
         eagerFactories[1]=NullDescriptorSerializer.nullFactory(ScalarDescriptorSerializer.INSTANCE_FACTORY,sparse);
@@ -42,6 +42,7 @@ public class V1SerializerMap implements SerializerMap, TypeProvider{
         eagerFactories[9]=NullDescriptorSerializer.nullFactory(UnsortedBinaryDescriptorSerializer.INSTANCE_FACTORY,sparse);
         eagerFactories[10]=NullDescriptorSerializer.nullFactory(DecimalDescriptorSerializer.INSTANCE_FACTORY,sparse);
         eagerFactories[11]=NullDescriptorSerializer.nullFactory(RefDescriptorSerializer.INSTANCE_FACTORY,sparse);
+//			    eagerFactories[12] = NullDescriptorSerializer.nullFactory(UDTDescriptorSerializer.INSTANCE_FACTORY, sparse);
     }
 
     public static volatile V1SerializerMap SPARSE_MAP;//=new V1SerializerMap(true);
@@ -80,8 +81,8 @@ public class V1SerializerMap implements SerializerMap, TypeProvider{
     }
 
     public V1SerializerMap(boolean sparse,KryoPool kryoPool){
-        this.factories=new DescriptorSerializer.Factory[12];
-        this.eagerFactories=new DescriptorSerializer.Factory[12];
+        this.factories=new DescriptorSerializer.Factory[13];
+        this.eagerFactories=new DescriptorSerializer.Factory[13];
         populateFactories(sparse,kryoPool);
     }
 

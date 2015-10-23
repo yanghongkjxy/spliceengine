@@ -325,7 +325,6 @@ public class SITransactor<Data, Table,
 
     @SuppressWarnings("UnusedDeclaration")
     private void checkPermission(Table table, Mutation[] mutations) throws IOException {
-        final String tableName = dataStore.getTableName(table);
         throw new UnsupportedOperationException("IMPLEMENT");
     }
 

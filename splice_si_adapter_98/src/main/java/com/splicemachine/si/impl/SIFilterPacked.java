@@ -16,14 +16,6 @@ import java.util.List;
  */
 public class SIFilterPacked extends BaseSIFilterPacked<Cell>{
 
-    public SIFilterPacked(){
-        super();
-    }
-
-    public SIFilterPacked(TxnFilter<Cell> filterState){
-        super(filterState);
-    }
-
     public SIFilterPacked(Txn txn,
                           ReadResolver resolver,
                           EntryPredicateFilter predicateFilter,

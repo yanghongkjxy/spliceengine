@@ -40,7 +40,7 @@ public class NoopTxnFilter implements TxnFilter<Cell>{
     }
 
     @Override
-    public KeyValueType getType(Cell keyValue) throws IOException{
+    public CellType getType(Cell keyValue) throws IOException{
         return dataStore.getKeyValueType(keyValue);
     }
 

@@ -160,7 +160,7 @@ public class SIConstants extends SpliceConstants {
      */
     @Parameter public static final String CHECKPOINT_SEEK_THRESHOLD = "splice.txn.checkpoint.seekThreshold";
     @DefaultValue(CHECKPOINT_SEEK_THRESHOLD) public static final int DEFAULT_CHECKPOINT_SEEK_THRESHOLD=SpliceConstants.scannerBatchSize/2;
-    public static long checkpointSeekThreshold;
+    public static int checkpointSeekThreshold;
 
     public static long matWatcherRefreshMs;
     public static void setParameters(Configuration config){

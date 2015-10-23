@@ -7,13 +7,14 @@ import com.splicemachine.si.api.TxnStore;
 
 /**
  * @author Scott Fines
- *         Date: 7/3/14
+ *         Date: 7/3/14q
  */
 public class TransactionLifecycle{
-    private static final Object lock=new Integer("2");
+    private static final Object lock=new Object();
 
     private static volatile @ThreadSafe TxnLifecycleManager lifecycleManager;
     private static volatile TxnLifecycleObserver tcObserver;
+    private static volatile MinimumTransactionWatcher matWatcher;
 
     public static TxnLifecycleManager getLifecycleManager(){
         TxnLifecycleManager tc=lifecycleManager;
@@ -29,6 +30,14 @@ public class TransactionLifecycle{
             tco = tcObserver;
         }
         return tco;
+    }
+
+    public static void setTransactionWatcher(MinimumTransactionWatcher watcher){
+        matWatcher = watcher;
+    }
+
+    public static MinimumTransactionWatcher getMatWatcher(){
+        return matWatcher;
     }
 
     private static TxnLifecycleManager initialize(){

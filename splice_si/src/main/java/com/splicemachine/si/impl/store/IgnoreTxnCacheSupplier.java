@@ -5,6 +5,7 @@ import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.constants.bytes.BytesUtil;
 import com.splicemachine.encoding.MultiFieldDecoder;
 import com.splicemachine.encoding.MultiFieldEncoder;
+import com.splicemachine.si.api.SIFactory;
 import com.splicemachine.si.data.api.SDataLib;
 import com.splicemachine.si.impl.SIFactoryDriver;
 import com.splicemachine.storage.EntryDecoder;
@@ -24,10 +25,15 @@ import java.util.List;
 public class IgnoreTxnCacheSupplier {
     private ConcurrentLinkedHashMap<String,List<Pair<Long, Long>>> cache;
     private ResultScanner resultScanner;
-    private SDataLib dataLib = SIFactoryDriver.siFactory.getDataLib();
+    private final SDataLib dataLib;
     private EntryDecoder entryDecoder;
 
     public IgnoreTxnCacheSupplier () {
+        this(SIFactoryDriver.siFactory.getDataLib());
+    }
+
+    public IgnoreTxnCacheSupplier (SDataLib dataLib) {
+        this.dataLib = dataLib;
         cache = new ConcurrentLinkedHashMap.Builder<String, List<Pair<Long, Long>>>()
                 .maximumWeightedCapacity(1024)
                 .concurrencyLevel(64)

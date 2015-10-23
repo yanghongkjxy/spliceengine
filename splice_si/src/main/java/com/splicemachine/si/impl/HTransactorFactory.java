@@ -61,11 +61,9 @@ public class HTransactorFactory extends SIConstants {
             final STableWriter writer = SIFactoryDriver.siFactory.getTableWriter();
             ManagedTransactor builderTransactor = new ManagedTransactor();
             DataStore ds = TxnDataStore.getDataStore();
-            TxnLifecycleManager tc = TransactionLifecycle.getLifecycleManager();
 
             if(readController==null)
-                readController = new SITransactionReadController<KeyValue,
-                        Get,Scan,Delete,Put>(ds,dataLib, SIFactoryDriver.siFactory.getTxnSupplier(),
+                readController =new SITransactionReadController<>(ds,dataLib,SIFactoryDriver.siFactory.getTxnSupplier(),
                         SIFactoryDriver.siFactory.getIgnoreTxnSupplier());
             Transactor transactor = new SITransactor.Builder()
                     .dataLib(dataLib)

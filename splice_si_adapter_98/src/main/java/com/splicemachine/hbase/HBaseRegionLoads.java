@@ -124,7 +124,7 @@ public class HBaseRegionLoads {
                     return value;
                 }
             };
-        HConnection conn = SpliceConnectionPool.INSTANCE.getConnection();
+        HConnection conn = SpliceConnectionPool.getDefaultPool().getConnection();
         try(HBaseAdmin admin = new HBaseAdmin(conn.getConfiguration())){
             ClusterStatus clusterStatus=admin.getClusterStatus();
             for(ServerName serverName : clusterStatus.getServers()){
@@ -150,7 +150,7 @@ public class HBaseRegionLoads {
 
     public static Map<String, RegionLoad> getCostWhenNoCachedRegionLoadsFound(String tableName){
         try{
-            HConnection conn = SpliceConnectionPool.INSTANCE.getConnection();
+            HConnection conn = SpliceConnectionPool.getDefaultPool().getConnection();
             try(HTableInterface t = conn.getTable(tableName)){
 
                 Map<byte[], Pair<String, Long>> ret=t.coprocessorService(SpliceMessage.SpliceDerbyCoprocessorService.class,HConstants.EMPTY_START_ROW,

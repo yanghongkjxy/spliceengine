@@ -128,19 +128,22 @@ public class TimestampClient extends TimestampBaseHandler implements TimestampRe
     }
 
     public void shutdown() {
-        synchronized (state) {
-            if (state.get() != State.SHUTDOWN) {
-                LOG.info(String.format("shutting down TimestampClient state=%s", state.get()));
-                try {
-                    state.set(State.SHUTDOWN);
-                    if (channel != null && channel.isOpen()) {
-                        channel.close().awaitUninterruptibly();
-                    }
-                    factory.releaseExternalResources();
-                } catch (Throwable t) {
-                    LOG.error("error shutting down", t);
-                }
+        boolean shouldContinue;
+        do{
+            State state=this.state.get();
+            if(state==State.SHUTDOWN) return; //someone else will shut this down
+
+            LOG.info(String.format("shutting down TimestampClient state=%s", state));
+            shouldContinue=!this.state.compareAndSet(state,State.SHUTDOWN);
+        }while(shouldContinue);
+
+        try {
+            if (channel != null && channel.isOpen()) {
+                channel.close().awaitUninterruptibly();
             }
+            factory.releaseExternalResources();
+        } catch (Throwable t) {
+            LOG.error("error shutting down", t);
         }
     }
 

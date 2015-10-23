@@ -37,19 +37,8 @@ public class WriteConflict extends DoNotRetryIOException {
      */
 
     public static WriteConflict fromString(String message){
-        long txn1 = parseTxn1(message); //will throw an error if it can't be parsed
-        long txn2 = parseTxn2(message); //will throw an error if it can't be parsed
-
         return new WriteConflict(message);
     }
-
-    public static WriteConflict fromThrowable(String message,Throwable baseCause){
-        long txn1 = parseTxn1(message); //will throw an error if it can't be parsed
-        long txn2 = parseTxn2(message); //will throw an error if it can't be parsed
-
-        return new WriteConflict(message,baseCause);
-    }
-
 
     public WriteConflict(String message) { super(message); }
     public WriteConflict(String message, Throwable cause) { super(message, cause);}

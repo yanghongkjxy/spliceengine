@@ -6,6 +6,8 @@ import com.splicemachine.utils.ByteSlice;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.cliffc.high_scale_lib.Counter;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
  *
  * Represents a Segment of a Region. When Statistics are integrated, we can
@@ -18,7 +20,7 @@ import org.cliffc.high_scale_lib.Counter;
 class RegionSegment {
 	private final byte[] startKey;
 	private final byte[] endKey;
-	private final Counter toResolve = new Counter();
+	private final AtomicLong toResolve = new AtomicLong();
 	private final ConcurrentHyperLogLogCounter txnCounter =  new ConcurrentHyperLogLogCounter(6,HashFunctions.murmur2_64(0));
 	private volatile boolean inProgress;
 	private String toString; //cache the toString for performance when needed
@@ -29,12 +31,12 @@ class RegionSegment {
 	}
 
 	void update(long txnId,long rowsWritten){
-		toResolve.add(rowsWritten);
+		toResolve.addAndGet(rowsWritten);
 		txnCounter.update(txnId);
 	}
 
 	long getToResolveCount(){
-		return toResolve.estimate_get();
+		return toResolve.get();
 	}
 
 	double estimateUniqueWritingTransactions(){
@@ -66,7 +68,7 @@ class RegionSegment {
 	}
 
 	public void rowResolved() {
-		toResolve.decrement();
+		toResolve.decrementAndGet();
 	}
 
 	@Override
@@ -112,6 +114,25 @@ class RegionSegment {
 		else if(endKey.length<=0) return 0;
 		else{
 			compare = rowKey.compareTo(endKey,0,endKey.length);
+			if(compare>=0) return 1;
+			return 0;
+		}
+	}
+
+	public int position(byte[] data, int dataOff,int dataLen){
+		if(startKey.length<=0){
+			if(endKey.length<=0) return 0;
+			else{
+				int compare=Bytes.compareTo(data,dataOff,dataLen,endKey,0,endKey.length);
+				if(compare>=0) return 1;
+				return 0;
+			}
+		}
+		int compare=Bytes.compareTo(data,dataOff,dataLen,startKey,0,startKey.length);
+		if(compare<=0) return compare; //startKey > endKey
+		else if(endKey.length<=0) return 0;
+		else{
+			compare=Bytes.compareTo(data,dataOff,dataLen,endKey,0,endKey.length);
 			if(compare>=0) return 1;
 			return 0;
 		}
