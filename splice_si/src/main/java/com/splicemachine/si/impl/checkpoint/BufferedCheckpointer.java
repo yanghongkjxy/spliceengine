@@ -1,17 +1,14 @@
-package com.splicemachine.si.impl;
+package com.splicemachine.si.impl.checkpoint;
 
-import com.splicemachine.constants.FixedSIConstants;
-import com.splicemachine.constants.FixedSpliceConstants;
 import com.splicemachine.si.api.Checkpointer;
-import com.splicemachine.storage.api.Partition;
+import com.splicemachine.si.api.Partition;
 import com.splicemachine.utils.ByteSlice;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -19,6 +16,7 @@ import java.util.Arrays;
  * @author Scott Fines
  *         Date: 10/5/15
  */
+@NotThreadSafe
 public class BufferedCheckpointer implements Checkpointer{
     private final int maxBufferSize;
     private final Partition region;
@@ -73,12 +71,24 @@ public class BufferedCheckpointer implements Checkpointer{
         advanceBuffer();
     }
 
+    @Override
+    public void checkpoint(byte[] rowKey,int keyOff,int keyLen,byte[] checkpointValue,long timestamp,long commitTimestamp) throws IOException{
+        Checkpoint cp = buffer[bufferPos];
+        if(cp==null){
+            cp = new Checkpoint();
+            buffer[bufferPos] = cp;
+        }
+        cp.set(rowKey,keyOff,keyLen,checkpointValue,timestamp,commitTimestamp);
+        advanceBuffer();
+    }
 
     @Override
     public void flush() throws IOException{
         writeBuffer(bufferPos);
         bufferPos=0;
     }
+
+    @Override public boolean issuesDeletes(){ return issueDeletes; }
 
     /* ****************************************************************************************************************/
     /*private helper methods*/
@@ -131,13 +141,7 @@ public class BufferedCheckpointer implements Checkpointer{
     private Mutation getCheckpointDelete(Checkpoint checkpoint){
         ByteSlice key = checkpoint.rowKey;
         long timestamp = checkpoint.timestamp-1;
-        Delete d = new Delete(key.array(),key.offset(),key.length());
-        d=d.deleteColumns(FixedSpliceConstants.DEFAULT_FAMILY_BYTES,FixedSIConstants.SNAPSHOT_ISOLATION_COMMIT_TIMESTAMP_COLUMN_BYTES,timestamp)
-                .deleteColumns(FixedSpliceConstants.DEFAULT_FAMILY_BYTES,FixedSIConstants.SNAPSHOT_ISOLATION_TOMBSTONE_COLUMN_BYTES,timestamp)
-                .deleteColumns(FixedSpliceConstants.DEFAULT_FAMILY_BYTES,FixedSpliceConstants.PACKED_COLUMN_BYTES,timestamp);
-        d.setAttribute(FixedSpliceConstants.SUPPRESS_INDEXING_ATTRIBUTE_NAME,FixedSpliceConstants.SUPPRESS_INDEXING_ATTRIBUTE_VALUE);
-        d.setDurability(Durability.SKIP_WAL);
-        return d;
+        return CheckpointerUtils.checkpointDelete(key,timestamp);
     }
 
     @SuppressWarnings("deprecation")
@@ -145,24 +149,7 @@ public class BufferedCheckpointer implements Checkpointer{
         ByteSlice key = checkpoint.rowKey;
         long ts = checkpoint.timestamp;
 
-        Put p = new Put(key.array(),key.offset(),key.length());
-        p.setAttribute(FixedSpliceConstants.SUPPRESS_INDEXING_ATTRIBUTE_NAME,FixedSpliceConstants.SUPPRESS_INDEXING_ATTRIBUTE_VALUE);
-        p.setDurability(Durability.SKIP_WAL);
-
-        //add the data field
-        p.add(FixedSpliceConstants.DEFAULT_FAMILY_BYTES,FixedSpliceConstants.PACKED_COLUMN_BYTES,ts,checkpoint.checkpointValue);
-
-        long cTs = checkpoint.commitTimestamp;
-        byte[] checkpointCellValue;
-        if(cTs>0){
-            checkpointCellValue = Bytes.toBytes(cTs);
-        }else{
-            checkpointCellValue = FixedSpliceConstants.EMPTY_BYTE_ARRAY;
-        }
-
-        //add the checkpoint field
-        p.add(FixedSpliceConstants.DEFAULT_FAMILY_BYTES,FixedSIConstants.SNAPSHOT_ISOLATION_CHECKPOINT_COLUMN_BYTES,ts,checkpointCellValue);
-        return p;
+        return CheckpointerUtils.checkpointPut(key,ts,checkpoint.checkpointValue,checkpoint.commitTimestamp);
     }
 
     private Mutation[] getMutationArray(int size){
@@ -181,6 +168,16 @@ public class BufferedCheckpointer implements Checkpointer{
         byte[] checkpointValue;
         long timestamp;
         long commitTimestamp;
+
+        public void set(byte[] rowKey,int keyOff,int keyLen,byte[] checkpointValue,long timestamp,long commitTimestamp){
+            if(this.rowKey==null)
+                this.rowKey = ByteSlice.wrap(rowKey,keyOff,keyLen);
+            else this.rowKey.set(rowKey,keyOff,keyLen);
+            this.checkpointValue = checkpointValue;
+            this.timestamp = timestamp;
+            this.commitTimestamp = commitTimestamp;
+
+        }
 
         void set(ByteSlice rowKey, byte[] checkpointValue,long timestamp, long commitTimestamp){
             if(this.rowKey==null)

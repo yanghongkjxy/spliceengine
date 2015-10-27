@@ -35,6 +35,7 @@ import com.splicemachine.si.data.api.SDataLib;
 import com.splicemachine.si.data.hbase.HDataLib;
 import com.splicemachine.si.data.hbase.HRowAccumulator;
 import com.splicemachine.si.impl.*;
+import com.splicemachine.si.impl.checkpoint.NoOpCheckpointResolver;
 import com.splicemachine.storage.EntryDecoder;
 import com.splicemachine.storage.EntryPredicateFilter;
 import com.splicemachine.storage.Predicate;
@@ -254,12 +255,13 @@ public class PopulateIndexTask extends ZkTask{
 
     private SIFilter<Cell> buildSIFilter(RowAccumulator<Cell> accumulator) throws IOException{
         //manually create the SIFilter
-        DDLTxnView demarcationPoint=new DDLTxnView(getTxn(),this.demarcationPoint);
+        final DDLTxnView demarcationPoint=new DDLTxnView(getTxn(),this.demarcationPoint);
         TransactionalRegion transactionalRegion=TransactionalRegions.get(region);
         TxnFilter unpacked = transactionalRegion.unpackedFilter(demarcationPoint);
         transactionalRegion.close();
         //noinspection unchecked
         return new PackedTxnFilter<Cell>(unpacked, accumulator){
+
             @Override
             public Filter.ReturnCode doAccumulate(Cell dataKeyValue) throws IOException {
                 if (!accumulator.isFinished() && accumulator.isOfInterest(dataKeyValue)) {
@@ -274,7 +276,7 @@ public class PopulateIndexTask extends ZkTask{
 
     protected MeasuredRegionScanner<Cell> getRegionScanner(SDataLib dataLib,SIFilter<Cell> siFilter,Scan regionScan,MetricFactory metricFactory) throws IOException{
         TxnFilter<Cell> unpacked = siFilter.unwrapFilter();
-        regionScan.setFilter(new CheckpointFilter(unpacked,SIConstants.checkpointSeekThreshold));
+        regionScan.setFilter(new CheckpointFilter(unpacked,SIConstants.checkpointSeekThreshold,NoOpCheckpointResolver.INSTANCE,3*regionScan.getBatch()/4));
         RegionScanner sourceScanner=region.getScanner(regionScan);
         return SpliceConstants.useReadAheadScanner?new ReadAheadRegionScanner(region,SpliceConstants.DEFAULT_CACHE_SIZE,sourceScanner,metricFactory,dataLib)
                 :new BufferedRegionScanner(region,sourceScanner,regionScan,SpliceConstants.DEFAULT_CACHE_SIZE,SpliceConstants.DEFAULT_CACHE_SIZE,metricFactory,dataLib);

@@ -13,5 +13,12 @@ public interface Checkpointer{
 
     void checkpoint(ByteSlice rowKey, byte[] checkpointValue,long timestamp,long commitTimestamp);
 
-    void flush();
+    void checkpoint(byte[] rowKey, int keyOff,int keyLen, byte[] checkpointValue,long timestamp,long commitTimestamp) throws IOException;
+
+    void flush() throws IOException;
+
+    /**
+     * @return true if this checkpointer will delete values, false otherwise
+     */
+    boolean issuesDeletes();
 }

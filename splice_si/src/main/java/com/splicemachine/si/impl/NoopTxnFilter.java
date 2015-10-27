@@ -1,6 +1,7 @@
 package com.splicemachine.si.impl;
 
 import com.splicemachine.si.api.TxnSupplier;
+import com.splicemachine.si.api.TxnView;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.filter.Filter;
 
@@ -55,4 +56,6 @@ public class NoopTxnFilter implements TxnFilter<Cell>{
     public TxnSupplier getTxnSupplier(){
         return txnSupplier;
     }
+
+    @Override public TxnView unwrapReadingTxn(){ return null; }
 }

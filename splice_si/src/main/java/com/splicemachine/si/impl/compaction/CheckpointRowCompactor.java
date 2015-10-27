@@ -1,6 +1,6 @@
 package com.splicemachine.si.impl.compaction;
 
-import com.carrotsearch.hppc.BitSet;
+import com.carrotsearch.hppc.LongOpenHashSet;
 import com.splicemachine.constants.FixedSIConstants;
 import com.splicemachine.constants.FixedSpliceConstants;
 import com.splicemachine.si.api.*;
@@ -38,9 +38,9 @@ public class CheckpointRowCompactor implements RowCompactor{
      * a hashtable of longs instead.
      *
      */
-    private BitSet setCommitTimestampVersions = new BitSet();
-    private BitSet emptyCheckpoints = new BitSet();
-    private BitSet visitedCheckpoints = new BitSet();
+    private LongOpenHashSet setCommitTimestampVersions = new LongOpenHashSet(1,0.8f);
+    private LongOpenHashSet emptyCheckpoints = new LongOpenHashSet(1,0.8f);
+    private LongOpenHashSet visitedCheckpoints = new LongOpenHashSet(1,0.8f);
     /*
      * This is the timestamp to which we will write the accumulated data.
      */
@@ -324,7 +324,7 @@ public class CheckpointRowCompactor implements RowCompactor{
             long globalCommitTs=Bytes.toLong(cell.getValueArray(),cell.getValueOffset(),cell.getValueLength());
             TxnView txn  = new CommittedTxn(timestamp,globalCommitTs);
             transactionStore.cache(txn);
-            setCommitTimestampVersions.set(timestamp);
+            setCommitTimestampVersions.add(timestamp);
         }
         if(timestamp>=checkpointVersion){
             //keep the CT around
@@ -384,7 +384,7 @@ public class CheckpointRowCompactor implements RowCompactor{
 
     private void processCheckpoint(Cell cell) throws IOException{
         long ts = cell.getTimestamp();
-        visitedCheckpoints.set(ts);
+        visitedCheckpoints.add(ts);
         if(ts<mat){
             /*
              * We don't normally need this entry, so we will discard it. It's always possible that this is
@@ -432,7 +432,7 @@ public class CheckpointRowCompactor implements RowCompactor{
         if(cell.getValueLength()==0){
             txn = transactionStore.getTransaction(cell.getTimestamp());
             if(txn.getEffectiveState()!=Txn.State.ROLLEDBACK)
-                emptyCheckpoints.set(cell.getTimestamp());
+                emptyCheckpoints.add(cell.getTimestamp());
             return false;
         }
 

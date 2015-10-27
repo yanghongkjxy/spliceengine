@@ -4,6 +4,7 @@ import com.splicemachine.derby.test.framework.SpliceSchemaWatcher;
 import com.splicemachine.derby.test.framework.SpliceUnitTest;
 import com.splicemachine.derby.test.framework.SpliceWatcher;
 import com.splicemachine.derby.test.framework.TestConnection;
+import com.splicemachine.metrics.*;
 import com.splicemachine.test_tools.Rows;
 import com.splicemachine.test_tools.TableCreator;
 import org.junit.*;
@@ -17,6 +18,7 @@ import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -72,7 +74,7 @@ public class UpdateMultiOperationIT{
             }
         }
 
-        try(ResultSet rs = conn.query("select * from warehouse")){
+        try(ResultSet rs = conn.query("select * from warehouse where w_id = 292")){
             long rowCount = 0l;
             while(rs.next()){
                 int wId = rs.getInt(1);

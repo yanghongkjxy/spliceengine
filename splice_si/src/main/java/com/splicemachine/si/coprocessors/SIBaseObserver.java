@@ -71,6 +71,7 @@ public abstract class SIBaseObserver extends BaseRegionObserver{
         SpliceLogUtils.trace(LOG,"stopping %s",SIBaseObserver.class);
         if(region!=null)
             region.close();
+
         super.stop(e);
     }
 
@@ -136,14 +137,14 @@ public abstract class SIBaseObserver extends BaseRegionObserver{
     private void addSIFilterToGet(Get get,boolean pack) throws IOException{
         TxnView txn=txnOperationFactory.fromReads(get);
         final Filter newFilter=makeSIFilter(txn,get.getFilter(),
-                getPredicateFilter(get),false,pack);
+                getPredicateFilter(get),false,pack,SIConstants.scannerBatchSize);
         get.setFilter(newFilter);
     }
 
     private void addSIFilterToScan(Scan scan,boolean pack) throws IOException{
         TxnView txn=txnOperationFactory.fromReads(scan);
         final Filter newFilter=makeSIFilter(txn,scan.getFilter(),
-                getPredicateFilter(scan),scan.getAttribute(SIConstants.SI_COUNT_STAR)!=null,pack);
+                getPredicateFilter(scan),scan.getAttribute(SIConstants.SI_COUNT_STAR)!=null,pack,scan.getBatch());
         scan.setFilter(newFilter);
     }
 
@@ -156,7 +157,9 @@ public abstract class SIBaseObserver extends BaseRegionObserver{
     protected abstract Filter makeSIFilter(TxnView txn,
                                            Filter currentFilter,
                                            EntryPredicateFilter predicateFilter,
-                                           boolean countStar,boolean pack) throws IOException;
+                                           boolean countStar,
+                                           boolean pack,
+                                           int scannerBatchSize) throws IOException;
 
     protected boolean needsCompositeFilter(Filter currentFilter){
         return currentFilter!=null;

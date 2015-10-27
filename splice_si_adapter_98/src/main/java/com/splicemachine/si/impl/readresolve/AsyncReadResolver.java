@@ -19,13 +19,13 @@ import java.util.concurrent.TimeUnit;
 /**
  * Read-Resolver which asynchronously submits regions for execution, discarding
  * any entries which exceed the size of the processing queue.
- *
+ * <p/>
  * This implementation uses an LMAX disruptor to asynchronously pass Read-resolve events
  * to a background thread, which in turn uses a SynchronousReadResolver to actually perform the resolution.
  *
- * @see com.splicemachine.si.impl.readresolve.SynchronousReadResolver
  * @author Scott Fines
- * Date: 7/1/14
+ *         Date: 7/1/14
+ * @see com.splicemachine.si.impl.readresolve.SynchronousReadResolver
  */
 @ThreadSafe
 public class AsyncReadResolver{
@@ -33,11 +33,11 @@ public class AsyncReadResolver{
     private volatile RingBuffer<ResolveEvent> ringBuffer;
     private final WorkerPool<ResolveEvent> disruptor;
 
-		private final ThreadPoolExecutor consumerThreads;
-		private volatile boolean stopped;
+    private final ThreadPoolExecutor consumerThreads;
+    private volatile boolean stopped;
     private final TxnSupplier txnSupplier;
     private final RollForwardStatus status;
-		private final TrafficControl trafficControl;
+    private final TrafficControl trafficControl;
 
     public AsyncReadResolver(int maxThreads,int bufferSize,
                              TxnSupplier txnSupplier,
@@ -118,12 +118,12 @@ public class AsyncReadResolver{
             }
             try{
                 if(SynchronousReadResolver.INSTANCE.resolve(event.region,
-												event.rowKey,
-												event.txnId,
-												txnSupplier,
-												status,
-												false,
-												trafficControl)){
+                        event.rowKey,
+                        event.txnId,
+                        txnSupplier,
+                        status,
+                        false,
+                        trafficControl)){
                     event.rollForward.recordResolved(event.rowKey,event.txnId);
                 }
             }catch(Exception e){
@@ -133,25 +133,25 @@ public class AsyncReadResolver{
         }
     }
 
-		private class RegionReadResolver implements ReadResolver {
-				private final HRegion region;
+    private class RegionReadResolver implements ReadResolver{
+        private final HRegion region;
         private final RollForward rollForward;
         public volatile long resumeSequenceId = 0;
 
-				public RegionReadResolver(HRegion region,RollForward rollForward) {
-						this.region = region;
-            this.rollForward = rollForward;
-				}
+        public RegionReadResolver(HRegion region,RollForward rollForward){
+            this.region=region;
+            this.rollForward=rollForward;
+        }
 
         @Override
         public void resolve(ByteSlice rowKey,long txnId){
             if(resumeSequenceId<0) return; //we are paused, so do not add to queue, do not pass go, do not collect 200 dollars
             if(stopped) return; //we aren't running, so do nothing
             long sequence;
-            try {
-                sequence = ringBuffer.tryNext();
-            } catch (InsufficientCapacityException e) {
-                if (LOG.isTraceEnabled())
+            try{
+                sequence=ringBuffer.tryNext();
+            }catch(InsufficientCapacityException e){
+                if(LOG.isTraceEnabled())
                     LOG.trace("Unable to submit for read resolution");
                 return;
             }
@@ -201,5 +201,4 @@ public class AsyncReadResolver{
             LOG.info("Unexpected shutdown exception",ex);
         }
     }
->>>>>>> a85dc58... Pausing transactional maintenance operators during compaction.
 }

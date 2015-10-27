@@ -3,7 +3,9 @@ package com.splicemachine.si.impl;
 import com.splicemachine.constants.FixedSIConstants;
 import com.splicemachine.constants.FixedSpliceConstants;
 import com.splicemachine.encoding.Encoding;
+import com.splicemachine.si.api.Txn;
 import com.splicemachine.si.api.TxnSupplier;
+import com.splicemachine.si.api.TxnView;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
@@ -225,7 +227,8 @@ public class CheckpointFilterTest{
                 FixedSpliceConstants.DEFAULT_FAMILY_BYTES,
                 FixedSIConstants.SNAPSHOT_ISOLATION_CHECKPOINT_COLUMN_BYTES,4l, value);
 
-        TxnFilter<Cell> txnFilter=new BaseTestTxnFilter(){
+        TxnView txn = new ReadOnlyTxn(1l,1l,Txn.IsolationLevel.READ_UNCOMMITTED,Txn.ROOT_TRANSACTION,null,null,true);
+        TxnFilter<Cell> txnFilter=new BaseTestTxnFilter(txn){
             @Override
             public Filter.ReturnCode filterKeyValue(Cell keyValue) throws IOException{
                 Assert.assertEquals("Should not check transactionality!",4l,keyValue.getTimestamp());
@@ -253,7 +256,8 @@ public class CheckpointFilterTest{
                 FixedSIConstants.SNAPSHOT_ISOLATION_CHECKPOINT_COLUMN_BYTES,2l, value);
 
         final long[] correctTs = new long[]{2l};
-        TxnFilter<Cell> txnFilter=new BaseTestTxnFilter(){
+        TxnView txn = new ReadOnlyTxn(1l,1l,Txn.IsolationLevel.READ_UNCOMMITTED,Txn.ROOT_TRANSACTION,null,null,true);
+        TxnFilter<Cell> txnFilter=new BaseTestTxnFilter(txn){
             @Override
             public Filter.ReturnCode filterKeyValue(Cell keyValue) throws IOException{
                 Assert.assertEquals("Should not check transactionality!",correctTs[0],keyValue.getTimestamp());
@@ -281,7 +285,8 @@ public class CheckpointFilterTest{
     /* ****************************************************************************************************************/
     /*private helper methods*/
     private TxnFilter<Cell> alwaysIncludeTxnFilter(){
-        return new BaseTestTxnFilter(){
+        TxnView txn = new ReadOnlyTxn(1l,1l,Txn.IsolationLevel.READ_UNCOMMITTED,Txn.ROOT_TRANSACTION,null,null,true);
+        return new BaseTestTxnFilter(txn){
             @Override
             public Filter.ReturnCode filterKeyValue(Cell keyValue) throws IOException{
                 return Filter.ReturnCode.INCLUDE;
@@ -311,11 +316,22 @@ public class CheckpointFilterTest{
     }
 
     private static abstract class BaseTestTxnFilter implements TxnFilter<Cell>{
+        private final TxnView readTxn;
+        public BaseTestTxnFilter(TxnView readTxn){
+            this.readTxn=readTxn;
+        }
+
+
+
         @Override public void nextRow(){ }
         @Override public Cell produceAccumulatedKeyValue(){ return null; }
         @Override public DataStore getDataStore(){ return null; }
         @Override public boolean isPacked(){ return false; }
         @Override public TxnSupplier getTxnSupplier(){ return null; }
+
+        @Override public TxnView unwrapReadingTxn(){
+            return readTxn;
+        }
 
         @Override public boolean getExcludeRow(){ return false; }
         @Override
@@ -323,6 +339,4 @@ public class CheckpointFilterTest{
             return getKeyValueType(keyValue);
         }
     }
-
-
 }

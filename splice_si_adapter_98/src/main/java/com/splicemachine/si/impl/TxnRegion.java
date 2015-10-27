@@ -1,24 +1,26 @@
 package com.splicemachine.si.impl;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.splicemachine.constants.SIConstants;
 import com.splicemachine.hbase.KVPair;
 import com.splicemachine.si.api.*;
-import com.splicemachine.si.coprocessors.SICompactionScanner;
 import com.splicemachine.si.coprocessors.SIObserver;
 import com.splicemachine.si.data.api.IHTable;
 import com.splicemachine.si.data.api.SRowLock;
 import com.splicemachine.si.data.hbase.HRowAccumulator;
 import com.splicemachine.si.data.hbase.HbRegion;
+import com.splicemachine.si.impl.checkpoint.CheckpointResolver;
+import com.splicemachine.si.impl.checkpoint.NoOpCheckpointResolver;
 import com.splicemachine.si.impl.compaction.CheckpointCompactionScanner;
 import com.splicemachine.si.impl.store.ActiveTxnCacheSupplier;
 import com.splicemachine.si.impl.store.IgnoreTxnCacheSupplier;
 import com.splicemachine.storage.EntryDecoder;
 import com.splicemachine.storage.EntryPredicateFilter;
+import com.splicemachine.storage.Region;
 import com.splicemachine.utils.ByteSlice;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionUtil;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
@@ -34,6 +36,7 @@ import java.util.Collection;
  */
 public class TxnRegion implements TransactionalRegion{
     private final HRegion region;
+    private final Partition partition;
     private final RollForward rollForward;
     private final ReadResolver readResolver;
     private final TxnSupplier txnSupplier;
@@ -42,9 +45,11 @@ public class TxnRegion implements TransactionalRegion{
     private final Transactor transactor;
     private final IHTable hbRegion;
     private final String tableName;
+    private final CheckpointResolver checkpointResolver;
 
     private final boolean transactionalWrites; //if false, then will use straightforward writes
 
+    @VisibleForTesting
     public TxnRegion(HRegion region,
                      RollForward rollForward,
                      ReadResolver readResolver,
@@ -52,6 +57,17 @@ public class TxnRegion implements TransactionalRegion{
                      IgnoreTxnCacheSupplier ignoreTxnCacheSupplier,
                      DataStore dataStore,
                      Transactor transactor){
+        this(region, rollForward, readResolver, txnSupplier, ignoreTxnCacheSupplier, dataStore, transactor,NoOpCheckpointResolver.INSTANCE);
+
+    }
+    public TxnRegion(HRegion region,
+                     RollForward rollForward,
+                     ReadResolver readResolver,
+                     TxnSupplier txnSupplier,
+                     IgnoreTxnCacheSupplier ignoreTxnCacheSupplier,
+                     DataStore dataStore,
+                     Transactor transactor,
+                     CheckpointResolver checkpointResolver){
         this.region=region;
         this.rollForward=rollForward;
         this.readResolver=readResolver;
@@ -62,6 +78,8 @@ public class TxnRegion implements TransactionalRegion{
         this.hbRegion=new HbRegion(region);
         this.tableName=region.getTableDesc().getNameAsString();
         this.transactionalWrites=SIObserver.doesTableNeedSI(region.getTableDesc().getNameAsString());
+        this.checkpointResolver = checkpointResolver;
+        this.partition = new Region(region);
     }
 
     @Override
@@ -85,43 +103,38 @@ public class TxnRegion implements TransactionalRegion{
     }
 
     @Override
-    public SICompactionState compactionFilter() throws IOException{
-        return new SICompactionState(dataStore,txnSupplier,rollForward);
-    }
-
-    @Override
     public boolean rowInRange(byte[] row){
-        return HRegion.rowIsInRange(region.getRegionInfo(),row);
+        return partition.rowInRange(row,0,row.length);
     }
 
     @Override
     public boolean rowInRange(ByteSlice slice){
-        return HRegionUtil.containsRow(region.getRegionInfo(),slice.array(),slice.offset(),slice.length());
+        return partition.rowInRange(slice);
     }
 
     @Override
     public boolean isClosed(){
-        return region.isClosed() || region.isClosing();
+        return partition.isClosed();
     }
 
     @Override
     public boolean containsRange(byte[] start,byte[] stop){
-        return HRegionUtil.containsRange(region,start,stop);
+        return partition.containsRange(start,stop);
     }
 
     @Override
     public String getTableName(){
-        return region.getTableDesc().getNameAsString();
+        return partition.getTableName();
     }
 
     @Override
     public void updateWriteRequests(long writeRequests){
-        HRegionUtil.updateWriteRequests(region,writeRequests);
+        partition.markWrites(writeRequests);
     }
 
     @Override
     public void updateReadRequests(long readRequests){
-        HRegionUtil.updateReadRequests(region,readRequests);
+        partition.markReads(readRequests);
     }
 
     @Override

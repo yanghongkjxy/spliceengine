@@ -1,5 +1,7 @@
 package com.splicemachine.si.impl;
 
+import com.splicemachine.si.impl.checkpoint.CheckpointResolver;
+import com.splicemachine.si.impl.checkpoint.NoOpCheckpointResolver;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.filter.FilterBase;
 
@@ -11,20 +13,29 @@ import java.util.List;
  *         Date: 10/8/15
  */
 public class CheckpointFilter extends FilterBase{
-
     private TxnFilter<Cell> txnFilter;
     private long seekThreshold;
+    private long resolveThreshold;
+    private CheckpointResolver resolver;
 
     private long checkpointVersion = -1l;
     private boolean seekColumns = false;
     private int checkpointCount; //the number of checkpoints that we've seen
     private CellType lastkvT;
+    private long numUserCells;
+    private boolean resolved;
 
-    public CheckpointFilter(TxnFilter<Cell> txnFilter,long seekThreshold){
+    CheckpointFilter(TxnFilter<Cell> txnFilter,long seekThreshold){
+        this(txnFilter, seekThreshold,NoOpCheckpointResolver.INSTANCE,Long.MAX_VALUE);
+    }
+
+    public CheckpointFilter(TxnFilter<Cell> txnFilter,long seekThreshold,CheckpointResolver resolver,long resolveThreshold){
         this.txnFilter=txnFilter;
         this.seekThreshold=seekThreshold;
         if(seekThreshold<0)
             seekColumns = true;
+        this.resolveThreshold = resolveThreshold;
+        this.resolver = resolver;
     }
 
     @Override
@@ -32,9 +43,20 @@ public class CheckpointFilter extends FilterBase{
         CellType type=txnFilter.getType(v);
         boolean sameKvType = lastkvT!=null && type==lastkvT;
         lastkvT = type;
+        return applyFilter(v,type,sameKvType);
+    }
+
+    private ReturnCode applyFilter(Cell v,CellType type,boolean sameKvType) throws IOException{
         switch(type){
             case CHECKPOINT:
                 return filterCheckpointCell(v);
+            case USER_DATA:
+                /*
+                 * Count the number of visible USER_DATA records. If the number
+                 * of records between the first entry and the checkpointVersion exceeds
+                 * the threshold, then submit this row for checkpoint resolution
+                 */
+                return filterUserDataCell(v,sameKvType);
             default:
                 return filterNonCheckpointCell(v,sameKvType);
         }
@@ -48,6 +70,8 @@ public class CheckpointFilter extends FilterBase{
             seekColumns = false;
         lastkvT = null;
         txnFilter.nextRow();
+        numUserCells=0;
+        resolved=false;
     }
 
     @Override
@@ -93,10 +117,36 @@ public class CheckpointFilter extends FilterBase{
         return ReturnCode.SKIP;
     }
 
+    private ReturnCode filterUserDataCell(Cell v,boolean sameCellType) throws IOException{
+        long timestamp=v.getTimestamp();
+        if(timestamp<checkpointVersion){
+            return skipBelowCheckpoint(sameCellType);
+        }else {
+            ReturnCode returnCode=txnFilter.filterKeyValue(v);
+            if(!resolved && returnCode==ReturnCode.INCLUDE){
+                numUserCells++;
+                if(numUserCells>resolveThreshold){
+                    long beginTimestamp=txnFilter.unwrapReadingTxn().getBeginTimestamp();
+                    resolver.resolveCheckpoint(v.getRowArray(),v.getRowOffset(),v.getRowLength(), beginTimestamp);
+                    numUserCells=0;
+                    resolved=true;
+                }
+            }
+            return returnCode;
+        }
+    }
+
     private ReturnCode filterNonCheckpointCell(Cell v,boolean sameCellType) throws IOException{
         long timestamp=v.getTimestamp();
         if(timestamp<checkpointVersion){
-            if(seekColumns) return ReturnCode.NEXT_COL;
+            return skipBelowCheckpoint(sameCellType);
+        }else {
+            return txnFilter.filterKeyValue(v);
+        }
+    }
+
+    private ReturnCode skipBelowCheckpoint(boolean sameCellType){
+        if(seekColumns) return ReturnCode.NEXT_COL;
 
             /*
              * We need to determine if a seek is appropriate on this column. To do that, we keep track
@@ -105,22 +155,19 @@ public class CheckpointFilter extends FilterBase{
              * to another column type (i.e. going from Commit timestamp to Tombstone), then we actually know that
              * seeking is not necessary, so we just return skip for it.
              */
-            if(!sameCellType){
-                checkpointCount=0;
-                return ReturnCode.SKIP;
-            }else{
-                /*
-                 * We have the same cell type, so keep track of how many we see. If we see enough, switch
-                 * to seek mode
-                 */
-                checkpointCount++;
-                if(checkpointCount>seekThreshold){
-                    seekColumns=true;
-                }
-            }
+        if(!sameCellType){
+            checkpointCount=0;
             return ReturnCode.SKIP;
-        }else {
-            return txnFilter.filterKeyValue(v);
+        }else{
+            /*
+             * We have the same cell type, so keep track of how many we see. If we see enough, switch
+             * to seek mode
+             */
+            checkpointCount++;
+            if(checkpointCount>seekThreshold){
+                seekColumns=true;
+            }
         }
+        return ReturnCode.SKIP;
     }
 }

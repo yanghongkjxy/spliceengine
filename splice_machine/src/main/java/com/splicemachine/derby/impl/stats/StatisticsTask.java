@@ -4,7 +4,6 @@ import com.carrotsearch.hppc.BitSet;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
 import com.splicemachine.SpliceKryoRegistry;
-import com.splicemachine.constants.FixedSpliceConstants;
 import com.splicemachine.constants.SIConstants;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.db.iapi.error.StandardException;
@@ -36,10 +35,7 @@ import com.splicemachine.si.api.Txn;
 import com.splicemachine.si.api.TxnLifecycleManager;
 import com.splicemachine.si.api.TxnView;
 import com.splicemachine.si.data.api.SDataLib;
-import com.splicemachine.si.impl.CheckpointFilter;
-import com.splicemachine.si.impl.HTransactorFactory;
-import com.splicemachine.si.impl.TransactionalRegions;
-import com.splicemachine.si.impl.TxnFilter;
+import com.splicemachine.si.impl.*;
 import com.splicemachine.stats.ColumnStatistics;
 import com.splicemachine.storage.EntryEncoder;
 import com.splicemachine.utils.SpliceZooKeeperManager;
@@ -149,7 +145,10 @@ public class StatisticsTask extends ZkTask{
         long[] statsTableIds = getStatsConglomerateIds();
         try(TransactionalRegion txnRegion = TransactionalRegions.get(region)) {
             TxnFilter<Cell> cellTxnFilter=txnRegion.unpackedFilter(txn);
-            partitionScan.setFilter(new CheckpointFilter(cellTxnFilter,SIConstants.checkpointSeekThreshold));
+            partitionScan.setFilter(new CheckpointFilter(cellTxnFilter,
+                    SIConstants.checkpointSeekThreshold,
+                    txnRegion.getCheckpointResolver(),
+                    3*partitionScan.getBatch()/4));
             markCollectionInProgress(txnRegion,statsTableIds[0]);
             StatisticsCollector collector;
             if(baseTableConglomerateId<0) {

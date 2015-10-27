@@ -174,8 +174,12 @@ public class SIObserver extends SIBaseObserver{
         }
     }
 
-    @Override
-    protected Filter makeSIFilter(TxnView txn,Filter currentFilter,EntryPredicateFilter predicateFilter,boolean countStar,boolean pack) throws IOException{
+    protected Filter makeSIFilter(TxnView txn,
+                                  Filter currentFilter,
+                                  EntryPredicateFilter predicateFilter,
+                                  boolean countStar,
+                                  boolean pack,
+                                  int scannerBatchSize) throws IOException{
 
         TxnFilter<Cell> txnFilter;
         if(pack){
@@ -183,13 +187,11 @@ public class SIObserver extends SIBaseObserver{
         }else{
             txnFilter = region.unpackedFilter(txn);
         }
-        CheckpointFilter siFilter = new CheckpointFilter(txnFilter,SIConstants.checkpointSeekThreshold);
+        CheckpointFilter siFilter = new CheckpointFilter(txnFilter,SIConstants.checkpointSeekThreshold,region.getCheckpointResolver(),3*scannerBatchSize/4);
         if(needsCompositeFilter(currentFilter)){
             return composeFilters(orderFilters(currentFilter,siFilter));
         }else{
             return siFilter;
         }
     }
-
-
 }

@@ -77,6 +77,11 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
     }
 
     @Override
+    public TxnView unwrapReadingTxn(){
+        return myTxn;
+    }
+
+    @Override
     public CellType getType(Data element) throws IOException{
         return dataStore.getKeyValueType(element);
     }

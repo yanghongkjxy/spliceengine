@@ -1,13 +1,9 @@
 package com.splicemachine.si.api;
 
 import com.splicemachine.hbase.KVPair;
-import com.splicemachine.si.impl.DDLFilter;
 import com.splicemachine.si.impl.DataStore;
-import com.splicemachine.si.impl.SICompactionState;
-import com.splicemachine.si.impl.TxnFilter;
-import com.splicemachine.storage.EntryPredicateFilter;
+import com.splicemachine.si.impl.checkpoint.CheckpointResolver;
 import com.splicemachine.utils.ByteSlice;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
@@ -21,27 +17,7 @@ import java.util.Collection;
  * @author Scott Fines
  *         Date: 7/1/14
  */
-public interface TransactionalRegion extends AutoCloseable{
-
-    /**
-     * Create a new Transactional Filter for the region.
-     *
-     * This filter is "Unpacked", in the sense that it will not attempt to deal with packed
-     * data.
-     *
-     * @param txn the transaction to create a filter for
-     * @return a new transactional filter for the region
-     * @throws IOException if something goes wrong.
-     */
-    TxnFilter<Cell> unpackedFilter(TxnView txn) throws IOException;
-
-    TxnFilter<Cell> noOpFilter(TxnView txn) throws IOException;
-
-    TxnFilter<Cell> packedFilter(TxnView txn, EntryPredicateFilter predicateFilter, boolean countStar) throws IOException;
-
-    DDLFilter ddlFilter(Txn ddlTxn) throws IOException;
-
-    SICompactionState compactionFilter() throws IOException;
+public interface TransactionalRegion extends AutoCloseable,TxnFilterFactory{
 
     /**
      * @return true if the underlying region is either closed or is closing

@@ -3,6 +3,7 @@ package com.splicemachine.si.impl;
 import com.splicemachine.si.api.RowAccumulator;
 import com.splicemachine.si.api.SIFilter;
 import com.splicemachine.si.api.TxnSupplier;
+import com.splicemachine.si.api.TxnView;
 import org.apache.hadoop.hbase.filter.Filter;
 
 import java.io.IOException;
@@ -19,8 +20,14 @@ public class PackedTxnFilter<Data> implements TxnFilter<Data>, SIFilter<Data>{
         this.accumulator=accumulator;
     }
 
+    @Override
     public RowAccumulator getAccumulator(){
         return accumulator;
+    }
+
+    @Override
+    public TxnView unwrapReadingTxn(){
+        return simpleFilter.unwrapReadingTxn();
     }
 
     @Override
