@@ -22,7 +22,6 @@ public class UDTDescriptorSerializer implements DescriptorSerializer,Closeable {
 
     public static final DescriptorSerializer INSTANCE = new UDTDescriptorSerializer();
 
-
     private ClassFactory cf;
 
     public static final Factory INSTANCE_FACTORY = new Factory() {

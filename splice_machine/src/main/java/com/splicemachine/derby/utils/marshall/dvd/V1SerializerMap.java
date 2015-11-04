@@ -15,13 +15,13 @@ public class V1SerializerMap implements SerializerMap, TypeProvider{
 
     public static final String VERSION="1.0";
 
-    protected void populateFactories(boolean sparse,KryoPool kryoPool){
+    protected void populateFactories(boolean sparse,KryoPool kp){
         factories[0]=NullDescriptorSerializer.nullFactory(BooleanDescriptorSerializer.INSTANCE_FACTORY,sparse);
         factories[1]=NullDescriptorSerializer.nullFactory(LazyDescriptorSerializer.factory(ScalarDescriptorSerializer.INSTANCE_FACTORY,VERSION),sparse);
         factories[2]=NullDescriptorSerializer.floatChecker(RealDescriptorSerializer.INSTANCE_FACTORY,sparse);
         factories[3]=NullDescriptorSerializer.doubleChecker(LazyDescriptorSerializer.factory(DoubleDescriptorSerializer.INSTANCE_FACTORY,VERSION),sparse);
         factories[4]=NullDescriptorSerializer.nullFactory(LazyDescriptorSerializer.factory(StringDescriptorSerializer.INSTANCE_FACTORY,VERSION),sparse);
-        factories[5]=NullDescriptorSerializer.nullFactory(KryoDescriptorSerializer.newFactory(kryoPool),sparse);
+        factories[5]=NullDescriptorSerializer.nullFactory(KryoDescriptorSerializer.newFactory(kp),sparse);
         factories[6]=NullDescriptorSerializer.nullFactory(DateDescriptorSerializer.INSTANCE_FACTORY,sparse);
         factories[7]=NullDescriptorSerializer.nullFactory(TimeDescriptorSerializer.INSTANCE_FACTORY,sparse);
         factories[8]=NullDescriptorSerializer.nullFactory(LazyTimeValuedSerializer.newFactory(TimestampV1DescriptorSerializer.INSTANCE_FACTORY,VERSION),sparse);
@@ -29,13 +29,12 @@ public class V1SerializerMap implements SerializerMap, TypeProvider{
         factories[10]=NullDescriptorSerializer.nullFactory(LazyDescriptorSerializer.factory(DecimalDescriptorSerializer.INSTANCE_FACTORY,VERSION),sparse);
         factories[11]=NullDescriptorSerializer.nullFactory(RefDescriptorSerializer.INSTANCE_FACTORY,sparse);
 //				factories[12] = NullDescriptorSerializer.nullFactory(UDTDescriptorSerializer.INSTANCE_FACTORY, sparse);
-
         eagerFactories[0]=NullDescriptorSerializer.nullFactory(BooleanDescriptorSerializer.INSTANCE_FACTORY,sparse);
         eagerFactories[1]=NullDescriptorSerializer.nullFactory(ScalarDescriptorSerializer.INSTANCE_FACTORY,sparse);
         eagerFactories[2]=NullDescriptorSerializer.floatChecker(RealDescriptorSerializer.INSTANCE_FACTORY,sparse);
         eagerFactories[3]=NullDescriptorSerializer.doubleChecker(DoubleDescriptorSerializer.INSTANCE_FACTORY,sparse);
         eagerFactories[4]=NullDescriptorSerializer.nullFactory(StringDescriptorSerializer.INSTANCE_FACTORY,sparse);
-        eagerFactories[5]=NullDescriptorSerializer.nullFactory(KryoDescriptorSerializer.newFactory(kryoPool),sparse);
+        eagerFactories[5]=NullDescriptorSerializer.nullFactory(KryoDescriptorSerializer.newFactory(kp),sparse);
         eagerFactories[6]=NullDescriptorSerializer.nullFactory(DateDescriptorSerializer.INSTANCE_FACTORY,sparse);
         eagerFactories[7]=NullDescriptorSerializer.nullFactory(TimeDescriptorSerializer.INSTANCE_FACTORY,sparse);
         eagerFactories[8]=NullDescriptorSerializer.nullFactory(TimestampV1DescriptorSerializer.INSTANCE_FACTORY,sparse);
@@ -49,24 +48,24 @@ public class V1SerializerMap implements SerializerMap, TypeProvider{
     public static volatile V1SerializerMap DENSE_MAP;//=new V1SerializerMap(false);
 
     public static V1SerializerMap getSparse(){
-        V1SerializerMap s = SPARSE_MAP;
+        V1SerializerMap s=SPARSE_MAP;
         if(s==null){
             synchronized(V1SerializerMap.class){
-                s = SPARSE_MAP;
+                s=SPARSE_MAP;
                 if(s==null)
-                    s = SPARSE_MAP = new V1SerializerMap(true);
+                    s=SPARSE_MAP=new V1SerializerMap(true);
             }
         }
         return s;
     }
 
     public static V1SerializerMap getDense(){
-        V1SerializerMap s = DENSE_MAP;
+        V1SerializerMap s=DENSE_MAP;
         if(s==null){
             synchronized(V1SerializerMap.class){
-                s = DENSE_MAP;
+                s=DENSE_MAP;
                 if(s==null)
-                    s = DENSE_MAP = new V1SerializerMap(false);
+                    s=DENSE_MAP=new V1SerializerMap(false);
             }
         }
         return s;

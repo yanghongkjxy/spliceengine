@@ -2,6 +2,7 @@ package com.splicemachine.derby.hbase;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.splicemachine.db.iapi.services.context.ContextService;
 import com.splicemachine.db.iapi.services.loader.ClassFactory;
 import com.splicemachine.db.iapi.sql.conn.LanguageConnectionContext;
 import com.splicemachine.derby.iapi.sql.execute.ConversionResultSet;
@@ -72,7 +73,7 @@ public class ActivationSerializer {
 
     private static final List<FieldStorageFactory> factories;
     private static final ArrayFactory arrayFactory;
-    private static ClassFactory classFactory;
+    private static final ClassFactory classFactory;
 
     static{
         factories = Lists.newArrayList();
@@ -87,6 +88,10 @@ public class ActivationSerializer {
 
         //always add SerializableFactory last, because otherwise it'll swallow everything else.
         factories.add(new SerializableFactory());
+        LanguageConnectionContext lcc = (LanguageConnectionContext)
+                ContextService.getContextOrNull(LanguageConnectionContext.CONTEXT_ID);
+        classFactory = lcc.getLanguageConnectionFactory().getClassFactory();
+
     }
 
     private static class Visitor{

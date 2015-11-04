@@ -41,9 +41,9 @@ public class V2SerializerMap extends V1SerializerMap{
         return sparse?getSparse():getDense();
     }
 
-    public V2SerializerMap(boolean sparse){
-        super(sparse);
-    }
+	public V2SerializerMap(boolean sparse){
+		super(sparse);
+	}
 
 	public V2SerializerMap(boolean sparse,KryoPool kryoPool){
 		super(sparse,kryoPool);
@@ -78,18 +78,5 @@ public class V2SerializerMap extends V1SerializerMap{
 				eagerFactories[10] = NullDescriptorSerializer.nullFactory(DecimalDescriptorSerializer.INSTANCE_FACTORY,sparse);
 				eagerFactories[11] = NullDescriptorSerializer.nullFactory(RefDescriptorSerializer.INSTANCE_FACTORY,sparse);
 //				eagerFactories[12] = NullDescriptorSerializer.nullFactory(UDTDescriptorSerializer.INSTANCE_FACTORY, sparse);
-
-        eagerFactories[0]=NullDescriptorSerializer.nullFactory(BooleanDescriptorSerializer.INSTANCE_FACTORY,sparse);
-        eagerFactories[1]=NullDescriptorSerializer.nullFactory(ScalarDescriptorSerializer.INSTANCE_FACTORY,sparse);
-        eagerFactories[2]=NullDescriptorSerializer.floatChecker(RealDescriptorSerializer.INSTANCE_FACTORY,sparse);
-        eagerFactories[3]=NullDescriptorSerializer.doubleChecker(DoubleDescriptorSerializer.INSTANCE_FACTORY,sparse);
-        eagerFactories[4]=NullDescriptorSerializer.nullFactory(StringDescriptorSerializer.INSTANCE_FACTORY,sparse);
-        eagerFactories[5]=NullDescriptorSerializer.nullFactory(KryoDescriptorSerializer.newFactory(kryoPool),sparse);
-        eagerFactories[6]=NullDescriptorSerializer.nullFactory(DateDescriptorSerializer.INSTANCE_FACTORY,sparse);
-        eagerFactories[7]=NullDescriptorSerializer.nullFactory(TimeDescriptorSerializer.INSTANCE_FACTORY,sparse);
-        eagerFactories[8]=NullDescriptorSerializer.nullFactory(TimestampV2DescriptorSerializer.INSTANCE_FACTORY,sparse);
-        eagerFactories[9]=NullDescriptorSerializer.nullFactory(UnsortedBinaryDescriptorSerializer.INSTANCE_FACTORY,sparse);
-        eagerFactories[10]=NullDescriptorSerializer.nullFactory(DecimalDescriptorSerializer.INSTANCE_FACTORY,sparse);
-        eagerFactories[11]=NullDescriptorSerializer.nullFactory(RefDescriptorSerializer.INSTANCE_FACTORY,sparse);
-    }
+		}
 }

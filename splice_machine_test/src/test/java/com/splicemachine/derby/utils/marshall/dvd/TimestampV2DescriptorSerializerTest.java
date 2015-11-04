@@ -3,6 +3,7 @@ package com.splicemachine.derby.utils.marshall.dvd;
 
 import com.splicemachine.db.iapi.error.StandardException;
 import com.splicemachine.db.shared.common.reference.SQLState;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.sql.Timestamp;
@@ -46,8 +47,16 @@ public class TimestampV2DescriptorSerializerTest {
     }
 
 
-
-
+    @Test
+    public void testEncodeDecodeTwoDates() throws Exception{
+        Timestamp ts = new Timestamp(1883-1900,0,1,1,1,1,0);
+        System.out.println(ts);
+        TimestampV2DescriptorSerializer ds = new TimestampV2DescriptorSerializer();
+        long l=ds.toLong(ts);
+        Timestamp ts2 = ds.toTimestamp(l);
+        System.out.println(ts2);
+        Assert.assertEquals("Incorrect encode/decode!",ts,ts2);
+    }
 
     @Test
     public void shouldFailOnSmallDate() {
