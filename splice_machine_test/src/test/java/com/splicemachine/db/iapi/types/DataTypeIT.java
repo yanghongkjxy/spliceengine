@@ -18,9 +18,7 @@ public abstract class DataTypeIT {
     private static final SpliceWatcher watcher = new SpliceWatcher("DATA_TYPES_TEST");
 
     @ClassRule
-    public static TestRule rule = RuleChain.outerRule(schemaWatcher);
-
-    //protected abstract Object[] getValues();
+    public static TestRule rule = RuleChain.outerRule(schemaWatcher).around(watcher);
 
     protected abstract String getTableName();
 
@@ -46,8 +44,8 @@ public abstract class DataTypeIT {
         String sql = "insert into " + tableName + " values (?)";
         PreparedStatement statement = watcher.prepareStatement(sql);
         setParameterValue(statement, value, 1);
-        int count = watcher.executeUpdate(sql);
-        assert count != 1;
+        int count = statement.executeUpdate();
+        assert count == 1;
     }
 
 
