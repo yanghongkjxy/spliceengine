@@ -18,6 +18,9 @@ import java.util.GregorianCalendar;
  */
 public class SqlDateTestIT extends DataTypeIT {
 
+    public static final long MIN_DATE = -2208988800000L;
+    public static final long MAX_DATE = 253402214400000L;
+
     @BeforeClass
     public static void beforeClass() throws Exception {
         SqlDateTestIT it = new SqlDateTestIT();
@@ -99,7 +102,20 @@ public class SqlDateTestIT extends DataTypeIT {
     @Test
     @Override
     public void testMinValue() throws Exception {
-        Date dt = new Date(-2208988800000L);
+        checkValue(MIN_DATE);
+    }
+
+    @Test
+    @Override
+    public void testMaxValue() throws Exception {
+        checkValue(MAX_DATE);
+    }
+
+    private void checkValue(Long date) throws Exception {
+        Date dt = null;
+        if (date != null) {
+            dt = new Date(date);
+        }
         runInsert(dt);
         ResultSet rs = runSelect();
         assert rs.next();
@@ -109,34 +125,29 @@ public class SqlDateTestIT extends DataTypeIT {
 
     @Test
     @Override
-    public void testMaxValue() throws Exception  {
-        runInsert(new Date(253402214400000L));
+    public void testNormalValue() throws Exception {
+        checkValue(System.currentTimeMillis());
     }
 
-    @Test
+    @Test(expected = Exception.class)
     @Override
-    public void testNormalValue() throws Exception {
-        Date dt = new Date();   // now
+    public void testBiggerMaxNegative() throws Exception {
+        Date dt = new Date(MAX_DATE + 1);
         runInsert(dt);
     }
 
-    @Test
-    @Override
-    public void testBiggerMaxNegative() throws Exception {
-
-    }
-
-    @Test
+    @Test(expected = Exception.class)
     @Override
     public void testSmallerMinNegative() throws Exception {
-
+        Date dt = new Date(MIN_DATE - 1);
+        runInsert(dt);
     }
 
 
     @Test
     @Override
     public void testNullValue() throws Exception {
-        runInsert(null);
+        checkValue(null);
     }
 
- }
+}
