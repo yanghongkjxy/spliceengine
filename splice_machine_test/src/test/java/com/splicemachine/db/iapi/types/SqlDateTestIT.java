@@ -1,10 +1,8 @@
 package com.splicemachine.db.iapi.types;
 
-import org.apache.tools.ant.taskdefs.Java;
-import org.junit.ClassRule;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TestRule;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -15,6 +13,18 @@ import java.util.Date;
  * Created by dmustafin on 11/23/15.
  */
 public class SqlDateTestIT extends DataTypeIT {
+
+    @BeforeClass
+    public static void beforeTest() throws Exception {
+        SqlDateTestIT it = new SqlDateTestIT();
+        it.createTable();
+    }
+
+
+    @AfterClass
+    public static void afterClass() {
+        watcher.closeAll();
+    }
 
     @Override
     protected String getTableName() {
@@ -43,22 +53,42 @@ public class SqlDateTestIT extends DataTypeIT {
         throw new IllegalArgumentException("Not supported type: " + value.getClass().getCanonicalName());
     }
 
-
     @Test
-    public void testCreateTable() throws Exception {
-        createTable();
+    @Override
+    public void testMinValue() {
+
     }
 
     @Test
-    public void testInsertNow() throws Exception {
+    @Override
+    public void testMaxValue() {
+
+    }
+
+    @Test
+    @Override
+    public void testNormalValue() throws Exception {
         Date dt = new Date();   // now
         runInsert(dt);
     }
 
+    @Test
+    @Override
+    public void testBiggerMaxNegative() throws Exception {
+
+    }
 
     @Test
-    public void testNull() throws Exception {
+    @Override
+    public void testSmallerMinNegative() throws Exception {
+
+    }
+
+
+    @Test
+    @Override
+    public void testNullValue() throws Exception {
         runInsert(null);
     }
 
-}
+ }

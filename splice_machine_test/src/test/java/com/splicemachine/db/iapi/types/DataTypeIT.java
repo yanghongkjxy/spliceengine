@@ -2,7 +2,7 @@ package com.splicemachine.db.iapi.types;
 
 import com.splicemachine.derby.test.framework.SpliceSchemaWatcher;
 import com.splicemachine.derby.test.framework.SpliceWatcher;
-import org.junit.ClassRule;
+import org.junit.*;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 
@@ -14,22 +14,26 @@ import java.sql.SQLException;
  * Created by dmustafin on 11/23/15.
  */
 public abstract class DataTypeIT {
-    public static final SpliceSchemaWatcher schemaWatcher = new SpliceSchemaWatcher("DATA_TYPES_TEST");
-    private static final SpliceWatcher watcher = new SpliceWatcher("DATA_TYPES_TEST");
+    protected static final SpliceSchemaWatcher schemaWatcher = new SpliceSchemaWatcher("DATA_TYPES_TEST");
+    protected static final SpliceWatcher watcher = new SpliceWatcher("DATA_TYPES_TEST");
 
     @ClassRule
     public static TestRule rule = RuleChain.outerRule(schemaWatcher).around(watcher);
 
     protected abstract String getTableName();
-
     protected abstract String getSqlDataType();
-
     protected abstract void setParameterValue(PreparedStatement preparedStatement, Object value, int paramIndex) throws SQLException;
-
 
     // create table
     // CRUD + negative
     // select
+    public abstract void testMinValue() throws Exception;
+    public abstract void testMaxValue() throws Exception;
+    public abstract void testNormalValue() throws Exception;
+    public abstract void testBiggerMaxNegative() throws Exception;
+    public abstract void testSmallerMinNegative() throws Exception;
+    public abstract void testNullValue() throws Exception;
+
 
     protected void createTable() throws Exception {
         String tableName = getTableName();
@@ -73,7 +77,5 @@ public abstract class DataTypeIT {
         ResultSet rs = watcher.executeQuery(sql);
         return rs;
     }
-
-
 
 }
