@@ -56,8 +56,7 @@ public abstract class DataTypeIT {
     protected void runDelete() throws Exception {
         String tableName = getTableName();
         String sql = "delete from " + tableName;
-        int count = watcher.executeUpdate(sql);
-        assert count != 1;
+        watcher.executeUpdate(sql);
     }
 
 
