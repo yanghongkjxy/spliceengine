@@ -66,7 +66,7 @@ public abstract class DataTypeIT {
         String sql = "update " + tableName + " set col1 = ?";
         PreparedStatement statement = watcher.prepareStatement(sql);
         setParameterValue(statement, value, 1);
-        int count = watcher.executeUpdate(sql);
+        int count = statement.executeUpdate();
         assert count != 1;
 
     }
