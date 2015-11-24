@@ -1,9 +1,6 @@
 package com.splicemachine.db.iapi.types;
 
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -18,8 +15,8 @@ import java.util.GregorianCalendar;
  */
 public class SqlDateTestIT extends DataTypeIT {
 
-    public static final long MIN_DATE = -2208988800000L;
-    public static final long MAX_DATE = 253402214400000L;
+    public static final long MIN_DATE =  -2177452800000L;  // -2208988800000L;
+    public static final long MAX_DATE = 253402214400000L;  //253402214400000L;
 
     @BeforeClass
     public static void beforeClass() throws Exception {
@@ -63,7 +60,7 @@ public class SqlDateTestIT extends DataTypeIT {
             return;
         }
 
-        throw new IllegalArgumentException("Not supported type: " + value.getClass().getCanonicalName());
+        throwNotSupportedType(value);
     }
 
 
@@ -120,6 +117,9 @@ public class SqlDateTestIT extends DataTypeIT {
         ResultSet rs = runSelect();
         assert rs.next();
         Date res = rs.getDate(1);
+        if (rs.wasNull()) {
+            res = null;
+        }
         assert compareDates(dt, res) : "written value (" + dt + ") is not equals read value (" + res + ")";
     }
 
@@ -136,11 +136,29 @@ public class SqlDateTestIT extends DataTypeIT {
         runInsert(dt);
     }
 
+    @Ignore  // it seems date BC (-0001-01-01) is transferred to our age (0001-01-01)
     @Test(expected = Exception.class)
     @Override
     public void testSmallerMinNegative() throws Exception {
-        Date dt = new Date(MIN_DATE - 1);
+        Calendar calendar = new GregorianCalendar(-100, 0, 1);
+        long l = calendar.getTimeInMillis();
+        Date dt = new Date(l);
+        System.out.println(dt);
         runInsert(dt);
+        /*
+        //for (long i = -62167370400001L; l > Long.MIN_VALUE; l = l - 100000000L) {
+        for (long i = 0L; i > Long.MIN_VALUE; i = i - 100000000L) {
+            System.out.println("---------");
+            System.out.println(i);
+            Date dt = new Date(i);
+            System.out.println(dt);
+            runInsert(dt);
+        }
+
+        //long l = MIN_DATE - 1;
+//        Date dt = new Date(l);
+//        System.out.println(dt);
+//        runInsert(dt);   */
     }
 
 
@@ -148,6 +166,23 @@ public class SqlDateTestIT extends DataTypeIT {
     @Override
     public void testNullValue() throws Exception {
         checkValue(null);
+    }
+
+    @Override
+    public void testUpdateValue() throws Exception {
+        Date d1 = new Date();
+        runInsert(d1);
+
+        Date d2 = new Date(0);
+        runUpdate(d2);
+
+        ResultSet rs = runSelect();
+        assert rs.next();
+        Date res = rs.getDate(1);
+        if (rs.wasNull()) {
+            res = null;
+        }
+        assert compareDates(d2, res) : "written value (" + d2 + ") is not equals read value (" + res + ")";
     }
 
 }

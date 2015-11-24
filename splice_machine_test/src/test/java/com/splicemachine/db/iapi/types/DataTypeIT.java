@@ -33,6 +33,7 @@ public abstract class DataTypeIT {
     public abstract void testBiggerMaxNegative() throws Exception;
     public abstract void testSmallerMinNegative() throws Exception;
     public abstract void testNullValue() throws Exception;
+    public abstract void testUpdateValue() throws Exception;
 
 
     protected void createTable() throws Exception {
@@ -75,6 +76,11 @@ public abstract class DataTypeIT {
         String sql = "select * from " + tableName;
         ResultSet rs = watcher.executeQuery(sql);
         return rs;
+    }
+
+
+    protected void throwNotSupportedType(Object value) {
+        throw new IllegalArgumentException("Not supported type: " + value.getClass().getCanonicalName());
     }
 
 }
