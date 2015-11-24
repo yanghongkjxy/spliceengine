@@ -67,7 +67,7 @@ public abstract class DataTypeIT {
         PreparedStatement statement = watcher.prepareStatement(sql);
         setParameterValue(statement, value, 1);
         int count = statement.executeUpdate();
-        assert count != 1;
+        assert count == 1;
 
     }
 
