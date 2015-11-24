@@ -2,10 +2,7 @@ package com.splicemachine.db.iapi.types;
 
 import org.junit.*;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -16,7 +13,8 @@ import java.util.GregorianCalendar;
 public class SqlDateTestIT extends DataTypeIT {
 
     public static final long MIN_DATE =  -2177452800000L;  // -2208988800000L;
-    public static final long MAX_DATE = 253402214400000L;  //253402214400000L;
+    public static final long MAX_DATE = 253402300799000L;  //253402214400000L;
+    private static final long MILLIS_IN_DAY = 24 * 60 * 60 * 1000;
 
     @BeforeClass
     public static void beforeClass() throws Exception {
@@ -129,10 +127,10 @@ public class SqlDateTestIT extends DataTypeIT {
         checkValue(System.currentTimeMillis());
     }
 
-    @Test(expected = Exception.class)
+    @Test(expected = SQLDataException.class)
     @Override
     public void testBiggerMaxNegative() throws Exception {
-        Date dt = new Date(MAX_DATE + 1);
+        Date dt = new Date(MAX_DATE + MILLIS_IN_DAY);
         runInsert(dt);
     }
 
