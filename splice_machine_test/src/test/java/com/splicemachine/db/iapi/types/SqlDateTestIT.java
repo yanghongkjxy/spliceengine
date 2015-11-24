@@ -113,7 +113,7 @@ public class SqlDateTestIT extends DataTypeIT {
         }
         runInsert(dt);
         ResultSet rs = runSelect();
-        assert rs.next();
+        assert rs.next() : "result set is empty";
         Date res = rs.getDate(1);
         if (rs.wasNull()) {
             res = null;
