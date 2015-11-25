@@ -3,10 +3,7 @@ package com.splicemachine.db.iapi.types;
 import org.junit.*;
 
 import javax.sql.rowset.serial.SerialClob;
-import java.sql.Clob;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 
 /**
  * Created by ochnev on 11/23/15.
@@ -59,7 +56,12 @@ public class SqlClobTestIT extends DataTypeIT {
     @Override
     public void testMinValue() throws Exception {
         Clob testClob = new SerialClob(new char[] {'a'});
-        runInsert(testClob); // just test that the insert is executed successfully
+        runInsert(testClob);
+
+        ResultSet rs = runSelect();
+        assert rs.next();
+        Clob res = rs.getClob(1);
+        Assert.assertEquals(1, res.length());
     }
 
     @Ignore
@@ -72,8 +74,14 @@ public class SqlClobTestIT extends DataTypeIT {
     @Test
     @Override
     public void testNormalValue() throws Exception {
-        Clob testClob = getSomeClob(100_000);
-        runInsert(testClob); // just test that the insert is executed successfully
+        int length = 100_000;
+        Clob testClob = getSomeClob(length);
+        runInsert(testClob);
+
+        ResultSet rs = runSelect();
+        assert rs.next();
+        Clob res = rs.getClob(1);
+        Assert.assertEquals(length, res.length());
     }
 
     @Ignore
