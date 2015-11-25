@@ -59,7 +59,7 @@ public class SqlClobTestIT extends DataTypeIT {
     @Override
     public void testMinValue() throws Exception {
         Clob testClob = new SerialClob(new char[] {'a'});
-        runInsert(testClob);
+        runInsert(testClob); // just test that the insert is executed successfully
     }
 
     @Ignore
@@ -73,7 +73,7 @@ public class SqlClobTestIT extends DataTypeIT {
     @Override
     public void testNormalValue() throws Exception {
         Clob testClob = getSomeClob(100_000);
-        runInsert(testClob);
+        runInsert(testClob); // just test that the insert is executed successfully
     }
 
     @Ignore
@@ -94,6 +94,13 @@ public class SqlClobTestIT extends DataTypeIT {
         runInsert(null);
     }
 
+    /**
+     * Produce a simple CLOB value for testing purposes
+     *
+     * @param size how many characters
+     * @return
+     * @throws SQLException
+     */
     private Clob getSomeClob(int size) throws SQLException {
         char[] ch = new char[size];
         for(int i = 0; i < size; i++) {
