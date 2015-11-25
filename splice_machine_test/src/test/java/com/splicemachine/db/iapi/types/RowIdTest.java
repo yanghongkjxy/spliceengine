@@ -51,7 +51,7 @@ public class RowIdTest extends DataTypeIT {
             return;
         }
 
-        throw new IllegalArgumentException("Not supported type: " + value.getClass().getCanonicalName());
+        throwNotSupportedType(value);
     }
 
     @Override

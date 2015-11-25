@@ -49,7 +49,7 @@ public class SqlClobTestIT extends DataTypeIT {
             return;
         }
 
-        throw new IllegalArgumentException("Not supported type: " + value.getClass().getCanonicalName());
+        throwNotSupportedType(value);
     }
 
     @Test
