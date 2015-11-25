@@ -3,7 +3,7 @@ package com.splicemachine.db.iapi.types;
 import org.junit.*;
 
 import java.sql.*;
-import java.util.Date;
+
 
 /**
  * Created by dmustafin on 11/23/15.
