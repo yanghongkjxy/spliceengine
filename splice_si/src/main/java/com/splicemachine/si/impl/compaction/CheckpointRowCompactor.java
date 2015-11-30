@@ -321,9 +321,7 @@ public class CheckpointRowCompactor implements RowCompactor{
                  */
                 return;
             }
-            long globalCommitTs=Bytes.toLong(cell.getValueArray(),cell.getValueOffset(),cell.getValueLength());
-            TxnView txn  = new CommittedTxn(timestamp,globalCommitTs);
-            transactionStore.cache(txn);
+            getAndCacheCommittedTxn(cell);
             setCommitTimestampVersions.add(timestamp);
         }
         if(timestamp>=checkpointVersion){
@@ -447,9 +445,7 @@ public class CheckpointRowCompactor implements RowCompactor{
             txn=transactionStore.getTransactionFromCache(cell.getTimestamp());
             if(txn==null){
                 //the transaction is not present in the cache yet, so populate the cache with our contents
-                long globalCommitTs=Bytes.toLong(cell.getValueArray(),cell.getValueOffset(),cell.getValueLength());
-                txn=new CommittedTxn(cell.getTimestamp(),globalCommitTs);
-                transactionStore.cache(txn);
+                txn=getAndCacheCommittedTxn(cell);
             }
         }
         return txn;
@@ -466,4 +462,13 @@ public class CheckpointRowCompactor implements RowCompactor{
         this.currentRowKey.reset();
         this.accumulator.reset();
     }
+
+    private TxnView getAndCacheCommittedTxn(Cell cell){
+        TxnView txn;
+        long globalCommitTs=Bytes.toLong(cell.getValueArray(),cell.getValueOffset(),cell.getValueLength());
+        txn=new CommittedTxn(cell.getTimestamp(),globalCommitTs);
+        transactionStore.cache(txn);
+        return txn;
+    }
+
 }

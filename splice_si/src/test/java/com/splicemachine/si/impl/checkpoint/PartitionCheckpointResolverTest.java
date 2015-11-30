@@ -45,6 +45,44 @@ public class PartitionCheckpointResolverTest{
     private static final SDataLib dataLib = new TestDataLib();
 
     @Test
+    public void doesNothingWhenLessThanVersionLimitCheckpointObjects() throws Exception{
+        final byte[] rk = Encoding.encode("Hello");
+        final NoOpCheckLock checkLock = new NoOpCheckLock();
+        Partition partition = new TestPartition("tt"){
+            @Override
+            public Lock lock(byte[] rowKey) throws IOException{
+                Assert.assertArrayEquals("Incorrect row key!",rk,rowKey);
+                return checkLock;
+            }
+        };
+
+        TxnSupplier supplier = new TestTxnSupplier();
+        List<Cell> cells=addRows(rk,3,supplier);
+        Put p = new Put(rk);
+        for(Cell cell:cells){
+            p.add(cell);
+        }
+
+        partition.mutate(p);
+
+        SimpleCheckpointer checkpointer=new SimpleCheckpointer(partition,false);
+        DataStore ds=newDataStore();
+        TxnFilterFactory tff= new TestFilterFactory(partition,supplier,new IgnoreTxnCacheSupplier(dataLib),ds);
+        PartitionCheckpointResolver pcr = new PartitionCheckpointResolver(partition,10,10,checkpointer,dataLib,supplier,tff);
+
+        Checkpoint cp= new Checkpoint();
+        cp.set(rk,0,rk.length,10);
+        pcr.resolveCheckpoint(cp);
+
+        //check concurrency primitives
+        Assert.assertTrue("Never acquired the lock!",checkLock.acquired);
+        Assert.assertTrue("Never released the lock!",checkLock.released);
+
+        validateCorrectOutput(rk,partition,cells);
+    }
+
+
+    @Test
     public void doesNothingWhenLessThanVersionLimit() throws Exception{
         final byte[] rk = Encoding.encode("Hello");
         final NoOpCheckLock checkLock = new NoOpCheckLock();
@@ -76,17 +114,94 @@ public class PartitionCheckpointResolverTest{
         Assert.assertTrue("Never acquired the lock!",checkLock.acquired);
         Assert.assertTrue("Never released the lock!",checkLock.released);
 
+        validateCorrectOutput(rk,partition,cells);
+    }
+
+    @Test
+    public void mergesTogetherWhenAboveCheckpointThresholdCheckpointObject() throws Exception{
+        final byte[] rk = Encoding.encode("Hello");
+        final NoOpCheckLock checkLock = new NoOpCheckLock();
+        Partition partition = new TestPartition("tt"){
+            @Override
+            public Lock lock(byte[] rowKey) throws IOException{
+                Assert.assertArrayEquals("Incorrect row key!",rk,rowKey);
+                return checkLock;
+            }
+        };
+
+        TxnSupplier supplier = new TestTxnSupplier();
+        List<Cell> cells=new ArrayList<>();
+        CommittedTxn txn=new CommittedTxn(1l,2l);
+        supplier.cache(txn);
+        cells.add(CompactionTestUtils.fullUserCell(txn,rk,4));
+        BitSet cols = new BitSet();
+        cols.set(0);
+        txn=new CommittedTxn(3l,4l);
+        supplier.cache(txn);
+        cells.add(CompactionTestUtils.partialUserCell(txn,rk,4,cols,"v1"));
+        cols.clear();
+        cols.set(1);
+        txn=new CommittedTxn(5l,6l);
+        supplier.cache(txn);
+        cells.add(CompactionTestUtils.partialUserCell(txn,rk,4,cols,"v2"));
+        cols.clear();
+        cols.set(2);
+        txn=new CommittedTxn(7l,8l);
+        supplier.cache(txn);
+        cells.add(CompactionTestUtils.partialUserCell(txn,rk,4,cols,"v3"));
+        Collections.reverse(cells);
+
+        RowAccumulator<Cell> accumulator =new HRowAccumulator<>(dataLib,EntryPredicateFilter.EMPTY_PREDICATE,new EntryDecoder(),false);
+        for(Cell c:cells){
+            Assert.assertFalse("Still want data!",accumulator.isFinished());
+            Assert.assertTrue("Not interested!",accumulator.isOfInterest(c));
+            accumulator.accumulate(c);
+        }
+        Put p = new Put(rk);
+        for(Cell cell:cells){
+            p.add(cell);
+        }
+
+        partition.mutate(p);
+
+        SimpleCheckpointer checkpointer=new SimpleCheckpointer(partition,false);
+        DataStore ds=newDataStore();
+        TxnFilterFactory tff= new TestFilterFactory(partition,supplier,new IgnoreTxnCacheSupplier(dataLib),ds);
+        PartitionCheckpointResolver pcr = new PartitionCheckpointResolver(partition,2,10,checkpointer,dataLib,supplier,tff);
+
+        Checkpoint cp = new Checkpoint();
+        cp.set(rk,0,rk.length,10);
+        pcr.resolveCheckpoint(cp);
+
+        //check concurrency primitives
+        Assert.assertTrue("Never acquired the lock!",checkLock.acquired);
+        Assert.assertTrue("Never released the lock!",checkLock.released);
+
         Get g = new Get(rk);
         Collection<Cell> retCells=partition.get(g);
-        Assert.assertEquals("Returned Cell list is not the same!",cells.size(),retCells.size());
+        //there should be 5 cells returned: a checkpoint, then 4 version cells
+        Assert.assertEquals("Incorrect return size!",5,retCells.size());
 
+        byte[] expected = accumulator.result();
+        Iterator<Cell> retCellList = retCells.iterator();
+        Cell f = retCellList.next();
+        Assert.assertEquals("First cell isn't a checkpoint!",CellType.CHECKPOINT,DefaultCellTypeParser.INSTANCE.parseCellType(f));
+        Assert.assertEquals("Did not include a commit timestamp!",8,f.getValueLength());
+
+        //next Cell should be a full user cell
+        Assert.assertTrue("Iterator failing!",retCellList.hasNext());
+        Cell n = retCellList.next();
+        Assert.assertArrayEquals("Incorrect accumulated value!",expected,n.getValue());
+
+        //now the remaining cells should match that of the original cell list
         Iterator<Cell> cIter = cells.iterator();
-        Iterator<Cell> aIter = retCells.iterator();
+        cIter.next(); //skip the first, since it should be replaced
         while(cIter.hasNext()){
+            Assert.assertTrue("Did not return the back cells!",retCellList.hasNext());
             Cell c = cIter.next();
-            Cell a = aIter.next();
+            Cell a = retCellList.next();
 
-            Assert.assertEquals("Incorrect cell!",c,a);
+            Assert.assertEquals("Did not preserve old data!",c,a);
         }
     }
 
@@ -255,7 +370,6 @@ public class PartitionCheckpointResolverTest{
         Iterator<Cell> cIter = cells.iterator();
         cIter.next(); //skip the first, since it should be replaced
         while(cIter.hasNext()){
-            Assert.assertTrue("Did not return the back cells!",retCellList.hasNext());
             Cell c = cIter.next();
             Cell a = retCellList.next();
 
@@ -265,6 +379,22 @@ public class PartitionCheckpointResolverTest{
 
     /* ****************************************************************************************************************/
     /*private helper methods*/
+
+    private void validateCorrectOutput(byte[] rk,Partition partition,List<Cell> expectedOutput) throws IOException{
+        Get g = new Get(rk);
+        Collection<Cell> retCells=partition.get(g);
+        Assert.assertEquals("Returned Cell list is not the same!",expectedOutput.size(),retCells.size());
+
+        Iterator<Cell> cIter = expectedOutput.iterator();
+        Iterator<Cell> aIter = retCells.iterator();
+        while(cIter.hasNext()){
+            Cell c = cIter.next();
+            Cell a = aIter.next();
+
+            Assert.assertEquals("Incorrect cell!",c,a);
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private DataStore newDataStore(){
         return new DataStore(dataLib,new PartitionReader(),new PartitionWriter(),
