@@ -26,9 +26,14 @@ public abstract class AbstractSequence implements Sequence {
     }
 
     public long getNext() throws StandardException {
-        if(remaining.getAndDecrement()<=0)
-            allocateBlock();
-        return currPosition.getAndAdd(incrementSteps);
+        updateLock.lock();
+        try {
+            if (remaining.getAndDecrement() <= 0)
+                allocateBlock();
+            return currPosition.getAndAdd(incrementSteps);
+        } finally {
+            updateLock.unlock();
+        }
     }
     
     protected abstract long getCurrentValue() throws IOException;
@@ -40,7 +45,6 @@ public abstract class AbstractSequence implements Sequence {
     private void allocateBlock() throws StandardException {
         boolean success = false;
         while(!success){
-            updateLock.lock();
             try{
                 if(remaining.getAndDecrement()>0)
                 	return;
@@ -53,9 +57,6 @@ public abstract class AbstractSequence implements Sequence {
             catch (IOException e) {
                 throw Exceptions.parseException(e);
             } 
-            finally{
-                updateLock.unlock();
-            }
         }
     }
     
