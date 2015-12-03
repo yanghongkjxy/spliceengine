@@ -1,7 +1,5 @@
 package com.splicemachine.pipeline.exception;
 
-import com.splicemachine.async.TableNotFoundException;
-import com.splicemachine.derby.hbase.DerbyFactory;
 import com.splicemachine.derby.hbase.ExceptionTranslator;
 import com.splicemachine.si.api.CannotCommitException;
 import com.splicemachine.derby.hbase.DerbyFactoryDriver;
@@ -10,8 +8,8 @@ import com.splicemachine.si.impl.WriteConflict;
 import com.splicemachine.db.iapi.error.StandardException;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
-import org.apache.hadoop.hbase.regionserver.WrongRegionException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.ConnectException;

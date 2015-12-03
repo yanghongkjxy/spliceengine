@@ -13,6 +13,7 @@ import com.splicemachine.metrics.TimeView;
 import com.splicemachine.utils.SpliceLogUtils;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
@@ -48,10 +49,10 @@ public class ClientScanProvider extends AbstractScanProvider {
 
 		@Override
 		public Result getResult() throws StandardException, IOException {
-				if(!opened) {
-						scanner.open();
-						opened =true;
-				}
+//				if(!opened) {
+//						scanner.open();
+//						opened =true;
+//				}
 				return scanner.next();
 		}
 

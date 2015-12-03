@@ -205,8 +205,8 @@ public class HBaseColumnStatisticsStore implements ColumnStatisticsStore {
                 LOG.error("Unable to obtain transaction",e);
                 return;
             }
-            try(SortedMultiScanner scanner = getScanner(txn, -1, null)) {
-                List<KeyValue> nextRow;
+            try(MeasuredResultScanner scanner = getScanner(baseTxn, -1, null)) {
+                Result nextRow;
                 EntryDecoder decoder = new EntryDecoder();
                 while ((nextRow = scanner.next()) != null) {
                     Cell kv = matchDataColumn(nextRow.rawCells());

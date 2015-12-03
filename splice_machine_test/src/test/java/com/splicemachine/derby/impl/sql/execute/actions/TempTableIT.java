@@ -69,6 +69,7 @@ public class TempTableIT {
 
     @Rule public SpliceWatcher methodWatcher = new SpliceWatcher();
 
+
     // ===============================================================
     // Test Helpers
     // ===============================================================

@@ -12,6 +12,7 @@ import com.splicemachine.si.impl.region.STransactionLib;
 import com.splicemachine.si.impl.store.IgnoreTxnCacheSupplier;
 import com.splicemachine.storage.EntryDecoder;
 import com.splicemachine.storage.EntryPredicateFilter;
+<<<<<<< HEAD
 import com.splicemachine.stream.StreamException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 
@@ -50,5 +51,4 @@ public interface SIFactory<Transaction>{
 
     byte[] transactionToByteArray(MultiFieldEncoder mfe,Transaction transaction);
 
-    TxnView transform(List<KeyValue> element) throws StreamException;
 }
