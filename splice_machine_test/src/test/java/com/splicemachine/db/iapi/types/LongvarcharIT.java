@@ -59,7 +59,7 @@ public class LongvarcharIT extends DataTypeIT {
     @Override
     protected void setParameterValue(PreparedStatement preparedStatement, Object value, int paramIndex) throws SQLException {
         if (value == null) {
-            preparedStatement.setNull(paramIndex, Types.LONGNVARCHAR);
+            preparedStatement.setNull(paramIndex, Types.LONGVARCHAR);
             return;
         }
 
@@ -118,7 +118,6 @@ public class LongvarcharIT extends DataTypeIT {
         // nothing to do here
     }
 
-    @Ignore  // bug in Derby
     @Test
     @Override
     public void testNullValue() throws Exception {
