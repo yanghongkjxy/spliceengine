@@ -88,6 +88,7 @@ public class AsyncReadResolver{
         ByteSlice rowKey=new ByteSlice();
         RollForward rollForward;
         RegionReadResolver resolver;
+        boolean isCheckpoint;
         long addSeq; //the sequence that we were added with
     }
 
@@ -123,7 +124,7 @@ public class AsyncReadResolver{
                         txnSupplier,
                         status,
                         false,
-                        trafficControl)){
+                        trafficControl,event.isCheckpoint)){
                     event.rollForward.recordResolved(event.rowKey,event.txnId);
                 }
             }catch(Exception e){
@@ -144,7 +145,7 @@ public class AsyncReadResolver{
         }
 
         @Override
-        public void resolve(ByteSlice rowKey,long txnId){
+        public void resolve(ByteSlice rowKey,long txnId,boolean isCheckpoint){
             if(resumeSequenceId<0) return; //we are paused, so do not add to queue, do not pass go, do not collect 200 dollars
             if(stopped) return; //we aren't running, so do nothing
             long sequence;
@@ -164,6 +165,7 @@ public class AsyncReadResolver{
                 event.rowKey.set(rowKey.getByteCopy());
                 event.rollForward=rollForward;
                 event.addSeq = sequence;
+                event.isCheckpoint = isCheckpoint;
             }finally{
                 ringBuffer.publish(sequence);
             }

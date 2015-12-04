@@ -30,6 +30,7 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
     private final ReadResolver readResolver;
     //per row fields
     private final LongOpenHashSet visitedTxnIds=new LongOpenHashSet();
+    private final LongOpenHashSet checkpointIds=new LongOpenHashSet();
     private final LongArrayList tombstonedTxnRows=new LongArrayList(1); //usually, there are very few deletes
     private final LongArrayList antiTombstonedTxnRows=new LongArrayList(1);
     private final ByteSlice rowKey=new ByteSlice();
@@ -136,10 +137,10 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
         return false;
     }
 
-    protected void doResolve(Data data,long ts){
+    protected void doResolve(Data data,long ts,boolean isCheckpoint){
         //get the row data. This will allow efficient movement of the row key without copying byte[]s
         dataStore.getDataLib().setRowInSlice(data,rowKey);
-        readResolver.resolve(rowKey,ts);
+        readResolver.resolve(rowKey,ts,isCheckpoint);
     }
 
     @Override
@@ -158,7 +159,7 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
     /*private helper methods*/
     private Filter.ReturnCode checkpointVisibility(Data element) throws IOException{
         long txnId = this.dataStore.getDataLib().getTimestamp(element);
-        visitedTxnIds.add(txnId);
+        checkpointIds.add(txnId);
         TxnView txn;
         long commitTs=dataStore.getDataLib().optionalValueToLong(element,-1l);
         if(commitTs>0){
@@ -169,8 +170,11 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
             currentTxn = txn;
         }else{
             txn=transactionStore.getTransaction(txnId);
+            if(txn.getEffectiveState().isFinal())
+                doResolve(element,txnId,true);
         }
 
+        visitedTxnIds.add(txnId);
         return myTxn.canSee(txn)?Filter.ReturnCode.INCLUDE:Filter.ReturnCode.SKIP;
     }
 
@@ -197,7 +201,7 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
             TxnView toCache;
             if(dataStore.isSIFail(data)){
                 //use the current read-resolver to remove the entry
-                doResolve(data,dataStore.getDataLib().getTimestamp(data));
+                doResolve(data,dataStore.getDataLib().getTimestamp(data),false);
                 toCache=new RolledBackTxn(txnId);
             }else if(ignoreTxnCache.shouldIgnore(tableName,txnId)){
                 toCache=new RolledBackTxn(txnId);
@@ -315,7 +319,7 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
 
         //submit it to the resolver to resolve asynchronously
         if(t.getEffectiveState().isFinal()){
-            doResolve(element,ts);
+            doResolve(element,ts,false);
         }
     }
 }

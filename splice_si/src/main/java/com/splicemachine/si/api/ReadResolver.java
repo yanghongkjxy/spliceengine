@@ -28,11 +28,11 @@ public interface ReadResolver {
      * when the caller knows that the transactional state is in some way final (it may not know
      * that the transaction has been fully committed all the way up the hierarchy, for example,
      * but may know that the transaction itself has been committed).
-     *
-     * @param rowKey the row key of the row to be resolved
+     *  @param rowKey the row key of the row to be resolved
      * @param txnId the transaction id (version) of the row to resolve.
+     * @param isCheckpoint {@code true} if the version is known to be a checkpoint version, {@code false} otherwise
      */
-    void resolve(ByteSlice rowKey, long txnId);
+    void resolve(ByteSlice rowKey,long txnId,boolean isCheckpoint);
 
     /**
      * Indicate that this resolver should stop (temporarily) the resolution of records, because

@@ -1,5 +1,6 @@
 package com.splicemachine.si.impl.readresolve;
 
+import com.splicemachine.constants.FixedSIConstants;
 import com.splicemachine.constants.SIConstants;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.si.api.ReadResolver;
@@ -38,15 +39,6 @@ public class SynchronousReadResolver {
 
 		public static final SynchronousReadResolver INSTANCE = new SynchronousReadResolver();
 
-    /**
-     * @param region the region for the relevant read resolver
-     * @param txnSupplier a Transaction Supplier for fetching transaction information
-     * @return a ReadResolver which uses Synchronous Read Resolution under the hood.
-     */
-    public static @ThreadSafe ReadResolver getResolver(final HRegion region,final TxnSupplier txnSupplier,final RollForwardStatus status){
-       return getResolver(region,txnSupplier,status,null,false);
-    }
-
     public static @ThreadSafe ReadResolver getResolver(final HRegion region,
                                                        final TxnSupplier txnSupplier,
                                                        final RollForwardStatus status,
@@ -54,8 +46,8 @@ public class SynchronousReadResolver {
                                                        final boolean failOnError){
         return new ReadResolver() {
             @Override
-            public void resolve(ByteSlice rowKey, long txnId) {
-                SynchronousReadResolver.INSTANCE.resolve(region,rowKey,txnId,txnSupplier,status,failOnError,trafficControl);
+            public void resolve(ByteSlice rowKey,long txnId,boolean isCheckpoint) {
+                SynchronousReadResolver.INSTANCE.resolve(region,rowKey,txnId,txnSupplier,status,failOnError,trafficControl,isCheckpoint);
             }
 
             @Override
@@ -70,7 +62,13 @@ public class SynchronousReadResolver {
         };
     }
 
-    boolean resolve(HRegion region, ByteSlice rowKey, long txnId, TxnSupplier supplier,RollForwardStatus status,boolean failOnError,TrafficControl trafficControl) {
+    boolean resolve(HRegion region,
+                    ByteSlice rowKey,
+                    long txnId,
+                    TxnSupplier supplier,
+                    RollForwardStatus status,
+                    boolean failOnError,
+                    TrafficControl trafficControl,boolean isCheckpoint) {
         try {
             TxnView transaction = supplier.getTransaction(txnId);
             boolean resolved = false;
@@ -90,7 +88,7 @@ public class SynchronousReadResolver {
                 if(t==Txn.ROOT_TRANSACTION){
                     trafficControl.acquire(1);
                     try {
-                        SynchronousReadResolver.INSTANCE.resolveCommitted(region, rowKey, txnId, transaction.getEffectiveCommitTimestamp(), failOnError);
+                        SynchronousReadResolver.INSTANCE.resolveCommitted(region, rowKey, txnId, transaction.getEffectiveCommitTimestamp(), failOnError,isCheckpoint);
                         resolved = true;
                     }finally{
                         trafficControl.release(1);
@@ -114,7 +112,8 @@ public class SynchronousReadResolver {
     /******************************************************************************************************************/
     /*private helper methods */
 
-    private void resolveCommitted(HRegion region,ByteSlice rowKey, long txnId, long commitTimestamp,boolean failOnError) {
+    @SuppressWarnings("deprecation") //deprecated to support CDH5.3.2
+    private void resolveCommitted(HRegion region,ByteSlice rowKey, long txnId, long commitTimestamp,boolean failOnError,boolean isCheckpoint) {
         /*
          * Resolve the row as committed directly.
          *
@@ -124,9 +123,15 @@ public class SynchronousReadResolver {
             return; //do nothing if we are closing
 
         Put put = new Put(rowKey.getByteCopy());
-        put.add(SIConstants.DEFAULT_FAMILY_BYTES,
-                SIConstants.SNAPSHOT_ISOLATION_COMMIT_TIMESTAMP_COLUMN_BYTES, txnId,
-                Bytes.toBytes(commitTimestamp));
+        if(isCheckpoint){
+            put.add(SIConstants.DEFAULT_FAMILY_BYTES,
+                    FixedSIConstants.SNAPSHOT_ISOLATION_CHECKPOINT_COLUMN_BYTES,txnId,
+                    Bytes.toBytes(commitTimestamp));
+        }else{
+            put.add(SIConstants.DEFAULT_FAMILY_BYTES,
+                    SIConstants.SNAPSHOT_ISOLATION_COMMIT_TIMESTAMP_COLUMN_BYTES,txnId,
+                    Bytes.toBytes(commitTimestamp));
+        }
         put.setAttribute(SIConstants.SI_EXEMPT,SIConstants.TRUE_BYTES);
         put.setAttribute(SIConstants.SUPPRESS_INDEXING_ATTRIBUTE_NAME, SIConstants.SUPPRESS_INDEXING_ATTRIBUTE_VALUE);
         put.setDurability(Durability.SKIP_WAL);
@@ -141,6 +146,7 @@ public class SynchronousReadResolver {
         }
     }
 
+    @SuppressWarnings("deprecation") //deprecated method used to support CDH5.3.2
     private void resolveRolledback(HRegion region,ByteSlice rowKey, long txnId,boolean failOnError) {
         /*
          * Resolve the row as rolled back directly.

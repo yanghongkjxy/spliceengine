@@ -275,7 +275,7 @@ public class SimpleTxnFilterTest {
                 rolledBackTs.setSecond((Long) args[1]);
                 return null;
             }
-        }).when(resolver).resolve(any(ByteSlice.class), anyLong());
+        }).when(resolver).resolve(any(ByteSlice.class), anyLong(),false);
         return resolver;
     }
 
@@ -292,7 +292,7 @@ public class SimpleTxnFilterTest {
                 committedTs.setSecond(Pair.newPair(tx, commitTs));
                 return null;
             }
-        }).when(resolver).resolve(any(ByteSlice.class), anyLong());
+        }).when(resolver).resolve(any(ByteSlice.class), anyLong(),false);
         return resolver;
     }
 
@@ -300,7 +300,7 @@ public class SimpleTxnFilterTest {
         ReadResolver resolver = mock(ReadResolver.class);
         doThrow(new AssertionError("Attempted to resolve an entry as committed!"))
                 .when(resolver)
-                .resolve(any(ByteSlice.class), anyLong());
+                .resolve(any(ByteSlice.class), anyLong(),false);
         return resolver;
     }
 

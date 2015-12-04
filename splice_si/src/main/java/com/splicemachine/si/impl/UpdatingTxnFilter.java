@@ -21,8 +21,8 @@ public class UpdatingTxnFilter<Data> extends SimpleTxnFilter<Data> {
     }
 
     @Override
-    protected void doResolve(Data keyValue, long ts) {
-        super.doResolve(keyValue, ts);
+    protected void doResolve(Data keyValue, long ts,boolean isCheckpoint) {
+        super.doResolve(keyValue, ts,isCheckpoint);
         context.rowResolved();
     }
 }
