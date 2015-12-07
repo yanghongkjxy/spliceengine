@@ -94,6 +94,7 @@ public abstract class DvdStatsCollector implements ColumnStatsCollector<DataValu
             case StoredFormatIds.SQL_DECIMAL_ID:
                 return new NumericStatsCollector(ColumnStatsCollectors.collector(columnId, cardPrecision, topKSize, decimalDistributionFactory));
             case StoredFormatIds.SQL_CHAR_ID:
+            case StoredFormatIds.SQL_BIT_ID:
                 return StringStatsCollector.charCollector(ColumnStatsCollectors.collector(columnId,
                         cardPrecision,
                         topKSize,
