@@ -29,8 +29,18 @@ public class SpliceConnectionPool {
     }
 
     public SpliceConnectionPool(int numConnections,Configuration conf) {
-        this.numConnections = numConnections;
-        this.connections = new HConnection[numConnections];
+        /*
+         * To avoid worrying about integer overflow here, we make the number of
+         * connections a positive power of 2, and the variable "numConnections" is shifted
+         * down by 1 to make an int with all 1s in the first n bits. This effectively traps
+         * the results of counter.get() in the range [0,n) (as opposed to a modulus operator which
+         * ends up in the range (-n,n))
+         */
+        int n = 1;
+        while(n<numConnections)
+            n<<=1;
+        this.numConnections = n-1;
+        this.connections = new HConnection[n];
 
         initialize(conf);
     }
@@ -51,7 +61,7 @@ public class SpliceConnectionPool {
     private void initialize(Configuration config) {
         ExecutorService connectionPool = createConnectionPool(config);
 
-        if(numConnections==1){
+        if(numConnections==0){
             try{
                 connections[0] = HConnectionManager.createConnection(config,connectionPool);
             }catch(IOException e){
@@ -75,7 +85,13 @@ public class SpliceConnectionPool {
     }
 
     HConnection getConnectionDirect(){
-        return connections[counter.getAndIncrement() % numConnections];
+        /*
+         * We used to do a modulus operation here, but modulus is bad because eventually
+         * the counter is going to overflow: when it does, the modulus will start spitting out negative
+         * numbers, which will cause this to explode. Using a power of 2 for the connection size and
+         * the & operator here will prevent that, as long as numConnections is a positive power of 2
+         */
+        return connections[counter.getAndIncrement() & numConnections];
     }
 
     private static ExecutorService createConnectionPool(Configuration conf) {
