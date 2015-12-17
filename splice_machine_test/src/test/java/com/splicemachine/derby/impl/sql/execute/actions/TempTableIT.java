@@ -452,7 +452,7 @@ public class TempTableIT {
         hbaseTempExists = hBaseAdmin.tableExists(tempConglomID);
         if (hbaseTempExists) {
             // HACK: wait a sec, try again.  It's going away, just takes some time.
-            Thread.sleep(2000);
+            Thread.sleep(3000);
             hbaseTempExists = hBaseAdmin.tableExists(tempConglomID);
         }
         Assert.assertFalse("HBase temp table [" + tempConglomID + "] still exists.", hbaseTempExists);

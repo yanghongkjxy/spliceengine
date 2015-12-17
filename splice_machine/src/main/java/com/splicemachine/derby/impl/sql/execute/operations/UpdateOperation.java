@@ -3,6 +3,7 @@ package com.splicemachine.derby.impl.sql.execute.operations;
 import com.carrotsearch.hppc.BitSet;
 import com.carrotsearch.hppc.ObjectArrayList;
 import com.google.common.io.Closeables;
+import com.splicemachine.SpliceKryoRegistry;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.derby.hbase.SpliceDriver;
 import com.splicemachine.derby.iapi.sql.execute.SpliceOperation;
@@ -510,8 +511,8 @@ public class UpdateOperation extends DMLWriteOperation{
 										doubleFields.set(i-1);
 								}
 						}
-						return EntryEncoder.create(SpliceDriver.getKryoPool(),currentRow.nColumns(),
-										notNullFields,scalarFields,floatFields,doubleFields);
+						return EntryEncoder.create(SpliceKryoRegistry.getInstance(),currentRow.nColumns(),
+								notNullFields,scalarFields,floatFields,doubleFields);
 				}
 
 				@Override

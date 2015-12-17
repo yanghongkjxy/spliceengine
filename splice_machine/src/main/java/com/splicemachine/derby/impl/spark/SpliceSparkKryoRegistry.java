@@ -1,6 +1,7 @@
 package com.splicemachine.derby.impl.spark;
 
 import com.carrotsearch.hppc.BitSet;
+import com.esotericsoftware.kryo.ClassResolver;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.Registration;
 import com.esotericsoftware.kryo.Serializer;
@@ -9,6 +10,7 @@ import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryo.serializers.DefaultSerializers;
 import com.esotericsoftware.kryo.serializers.FieldSerializer;
 import com.esotericsoftware.kryo.serializers.MapSerializer;
+import com.splicemachine.DerbyClassResolver;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.derby.ddl.DDLChangeType;
 import com.splicemachine.derby.ddl.TentativeAddColumnDesc;
@@ -116,6 +118,11 @@ public class SpliceSparkKryoRegistry implements KryoPool.KryoRegistry{
 				return spliceKryoPool;
 		}
 
+
+    @Override
+    public ClassResolver newResolver(){
+        return new DerbyClassResolver();
+    }
     @Override
     public void register(Kryo instance) {
     	instance.setReferences(false);

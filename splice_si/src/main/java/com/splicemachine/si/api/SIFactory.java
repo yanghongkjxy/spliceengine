@@ -12,12 +12,9 @@ import com.splicemachine.si.impl.region.STransactionLib;
 import com.splicemachine.si.impl.store.IgnoreTxnCacheSupplier;
 import com.splicemachine.storage.EntryDecoder;
 import com.splicemachine.storage.EntryPredicateFilter;
-<<<<<<< HEAD
-import com.splicemachine.stream.StreamException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 
 import java.io.IOException;
-import java.util.List;
 
 public interface SIFactory<Transaction>{
     RowAccumulator getRowAccumulator(EntryPredicateFilter predicateFilter,EntryDecoder decoder,boolean countStar);

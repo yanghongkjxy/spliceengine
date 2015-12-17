@@ -3,6 +3,7 @@ package com.splicemachine.derby.metrics;
 import com.carrotsearch.hppc.BitSet;
 import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.splicemachine.SpliceKryoRegistry;
 import com.splicemachine.derby.hbase.SpliceDriver;
 import com.splicemachine.derby.impl.store.access.SpliceAccessManager;
 import com.splicemachine.encoding.MultiFieldEncoder;
@@ -73,8 +74,8 @@ public class AsyncTableWritingMetricsReporter implements RuntimeMetricsReporter{
 						BitSet floatFields = new BitSet();
 						BitSet doubleFields = new BitSet();
 
-						EntryEncoder entryEncoder = EntryEncoder.create(SpliceDriver.getKryoPool(),
-										numFields, setCols, scalarFields, floatFields, doubleFields);
+						EntryEncoder entryEncoder = EntryEncoder.create(SpliceKryoRegistry.getInstance(),
+								numFields,setCols,scalarFields,floatFields,doubleFields);
 						//flush frequently
 						CallBuffer<KVPair> writeBuffer = SpliceDriver.driver().getTableWriter().writeBuffer(destinationTable,null,20);
 						HTableInterface hTable = SpliceAccessManager.getHTable(destinationTable);

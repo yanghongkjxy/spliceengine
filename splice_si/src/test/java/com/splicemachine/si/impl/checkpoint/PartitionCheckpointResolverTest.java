@@ -41,6 +41,7 @@ import java.util.concurrent.locks.Lock;
  * @author Scott Fines
  *         Date: 11/16/15
  */
+@SuppressWarnings("deprecation")
 public class PartitionCheckpointResolverTest{
     private static final SDataLib dataLib = new TestDataLib();
 

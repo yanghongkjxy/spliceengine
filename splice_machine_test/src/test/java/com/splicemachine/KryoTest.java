@@ -16,6 +16,7 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.google.common.collect.Lists;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.splicemachine.constants.SpliceConstants;
@@ -203,6 +204,7 @@ public class KryoTest  {
     }
 
     @Test
+    @Ignore("We no longer prevent Kryo from serializing elements not in the kryo registry")
     public void testCachedByteSlice() {
         ByteSlice byteSliceIn = new CachedByteSlice(new byte[] {0, 1, 2,3,4,5,6,7,8,9}, 5, 0);
 

@@ -1,6 +1,7 @@
 package com.splicemachine.derby.management;
 
 import com.carrotsearch.hppc.BitSet;
+import com.splicemachine.SpliceKryoRegistry;
 import com.splicemachine.derby.hbase.SpliceDriver;
 import com.splicemachine.derby.utils.marshall.DataHash;
 import com.splicemachine.encoding.MultiFieldEncoder;
@@ -76,8 +77,8 @@ public class XplainStatementReporter extends TransactionalSysTableWriter<Stateme
 								scalarFields.set(6,12);
 								BitSet floatFields = new BitSet(0);
 								BitSet doubleFields = new BitSet(0);
-								return EntryEncoder.create(SpliceDriver.getKryoPool(),12,
-												fields,scalarFields,floatFields,doubleFields);
+								return EntryEncoder.create(SpliceKryoRegistry.getInstance(),12,
+										fields,scalarFields,floatFields,doubleFields);
 						}
 				};
 		}

@@ -7,6 +7,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 
@@ -22,7 +23,7 @@ public interface Partition{
 
     Lock lock(byte[] rowKey) throws IOException;
 
-    List<Cell> get(Get get) throws IOException;
+    Collection<Cell> get(Get get) throws IOException;
 
     boolean rowInRange(byte[] row,int offset,int length);
 

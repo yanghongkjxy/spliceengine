@@ -3,6 +3,8 @@ package com.splicemachine.si.data.light;
 
 import com.splicemachine.concurrent.Clock;
 
+import java.lang.InterruptedException;
+import java.lang.Override;
 import java.util.concurrent.TimeUnit;
 
 public class ManualClock implements Clock{
@@ -20,5 +22,10 @@ public class ManualClock implements Clock{
     @Override
     public long nanoTime(){
         return TimeUnit.MILLISECONDS.toNanos(time);
+    }
+
+    @Override
+    public void sleep(long time, TimeUnit unit) throws InterruptedException{
+        time+=unit.toMillis(time);
     }
 }

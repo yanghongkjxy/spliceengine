@@ -1,5 +1,6 @@
 package com.splicemachine;
 
+import com.esotericsoftware.kryo.ClassResolver;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
@@ -128,6 +129,11 @@ public class SpliceKryoRegistry implements KryoPool.KryoRegistry{
 		public static KryoPool getInstance(){
 				return spliceKryoPool;
 		}
+
+    @Override
+    public ClassResolver newResolver(){
+        return new DerbyClassResolver();
+    }
 
     @Override
     public void register(Kryo instance) {

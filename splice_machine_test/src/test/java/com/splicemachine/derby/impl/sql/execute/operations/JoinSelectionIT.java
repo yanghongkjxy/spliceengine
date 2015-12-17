@@ -233,7 +233,7 @@ public class JoinSelectionIT extends SpliceUnitTest  {
             		  "(SELECT a4.PID FROM %s a4 WHERE EXISTS " +
             				  "(SELECT a5.PID FROM %s a5 WHERE a4.PID = a5.PID)) AS a3 " +
             				  "ON a2.PID = a3.PID", spliceTableWatcher2, spliceTableWatcher2, spliceTableWatcher),
-            MERGE_SORT_JOIN, methodWatcher);
+            BROADCAST_JOIN, methodWatcher);
     }
     
     @Test
@@ -529,12 +529,4 @@ public class JoinSelectionIT extends SpliceUnitTest  {
         return cost;
     }
 
-    //DB-3865
-    @Test
-    public void testLeftJoin() throws Exception {
-        thirdRowContainsQuery(
-                format("explain select * from %s t1 left join %s t2 on t1.i=t2.i",
-                        spliceTableWatcher3, spliceTableWatcher3),
-                LO_BROADCAST_JOIN, methodWatcher);
-    }
 }

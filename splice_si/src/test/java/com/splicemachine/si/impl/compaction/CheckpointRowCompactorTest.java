@@ -64,7 +64,7 @@ public class CheckpointRowCompactorTest{
         Assert.assertEquals("Incorrect number of returned cells!",2,data.size());
         Cell fullCp = fullCheckpointCell(txn);
         Assert.assertEquals("Incorrect checkpoint cell!",fullCp,data.get(0));
-//        Cell ctCp = commitTimestampCell(txn);
+//        Cell ctCp = commitTimestampCell(tombTxn);
 //        Assert.assertEquals("Incorrect commit timestamp!",ctCp,data.get(1));
         Assert.assertEquals("Incorrect user data!",usert,data.get(1));
 
@@ -1119,7 +1119,7 @@ public class CheckpointRowCompactorTest{
 
         BitSet lowField = new BitSet();
         topField.set(0);
-        userCell = partialValueCell(toFetch,lowField);
+        userCell = partialValueCell(lower,lowField);
         compactor.addCell(userCell);
 
         Assert.assertFalse("Should not be empty!",compactor.isEmpty());
@@ -1127,13 +1127,11 @@ public class CheckpointRowCompactorTest{
         List<Cell> data = new ArrayList<>(1);
         compactor.reverse();
         compactor.placeCells(data,10);
-        Assert.assertEquals("Incorrect number of returned cells!",3,data.size());
+        Assert.assertEquals("Incorrect number of returned cells!",2,data.size());
         Cell cpCell = fullCheckpointCell(toFetch);
         Assert.assertEquals("Incorrect Checkpoint cell!",cpCell,data.get(0));
-        Cell ctCell = commitTimestampCell(toFetch);
-        Assert.assertEquals("Incorrect CommitTimestamp cell!",ctCell,data.get(1));
         userCell = fullValueCell(toFetch);
-        Assert.assertEquals("Incorrect User cell!",userCell,data.get(2));
+        Assert.assertEquals("Incorrect User cell!",userCell,data.get(1));
         Assert.assertTrue("Does not report empty!",compactor.isEmpty());
     }
 

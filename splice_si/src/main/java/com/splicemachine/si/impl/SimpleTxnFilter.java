@@ -229,7 +229,7 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
         int tombstoneSize=tombstonedTxnRows.size();
         for(int i=0;i<tombstoneSize;i++){
             long tombstone=tombstones[i];
-            if(isVisible(tombstone) && timestamp<tombstone)
+            if(isVisible(tombstone) && timestamp<=tombstone)
                 return Filter.ReturnCode.NEXT_COL;
         }
 

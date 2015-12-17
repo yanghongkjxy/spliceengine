@@ -68,7 +68,7 @@ public class SpliceConnectionPool {
                 throw new RuntimeException(e);
             }
         }else{
-            for(int i=0;i<numConnections;i++){
+            for(int i=0;i<=numConnections;i++){
                 Configuration configuration=new Configuration(config);
                 configuration.setInt(HConstants.HBASE_CLIENT_INSTANCE_ID,i);
                 try{

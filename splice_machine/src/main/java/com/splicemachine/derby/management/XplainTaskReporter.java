@@ -1,6 +1,7 @@
 package com.splicemachine.derby.management;
 
 import com.carrotsearch.hppc.BitSet;
+import com.splicemachine.SpliceKryoRegistry;
 import com.splicemachine.derby.hbase.SpliceDriver;
 import com.splicemachine.derby.metrics.OperationMetric;
 import com.splicemachine.derby.metrics.OperationRuntimeStats;
@@ -43,7 +44,7 @@ public class XplainTaskReporter extends TransactionalSysTableWriter<OperationRun
 								BitSet doubleFields = new BitSet(totalLength);
 								doubleFields.set(totalLength-1);
 
-								return EntryEncoder.create(SpliceDriver.getKryoPool(),totalLength,fields,scalarFields,floatFields,doubleFields);
+								return EntryEncoder.create(SpliceKryoRegistry.getInstance(),totalLength,fields,scalarFields,floatFields,doubleFields);
 						}
 
 						@Override

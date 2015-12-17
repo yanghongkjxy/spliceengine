@@ -2,9 +2,7 @@ package com.splicemachine.si;
 
 import com.splicemachine.si.testsetup.SharedStoreHolder;
 import com.splicemachine.si.testsetup.TestTransactionSetup;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.*;
 
 import java.io.IOException;
 
@@ -27,4 +25,8 @@ public class HBaseTransactionInteractionTest extends TransactionInteractionTest 
     public static void setUpClass() throws Exception {
     }
 
+    @Override
+    @Ignore("The constraint won't be passed to the server, so the test will spuriously fail")
+    public void insertDeleteInsertInsert() throws Exception{
+    }
 }

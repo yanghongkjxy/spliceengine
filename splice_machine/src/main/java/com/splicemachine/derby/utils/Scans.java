@@ -183,7 +183,7 @@ public class Scans extends SpliceUtils {
                                  String tableVersion,
                                  boolean rowIdKey) throws StandardException {
         return setupScan(startKeyValue, startSearchOperator, stopKeyValue, null, stopSearchOperator, qualifiers,
-                sortOrder, scanColumnList, txn, sameStartStopPosition, formatIds, null, keyDecodingMap,
+                sortOrder, scanColumnList, txn,  formatIds, null, keyDecodingMap,
                 keyTablePositionMap, dataValueFactory, tableVersion, rowIdKey);
     }
 

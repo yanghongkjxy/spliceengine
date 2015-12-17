@@ -56,8 +56,7 @@ public class ForeignKeyChildCheckWriteHandler implements WriteHandler {
                 ctx.failed(kvPair, WriteResult.wrongRegion());
             } else {
                 try {
-                    List rowsReferencingParent = scanForReferences(kvPair, ctx);
-                    if (!rowsReferencingParent.isEmpty()) {
+                    if (scanForReferences(kvPair,ctx)) {
                         String failedKvAsHex = BytesUtil.toHex(kvPair.getRowKey());
                         ConstraintContext context = ConstraintContext.foreignKey(fkConstraintInfo).withInsertedMessage(0, failedKvAsHex);
                         WriteResult foreignKeyConstraint = new WriteResult(Code.FOREIGN_KEY_VIOLATION, context);
@@ -73,7 +72,10 @@ public class ForeignKeyChildCheckWriteHandler implements WriteHandler {
         ctx.sendUpstream(kvPair);
     }
 
-    private List scanForReferences(KVPair kvPair, WriteContext ctx) throws IOException {
+    private boolean scanForReferences(KVPair kvPair, WriteContext ctx) throws IOException {
+        /*
+         * Returns true if there is a data cell present for this row, false otherwise.
+         */
         byte[] startKey = kvPair.getRowKey();
 
         TxnFilter txnFilter = transactionalRegion.unpackedFilter(ctx.getTxn());
@@ -86,13 +88,10 @@ public class ForeignKeyChildCheckWriteHandler implements WriteHandler {
         scan.setFilter(new FilterList(prefixFilter, siFilter));
 
         List result = Lists.newArrayList();
-        RegionScanner regionScanner = env.getRegion().getScanner(scan);
-        try {
+        try(RegionScanner regionScanner = env.getRegion().getScanner(scan)){
             dataLib.regionScannerNext(regionScanner, result);
-        } finally {
-            regionScanner.close();
+            return dataLib.matchDataColumn(result)!=null;
         }
-        return result;
     }
 
     @Override

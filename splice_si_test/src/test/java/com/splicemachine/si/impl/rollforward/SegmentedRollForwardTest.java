@@ -1,6 +1,5 @@
 package com.splicemachine.si.impl.rollforward;
 
-import com.splicemachine.si.api.RollForward;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.junit.Test;
@@ -10,7 +9,6 @@ import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 

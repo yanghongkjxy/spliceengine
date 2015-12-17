@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -158,8 +159,7 @@ public class SpliceHTable extends HTable {
         Throwable {
         List<Pair<byte[], byte[]>> keysToUse = getKeysDealWithSameStartStopKey(startKey, endKey, 0);
 
-        KeyedCompletionService<ExecContext, R> completionService = new KeyedCompletionService<ExecContext,
-            R>(tableExecutor);
+        KeyedCompletionService<ExecContext, R> completionService =new KeyedCompletionService<>(tableExecutor);
         int outstandingFutures = 0;
         for (Pair<byte[], byte[]> key : keysToUse) {
             if (LOG.isDebugEnabled())

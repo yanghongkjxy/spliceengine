@@ -1,6 +1,7 @@
 package com.splicemachine.hbase.backup;
 
 import com.carrotsearch.hppc.BitSet;
+import com.splicemachine.SpliceKryoRegistry;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.db.iapi.error.StandardException;
 import com.splicemachine.db.iapi.types.*;
@@ -49,7 +50,7 @@ public class RestoreItemReporter extends TransactionalSysTableWriter<RestoreItem
                 BitSet floatFields = new BitSet(0);
                 BitSet doubleFields = new BitSet(0);
 
-                return EntryEncoder.create(SpliceDriver.getKryoPool(),totalLength,fields,scalarFields,floatFields,doubleFields);
+                return EntryEncoder.create(SpliceKryoRegistry.getInstance(),totalLength,fields,scalarFields,floatFields,doubleFields);
             }
 
             @Override

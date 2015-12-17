@@ -3,6 +3,7 @@ package com.splicemachine.si.testsetup;
 import com.google.common.base.Function;
 import com.splicemachine.concurrent.*;
 import com.splicemachine.concurrent.SystemClock;
+import com.splicemachine.constants.FixedSpliceConstants;
 import com.splicemachine.constants.SIConstants;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.hbase.table.SpliceHTableFactory;
@@ -96,6 +97,8 @@ public class HStoreSetup implements StoreSetup {
         String familyString = Bytes.toString(SpliceConstants.DEFAULT_FAMILY_BYTES);
         TestHTableSource tableSource1 = new TestHTableSource(testCluster, new String[]{familyString});
         HBaseAdmin admin = testCluster.getHBaseAdmin();
+        HTableDescriptor restoreTable= SpliceUtilities.generateNonSITable(FixedSpliceConstants.RESTORE_TABLE_NAME);
+        admin.createTable(restoreTable);
         HTableDescriptor td = SpliceUtilities.generateTransactionTable();
         admin.createTable(td, SpliceUtilities.generateTransactionSplits());
 

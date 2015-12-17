@@ -462,16 +462,17 @@ public class UpdateOperationIT{
 
     @Test
     public void testUpdateOverMergeSortJoin() throws Exception{
-        doTestUpdateOverJoin("SORTMERGE",conn);
+        doTestUpdateOverJoin(null,conn);
     }
 
     private void doTestUpdateOverJoin(String hint,TestConnection connection) throws Exception{
-        String query=String.format("update CUSTOMER customer set CUSTOMER.status = 'false' \n"
-                +"where not exists ( \n"
-                +"  select 1 \n"
-                +"  from SHIPMENT shipment --SPLICE-PROPERTIES joinStrategy=%s \n"
-                +"  where CUSTOMER.cust_id = SHIPMENT.cust_id \n"
-                +") \n",hint);
+        String props = hint==null?"":String.format("--SPLICE-PROPERTIES joinStrategy=%s \n",hint);
+        String query=String.format("update CUSTOMER customer set CUSTOMER.status = 'false' %n"
+                +"where not exists ( %n"
+                +"  select 1 %n"
+                +"  from SHIPMENT shipment %s %n"
+                +"  where CUSTOMER.cust_id = SHIPMENT.cust_id %n"
+                +") %n",props);
         int rows=connection.createStatement().executeUpdate(query);
         assertEquals("incorrect num rows updated!",3,rows);
     }
@@ -496,16 +497,9 @@ public class UpdateOperationIT{
     }
 
     @Test
-<<<<<<< HEAD
     public void testUpdateMultiColumnOneSubSyntaxWithOuterWhere() throws Exception {
         int rows = doTestUpdateMultiColumnOneSubSyntax(" where customer.cust_id <> 105");
         Assert.assertEquals("incorrect num rows updated!", 4, rows);
-=======
-    @Ignore("DB-")
-    public void testUpdateMultiColumnOneSubSyntaxWithOuterWhere() throws Exception{
-        int rows=doTestUpdateMultiColumnOneSubSyntax(" where customer.cust_id <> 105");
-        Assert.assertEquals("incorrect num rows updated!",4,rows);
->>>>>>> 13eda46... Fixing UpdateOperationIT to be transactionally sane
     }
 
     // Used by previous tests (testUpdateMultiColumnOneSub*)

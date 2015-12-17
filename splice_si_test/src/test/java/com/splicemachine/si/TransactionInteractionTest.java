@@ -134,6 +134,7 @@ public class TransactionInteractionTest {
         try{
             Assert.assertEquals("Incorrect row!","scott age=29 job=null",testUtility.read(insertChild3,"scott"));
             testUtility.insertAge(insertChild3,"scott",30,uniqueConstraint);
+            System.out.println(testUtility.read(insertChild3,"scott"));
             Assert.fail("Did not throw the constraint violation");
         }catch(IOException ioe){
             Assert.assertEquals("Incorrect error message!","UniqueConstraint violation",ioe.getMessage());

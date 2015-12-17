@@ -3,7 +3,6 @@ package com.splicemachine.si.impl.checkpoint;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.lmax.disruptor.*;
 import com.splicemachine.si.api.Partition;
-import com.splicemachine.utils.ByteSlice;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
@@ -51,7 +50,7 @@ public class AsyncCheckpointResolver{
     /* ********************************************************************************************************/
     /*private helper methods and classes*/
     private WorkHandler<CheckpointEvent>[] workers(int maxThreads){
-        WorkHandler<CheckpointEvent>[] workers = new WorkHandler[maxThreads];
+        @SuppressWarnings("unchecked") WorkHandler<CheckpointEvent>[] workers = new WorkHandler[maxThreads];
         for(int i=0;i<maxThreads;i++){
             workers[i] = new CheckpointHandler();
         }
@@ -62,13 +61,20 @@ public class AsyncCheckpointResolver{
 
         @Override
         public void onEvent(CheckpointEvent event) throws Exception{
+            if(event==null||event.resolver==null) return; //safety valve, to prevent NPEs
+            long pauseSeq=event.resolver.pauseSeq;
+            if(pauseSeq<0 || event.seqId <= pauseSeq) return; //we are still paused, or we were on the ringbuffer when pause was called
+
             resolver.checkpoint(event.partition,event.checkpoint);
         }
     }
 
-    private class CheckpointEvent{
+    private static class CheckpointEvent{
         private Partition partition;
         private Checkpoint checkpoint;
+        PartResolver resolver;
+        long seqId;
+
     }
 
     private class CheckpointFactory implements EventFactory<CheckpointEvent>{
@@ -78,10 +84,10 @@ public class AsyncCheckpointResolver{
         }
     }
 
-    private class LoggingExceptionHandler implements ExceptionHandler{
+    private static class LoggingExceptionHandler implements ExceptionHandler{
         @Override
         public void handleEventException(Throwable ex,long sequence,Object event){
-           LOG.info("Unexpected exception processing Checkpoint",ex);
+            LOG.info("Unexpected exception processing Checkpoint",ex);
         }
 
         @Override
@@ -97,6 +103,8 @@ public class AsyncCheckpointResolver{
 
     private class PartResolver implements CheckpointResolver{
         private final Partition partition;
+        //the timestamp to use for pausing
+        private volatile long pauseSeq = 0;
 
         public PartResolver(Partition partition){
             this.partition=partition;
@@ -121,6 +129,8 @@ public class AsyncCheckpointResolver{
                 while(l<=sequence){
                     CheckpointEvent ce=ringBuffer.get(l);
                     ce.partition=partition;
+                    ce.resolver = this;
+                    ce.seqId = l;
                     Checkpoint cp;
                     if(ce.checkpoint==null){
                         cp=ce.checkpoint=new Checkpoint();
@@ -135,13 +145,8 @@ public class AsyncCheckpointResolver{
         }
 
         @Override
-        public void resolveCheckpoint(ByteSlice rowKey,long checkpointTimestamp) throws IOException{
-            resolveCheckpoint(rowKey.array(),rowKey.offset(),rowKey.length(),checkpointTimestamp);
-        }
-
-        @Override
         public void resolveCheckpoint(byte[] rowKeyArray,int offset,int length,long checkpointTimestamp) throws IOException{
-            if(stopped) return;
+            if(stopped||pauseSeq<0) return;
             long sequence;
             try{
                 sequence = ringBuffer.tryNext();
@@ -154,6 +159,8 @@ public class AsyncCheckpointResolver{
             try{
                 CheckpointEvent ce=ringBuffer.get(sequence);
                 ce.partition=partition;
+                ce.resolver=this;
+                ce.seqId=sequence;
                 Checkpoint cp;
                 if(ce.checkpoint==null){
                     cp=ce.checkpoint=new Checkpoint();
@@ -162,6 +169,17 @@ public class AsyncCheckpointResolver{
             }finally{
                 ringBuffer.publish(sequence);
             }
+        }
+
+        @Override
+        public void pauseCheckpointing(){
+            pauseSeq = -1;
+        }
+
+        @Override
+        public void resumeCheckpointing(){
+            pauseSeq = ringBuffer.next();
+            ringBuffer.publish(pauseSeq);
         }
     }
 }

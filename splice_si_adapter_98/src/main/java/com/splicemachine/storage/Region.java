@@ -23,15 +23,9 @@ import java.util.concurrent.locks.Lock;
  */
 public class Region implements Partition{
     private final HRegion region;
-    private final boolean useCoprocessorWithGet;
 
     public Region(HRegion region){
-       this(region,true);
-    }
-
-    public Region(HRegion region,boolean useCoprocessorWithGet){
         this.region=region;
-        this.useCoprocessorWithGet = useCoprocessorWithGet;
     }
 
     @Override
@@ -54,7 +48,7 @@ public class Region implements Partition{
 
     @Override
     public List<Cell> get(Get get) throws IOException{
-        return region.get(get,useCoprocessorWithGet);
+        return region.get(get).listCells();
     }
 
     @Override

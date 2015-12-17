@@ -31,4 +31,11 @@ public class IncrementingClock implements Clock{
     public void delay(long delay) {
         time = time + delay;
     }
+
+    @Override
+    public void sleep(long time, TimeUnit unit) throws InterruptedException{
+        time+=unit.toMillis(time);
+    }
+
 }
+

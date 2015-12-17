@@ -147,7 +147,7 @@ public class AsynchronousDDLControllerTest{
 
         LockFactory lf = new SingleInstanceLockFactory(lock);
 
-        AsynchronousDDLController controller=new AsynchronousDDLController(ddlCommunicator,lf,clock,10,1);
+        AsynchronousDDLController controller=new AsynchronousDDLController(ddlCommunicator,lf,clock,1,10);
         TxnView txn = new WritableTxn(1l,1l,Txn.IsolationLevel.SNAPSHOT_ISOLATION,Txn.ROOT_TRANSACTION,null,null,false);
         DDLChange change = new DDLChange(txn);
         String retChangeId=controller.notifyMetadataChange(change);
@@ -201,13 +201,8 @@ public class AsynchronousDDLControllerTest{
 
         LockFactory lf = new SingleInstanceLockFactory(lock);
 
-<<<<<<< HEAD
         AsynchronousDDLController controller=new AsynchronousDDLController(ddlCommunicator,lf,clock,1,10);
-        TxnView txn = new WritableTxn(1l,1l,Txn.IsolationLevel.SNAPSHOT_ISOLATION,Txn.ROOT_TRANSACTION,null,false);
-=======
-        AsynchronousDDLController controller=new AsynchronousDDLController(ddlCommunicator,lf,clock,10,1);
         TxnView txn = new WritableTxn(1l,1l,Txn.IsolationLevel.SNAPSHOT_ISOLATION,Txn.ROOT_TRANSACTION,null,null,false);
->>>>>>> 49d1cde... Fixing merge conflicts
         DDLChange change = new DDLChange(txn);
         String retChangeId=controller.notifyMetadataChange(change);
         Assert.assertEquals("Change id does not match!",changeId,retChangeId);

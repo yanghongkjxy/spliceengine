@@ -18,7 +18,6 @@ import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -109,8 +108,9 @@ public class SharedCheckpointResolver{
         Partition lockedP = new StripeLockedPartition(p);
         return new PartitionCheckpointResolver(lockedP,
                 3*SIConstants.scannerBatchSize/4,
+                SIConstants.checkpointSeekThreshold,
                 cp,
-                dataStore,
+                dataStore.getDataLib(),
                 txnSupplier,
                 newFilterFactory(lockedP));
     }
@@ -163,7 +163,7 @@ public class SharedCheckpointResolver{
         }
 
         @Override
-        public List<Cell> get(Get get) throws IOException{
+        public Collection<Cell> get(Get get) throws IOException{
             return delegate.get(get);
         }
 

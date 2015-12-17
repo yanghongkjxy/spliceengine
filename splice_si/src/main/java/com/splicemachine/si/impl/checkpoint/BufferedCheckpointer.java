@@ -4,15 +4,15 @@ import com.splicemachine.si.api.Checkpointer;
 import com.splicemachine.si.api.Partition;
 import com.splicemachine.utils.ByteSlice;
 import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.util.Bytes;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.util.Arrays;
 
 /**
+ * A Checkpointer which buffers up writes so that they go to the partition in batch, rather than
+ * one at a time.
+ *
  * @author Scott Fines
  *         Date: 10/5/15
  */
@@ -33,7 +33,7 @@ public class BufferedCheckpointer implements Checkpointer{
     }
 
     public BufferedCheckpointer(Partition region,int maxBufferSize,boolean issueDeletes){
-       this(region,maxBufferSize,16,issueDeletes);
+        this(region,maxBufferSize,16,issueDeletes);
     }
 
     public BufferedCheckpointer(Partition region,int maxBufferSize,int initialBufferSize,boolean issueDeletes){
@@ -99,8 +99,9 @@ public class BufferedCheckpointer implements Checkpointer{
                 int newSize = Math.min(maxBufferSize,2*buffer.length);
                 buffer =Arrays.copyOf(buffer,newSize);
                 shift = newSize-1;
+                s=bufferPos+1;
             }else{
-               writeBuffer(buffer.length);
+                writeBuffer(buffer.length);
             }
         }
         bufferPos = s;

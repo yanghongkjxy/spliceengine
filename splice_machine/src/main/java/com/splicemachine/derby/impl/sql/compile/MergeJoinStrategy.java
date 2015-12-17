@@ -74,10 +74,19 @@ public class MergeJoinStrategy extends HashableJoinStrategy{
         ConglomerateDescriptor currentCd=innerTable.getCurrentAccessPath().getConglomerateDescriptor();
         if(currentCd==null) return false; //TODO -sf- this happens when over a non table scan, we should fix that
 
+        // Take into account predicates from both inner and outer tables
+        OptimizablePredicateList allPredicateList = new PredicateList();
+        if (predList != null) {
+            predList.copyPredicatesToOtherList(allPredicateList);
+        }
+        OptimizablePredicateList outerTablePredicateList = outerCost.getPredicateList();
+        if (outerTablePredicateList != null) {
+            outerTablePredicateList.copyPredicatesToOtherList(allPredicateList);
+        }
         IndexRowGenerator innerRowGen=currentCd.getIndexDescriptor();
         return innerRowGen!=null
                 && innerRowGen.getIndexDescriptor()!=null
-                && mergeable(outerRowOrdering,innerRowGen,predList,innerTable);
+                && mergeable(outerRowOrdering,innerRowGen,allPredicateList,innerTable);
     }
 
 
@@ -106,7 +115,7 @@ public class MergeJoinStrategy extends HashableJoinStrategy{
         innerCost.setBase(innerCost.cloneMe());
         double joinSelectivity = SelectivityUtil.estimateJoinSelectivity(innerTable, cd, predList, (long) innerCost.rowCount(), (long) outerCost.rowCount(), outerCost);
         double scanSelectivity = SelectivityUtil.estimateScanSelectivity(innerTable, predList);
-        double totalOutputRows = SelectivityUtil.getTotalRows(joinSelectivity*scanSelectivity, outerCost.rowCount(), innerCost.rowCount());
+        double totalOutputRows = SelectivityUtil.getTotalRows(joinSelectivity * scanSelectivity, outerCost.rowCount(), innerCost.rowCount());
         innerCost.setNumPartitions(outerCost.partitionCount());
         boolean empty = isOuterTableEmpty(innerTable, predList);
         double joinCost = SelectivityUtil.mergeJoinStrategyLocalCost(innerCost, outerCost, empty);
@@ -153,9 +162,9 @@ public class MergeJoinStrategy extends HashableJoinStrategy{
         return false;
     }
     private boolean mergeable(RowOrdering outerRowOrdering,
-                                IndexRowGenerator innerRowGenerator,
-                                OptimizablePredicateList predList,
-                                Optimizable innerTable) throws StandardException{
+                              IndexRowGenerator innerRowGenerator,
+                              OptimizablePredicateList predList,
+                              Optimizable innerTable) throws StandardException{
         int[] keyColumnPositionMap = innerRowGenerator.baseColumnPositions();
         boolean[] keyAscending = innerRowGenerator.isAscending();
 
@@ -215,6 +224,7 @@ public class MergeJoinStrategy extends HashableJoinStrategy{
                 BinaryRelationalOperatorNode bron = (BinaryRelationalOperatorNode)relop;
                 ColumnReference innerColumn=relop.getColumnOperand(innerTable);
                 ColumnReference outerColumn=getOuterColumn(bron,innerColumn);
+                if (innerColumn == null || outerColumn == null) continue;
                 int innerColumnNumber = innerColumn.getColumnNumber();
                 if(innerColumnNumber==innerColumnPosition){
                     innerColumns.set(i);
@@ -269,13 +279,19 @@ public class MergeJoinStrategy extends HashableJoinStrategy{
          * Find the first inner join column, make sure all columns before it appear in innerColumns and outerColumns.
          * These columnsare referenced in equal predicates
          */
-        int first = 0;
-        while(innerToOuterJoinColumnMap[first] == -1) {
-            first++;
-        }
-        for (int i = 0; i < first; ++i) {
-            if (!innerColumns.get(i)) {
+        if (innerToOuterJoinColumnMap.length > 0) {
+            int first = 0;
+            while (first < innerToOuterJoinColumnMap.length && innerToOuterJoinColumnMap[first] == -1) {
+                first++;
+            }
+            // No inner join columns, merge join is not feasible
+            if (first >= innerToOuterJoinColumnMap.length)
                 return false;
+
+            for (int i = 0; i < first; ++i) {
+                if (!innerColumns.get(i)) {
+                    return false;
+                }
             }
 
             int outerCol = innerToOuterJoinColumnMap[first];

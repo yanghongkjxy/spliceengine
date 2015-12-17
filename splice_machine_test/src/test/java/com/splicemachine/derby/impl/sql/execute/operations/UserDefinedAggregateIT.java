@@ -16,20 +16,22 @@ import org.junit.rules.TestRule;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 import static com.splicemachine.test_tools.Rows.row;
 import static com.splicemachine.test_tools.Rows.rows;
 
-public class SpliceUDTIT extends SpliceUnitTest {
+public class UserDefinedAggregateIT extends SpliceUnitTest {
 
-    private static Logger LOG = Logger.getLogger(SpliceUDTIT.class);
-    public static final String CLASS_NAME = SpliceUDTIT.class.getSimpleName().toUpperCase();
+    private static Logger LOG = Logger.getLogger(UserDefinedAggregateIT.class);
+    public static final String CLASS_NAME = UserDefinedAggregateIT.class.getSimpleName().toUpperCase();
     protected static SpliceWatcher spliceClassWatcher = new SpliceWatcher(CLASS_NAME);
     protected static SpliceSchemaWatcher spliceSchemaWatcher = new SpliceSchemaWatcher(CLASS_NAME);
 
     private static final String CALL_INSTALL_JAR_FORMAT_STRING = "CALL SQLJ.INSTALL_JAR('%s', '%s', 0)";
     private static final String CALL_REMOVE_JAR_FORMAT_STRING = "CALL SQLJ.REMOVE_JAR('%s', 0)";
-    private static final String STORED_PROCS_JAR_FILE = getResourceDirectory() + "/UDT.jar";
+    private static final String STORED_PROCS_JAR_FILE = getResourceDirectory() + "UDT.jar";
     private static final String JAR_FILE_SQL_NAME = CLASS_NAME + ".UDT_JAR";
 
     private static final String CALL_SET_CLASSPATH_FORMAT_STRING = "CALL SYSCS_UTIL.SYSCS_SET_GLOBAL_DATABASE_PROPERTY('derby.database.classpath', '%s')";
@@ -46,7 +48,7 @@ public class SpliceUDTIT extends SpliceUnitTest {
         createData(spliceClassWatcher.getOrCreateConnection());
     }
 
-    //@AfterClass
+//    @AfterClass
     public static void tearDown() throws Exception {
         methodWatcher.execute(String.format(CALL_REMOVE_JAR_FORMAT_STRING, JAR_FILE_SQL_NAME));
         methodWatcher.execute("DROP DERBY AGGREGATE Median RESTRICT");
@@ -55,9 +57,19 @@ public class SpliceUDTIT extends SpliceUnitTest {
     }
 
     public static void createData(Connection conn) throws Exception {
-        methodWatcher.execute(String.format(CALL_INSTALL_JAR_FORMAT_STRING, STORED_PROCS_JAR_FILE, JAR_FILE_SQL_NAME));
-        methodWatcher.execute(String.format(CALL_SET_CLASSPATH_FORMAT_STRING, JAR_FILE_SQL_NAME));
-        methodWatcher.execute("create derby aggregate median for int external name 'com.customer.Median'");
+        try(Statement s = conn.createStatement()){
+            s.execute(String.format(CALL_INSTALL_JAR_FORMAT_STRING,STORED_PROCS_JAR_FILE,JAR_FILE_SQL_NAME));
+        }catch(SQLException se){
+            //ignore it if we've already added the jar
+            if(!se.getSQLState().equals("X0Y32")) throw se;
+        }
+
+        try(Statement s = conn.createStatement()){
+            s.execute(String.format(CALL_SET_CLASSPATH_FORMAT_STRING,JAR_FILE_SQL_NAME));
+            s.execute("create derby aggregate median for int external name 'com.customer.Median'");
+        }catch(SQLException se){
+            if(!se.getSQLState().equals("X0Y68")) throw se;
+        }
 
         new TableCreator(conn)
                 .withCreate("create table t(i int)")
@@ -70,15 +82,26 @@ public class SpliceUDTIT extends SpliceUnitTest {
                         row(5)))
                 .create();
 
-        methodWatcher.execute("CREATE TYPE price EXTERNAL NAME 'com.customer.Price' language Java");
-        methodWatcher.execute("CREATE FUNCTION makePrice(varchar(30), double)\n" +
-                "RETURNS Price\n" +
-                "LANGUAGE JAVA\n" +
-                "PARAMETER STYLE JAVA\n" +
-                "NO SQL EXTERNAL NAME 'com.customer.CreatePrice.createPriceObject'");
+        try(Statement s = conn.createStatement()){
+            s.execute("CREATE TYPE price EXTERNAL NAME 'com.customer.Price' language Java");
+        }catch(SQLException se){
+            if(!se.getSQLState().equals("X0Y68")) throw se;
+        }
 
-        methodWatcher.execute("create table orders(orderID INT,customerID INT,totalPrice price)");
-        methodWatcher.execute("insert into orders values (12345, 12, makePrice('USD', 12))");
+        try(Statement s = conn.createStatement()){
+            s.execute("CREATE FUNCTION makePrice(varchar(30), double)\n"+
+                    "RETURNS Price\n"+
+                    "LANGUAGE JAVA\n"+
+                    "PARAMETER STYLE JAVA\n"+
+                    "NO SQL EXTERNAL NAME 'com.customer.CreatePrice.createPriceObject'");
+        }catch(SQLException se){
+            if(!se.getSQLState().equals("X0Y68")) throw se;
+        }
+
+        try(Statement s = conn.createStatement()){
+            s.execute("create table orders(orderID INT,customerID INT,totalPrice price)");
+            s.execute("insert into orders values (12345, 12, makePrice('USD', 12))");
+        }
     }
 
     @Test

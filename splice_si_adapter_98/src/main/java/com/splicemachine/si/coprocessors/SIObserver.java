@@ -167,13 +167,6 @@ public class SIObserver extends SIBaseObserver{
         super.postCompact(e,store,resultFile);
     }
 
-    @Override
-    public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e,Store store,StoreFile resultFile){
-        if(tableEnvMatch){
-            region.resumeMaintenance();
-        }
-    }
-
     protected Filter makeSIFilter(TxnView txn,
                                   Filter currentFilter,
                                   EntryPredicateFilter predicateFilter,

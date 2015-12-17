@@ -3,6 +3,7 @@ package com.splicemachine.derby.utils;
 import com.carrotsearch.hppc.BitSet;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Closeables;
+import com.splicemachine.SpliceKryoRegistry;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.derby.hbase.SpliceDriver;
 import com.splicemachine.derby.impl.store.access.SpliceAccessManager;
@@ -225,7 +226,7 @@ public class ConglomerateUtils extends SpliceConstants {
             Put put = SpliceUtils.createPut(Bytes.toBytes(conglomId), txn);
             BitSet fields = new BitSet();
             fields.set(0);
-            entryEncoder = EntryEncoder.create(SpliceDriver.getKryoPool(),1, fields,null,null,null);
+            entryEncoder = EntryEncoder.create(SpliceKryoRegistry.getInstance(),1, fields,null,null,null);
             entryEncoder.getEntryEncoder().encodeNextUnsorted(conglomData);
             put.add(DEFAULT_FAMILY_BYTES, SpliceConstants.PACKED_COLUMN_BYTES, entryEncoder.encode());
             table.put(put);
@@ -255,7 +256,7 @@ public class ConglomerateUtils extends SpliceConstants {
             Put put = SpliceUtils.createPut(Bytes.toBytes(conglomerate.getContainerid()), txn);
             BitSet setFields = new BitSet();
             setFields.set(0);
-            entryEncoder = EntryEncoder.create(SpliceDriver.getKryoPool(),1,setFields,null,null,null); //no need to set length-delimited, we aren't
+            entryEncoder = EntryEncoder.create(SpliceKryoRegistry.getInstance(),1,setFields,null,null,null); //no need to set length-delimited, we aren't
             entryEncoder.getEntryEncoder().encodeNextUnsorted(DerbyBytesUtil.toBytes(conglomerate));
             put.add(DEFAULT_FAMILY_BYTES, SpliceConstants.PACKED_COLUMN_BYTES, entryEncoder.encode());
             table.put(put);

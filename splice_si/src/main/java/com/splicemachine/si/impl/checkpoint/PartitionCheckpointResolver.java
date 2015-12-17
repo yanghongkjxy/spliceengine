@@ -1,21 +1,20 @@
 package com.splicemachine.si.impl.checkpoint;
 
-import com.splicemachine.constants.SIConstants;
+import com.splicemachine.constants.FixedSpliceConstants;
 import com.splicemachine.si.api.*;
+import com.splicemachine.si.data.api.SDataLib;
 import com.splicemachine.si.data.hbase.HRowAccumulator;
 import com.splicemachine.si.impl.ActiveReadTxn;
 import com.splicemachine.si.impl.CheckpointFilter;
-import com.splicemachine.si.impl.DataStore;
 import com.splicemachine.si.impl.TxnFilter;
 import com.splicemachine.storage.EntryDecoder;
 import com.splicemachine.storage.EntryPredicateFilter;
-import com.splicemachine.utils.ByteSlice;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Get;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
-import java.util.List;
+import java.util.Collection;
 import java.util.concurrent.locks.Lock;
 
 /**
@@ -26,28 +25,35 @@ import java.util.concurrent.locks.Lock;
 public class PartitionCheckpointResolver implements CheckpointResolver{
     private final Partition partition;
     private final Checkpointer checkpointer;
-    private final DataStore dataStore;
+    private final SDataLib dataLib;
     private final TxnSupplier txnSupplier;
     private final int checkpointThreshold;
     private final TxnFilterFactory filterFactory;
+    private final int checkpointSeekThreshold;
+
+    private volatile boolean paused;
 
     public PartitionCheckpointResolver(Partition partition,
                                        int checkpointThreshold,
+                                       int checkpointSeekThreshold,
                                        Checkpointer checkpointer,
-                                       DataStore dataStore,
+                                       SDataLib dataLib,
                                        TxnSupplier txnSupplier,
-                                       TxnFilterFactory txnFilterFactory){
+                                       TxnFilterFactory txnFilterFactory
+    ){
         this.partition=partition;
         this.checkpointer= checkpointer;
-        this.dataStore=dataStore;
+        this.dataLib = dataLib;
         this.txnSupplier = txnSupplier;
         assert checkpointThreshold>0: "Checkpoint threshold set too low!";
         this.checkpointThreshold = checkpointThreshold;
+        this.checkpointSeekThreshold = checkpointSeekThreshold;
         this.filterFactory = txnFilterFactory;
     }
 
     @Override
     public void resolveCheckpoint(Checkpoint... checkpoint) throws IOException{
+        if(paused) return;
         if(checkpoint.length<=0) return; //nothing to do
         else if(checkpoint.length==1){
             Checkpoint cp=checkpoint[0];
@@ -60,7 +66,7 @@ public class PartitionCheckpointResolver implements CheckpointResolver{
         }
 
         RowAccumulator<Cell> accumulator =new HRowAccumulator<>(
-                dataStore.getDataLib(),EntryPredicateFilter.EMPTY_PREDICATE,
+                dataLib,EntryPredicateFilter.EMPTY_PREDICATE,
                 new EntryDecoder(),false);
         //noinspection ForLoopReplaceableByForEach
         for(int i=0;i<checkpoint.length;i++){
@@ -71,17 +77,22 @@ public class PartitionCheckpointResolver implements CheckpointResolver{
     }
 
     @Override
-    public void resolveCheckpoint(ByteSlice rowKey,long checkpointTimestamp) throws IOException{
-        resolveCheckpoint(rowKey.array(),rowKey.offset(),rowKey.length(),checkpointTimestamp);
+    public void resolveCheckpoint(byte[] rowKeyArray,int offset,int length,long checkpointTimestamp) throws IOException{
+        if(paused) return;
+        RowAccumulator<Cell> accumulator =new HRowAccumulator<>(
+                dataLib,EntryPredicateFilter.EMPTY_PREDICATE,
+                new EntryDecoder(),false);
+        doResolve(rowKeyArray,offset,length,checkpointTimestamp,accumulator);
     }
 
     @Override
-    public void resolveCheckpoint(byte[] rowKeyArray,int offset,int length,long checkpointTimestamp) throws IOException{
+    public void pauseCheckpointing(){
+        paused=true;
+    }
 
-        RowAccumulator<Cell> accumulator =new HRowAccumulator<>(
-                dataStore.getDataLib(),EntryPredicateFilter.EMPTY_PREDICATE,
-                new EntryDecoder(),false);
-        doResolve(rowKeyArray,offset,length,checkpointTimestamp,accumulator);
+    @Override
+    public void resumeCheckpointing(){
+        paused=false;
     }
 
     /* ****************************************************************************************************************/
@@ -93,14 +104,15 @@ public class PartitionCheckpointResolver implements CheckpointResolver{
         if(lock.tryLock()){
             Get get = checkpointGet(rowKey,checkpointTimestamp);
             try{
-                List<Cell> cells=partition.get(get);
+                Collection<Cell> cells=partition.get(get);
                 if(cells==null||cells.size()<checkpointThreshold) return; //nothing to do
-                long highestTs = cells.get(0).getTimestamp();
+                long highestTs = -1l;
 
                 for(Cell c:cells){
                     if(accumulator.isOfInterest(c)){
                         accumulator.accumulate(c);
                     }
+                    if(highestTs<0) highestTs = c.getTimestamp();
                     if(accumulator.isFinished()) break; //should never happen, but just in case
                 }
 
@@ -123,9 +135,10 @@ public class PartitionCheckpointResolver implements CheckpointResolver{
         get.setMaxVersions();
         get.setTimeRange(0,checkpointTimestamp+1);
         TxnFilter<Cell> txnFilter=filterFactory.unpackedFilter(new ActiveReadTxn(checkpointTimestamp));
-        CheckpointFilter filter=new CheckpointFilter(txnFilter,SIConstants.checkpointSeekThreshold,NoOpCheckpointResolver.INSTANCE,0l);
+        CheckpointFilter filter=new CheckpointFilter(txnFilter,checkpointSeekThreshold,NoOpCheckpointResolver.INSTANCE,0l);
         get.setFilter(filter);
-        get.setAttribute(SIConstants.SUPPRESS_INDEXING_ATTRIBUTE_NAME,SIConstants.SUPPRESS_INDEXING_ATTRIBUTE_VALUE);
+        get.setAttribute(FixedSpliceConstants.SUPPRESS_INDEXING_ATTRIBUTE_NAME,
+                FixedSpliceConstants.SUPPRESS_INDEXING_ATTRIBUTE_VALUE);
 
         return get;
     }

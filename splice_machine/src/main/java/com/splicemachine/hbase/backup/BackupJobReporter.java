@@ -1,6 +1,7 @@
 package com.splicemachine.hbase.backup;
 
 import com.carrotsearch.hppc.BitSet;
+import com.splicemachine.SpliceKryoRegistry;
 import com.splicemachine.db.iapi.error.StandardException;
 import com.splicemachine.derby.hbase.SpliceDriver;
 import com.splicemachine.derby.management.TransactionalSysTableWriter;
@@ -32,7 +33,7 @@ public class BackupJobReporter extends TransactionalSysTableWriter<BackupJob> {
                 BitSet floatFields = new BitSet(0);
                 BitSet doubleFields = new BitSet(0);
 
-                return EntryEncoder.create(SpliceDriver.getKryoPool(),totalLength,fields,scalarFields,floatFields,doubleFields);
+                return EntryEncoder.create(SpliceKryoRegistry.getInstance(),totalLength,fields,scalarFields,floatFields,doubleFields);
             }
 
             @Override

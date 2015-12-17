@@ -15,6 +15,7 @@ import com.splicemachine.hbase.MeasuredRegionScanner;
 import com.splicemachine.metrics.Metrics;
 import com.splicemachine.si.api.RowAccumulator;
 import com.splicemachine.si.api.SIFilter;
+import com.splicemachine.si.api.TxnSupplier;
 import com.splicemachine.si.data.api.SDataLib;
 import com.splicemachine.si.data.hbase.HDataLib;
 import com.splicemachine.si.data.hbase.HRowAccumulator;
@@ -31,6 +32,8 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.*;
+
+import static org.mockito.Mockito.mock;
 
 /**
  * @author Scott Fines
@@ -63,7 +66,7 @@ public class CheckpointReaderTest{
         SIFilter filter = buildSIFilter(acc);
         MeasuredRegionScanner mrs = this.buildScanner(buildRowResults(10,tde));
 
-        CheckpointReader cr = new CheckpointReader(mat,handler,acc,filter,dataLib,mrs,Metrics.noOpMetricFactory());
+        CheckpointReader cr = new CheckpointReader(mat,handler,acc,filter,mock(TxnSupplier.class),dataLib,mrs,Metrics.noOpMetricFactory());
 
         Assert.assertTrue("Did not read a row!",cr.readNext());
         //we don't know anything about the row key(no pks), so we just make sure it's there

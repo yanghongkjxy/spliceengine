@@ -7,11 +7,8 @@ import com.splicemachine.db.iapi.services.loader.ClassFactory;
 import com.splicemachine.db.iapi.sql.conn.LanguageConnectionContext;
 import com.splicemachine.derby.iapi.sql.execute.ConversionResultSet;
 import com.splicemachine.derby.iapi.sql.execute.OperationResultSet;
-import com.splicemachine.db.shared.common.udt.UDTBase;
-import com.splicemachine.db.iapi.types.UserType;
 import com.splicemachine.derby.iapi.sql.execute.SpliceOperation;
 import com.splicemachine.derby.impl.sql.execute.operations.CachedOperation;
-import com.splicemachine.derby.utils.marshall.dvd.UDTInputStream;
 import com.splicemachine.utils.SpliceLogUtils;
 
 import com.splicemachine.db.iapi.error.StandardException;
@@ -42,10 +39,10 @@ public class ActivationSerializer {
     private static final Logger LOG = Logger.getLogger(ActivationSerializer.class);
 
     public static void write(Activation source,ObjectOutput out) throws IOException {
-        if (classFactory == null) {
-            LanguageConnectionContext lcc = source.getLanguageConnectionContext();
-            classFactory = lcc.getLanguageConnectionFactory().getClassFactory();
-        }
+//        if (classFactory == null) {
+//            LanguageConnectionContext lcc = source.getLanguageConnectionContext();
+//            classFactory = lcc.getLanguageConnectionFactory().getClassFactory();
+//        }
         Visitor visitor = new Visitor(source);
         try {
             visitor.visitAll();
@@ -57,10 +54,10 @@ public class ActivationSerializer {
 
     public static Activation readInto(ObjectInput in, Activation destination) throws IOException, StandardException {
         try {
-            if (classFactory == null) {
-                LanguageConnectionContext lcc = destination.getLanguageConnectionContext();
-                classFactory = lcc.getLanguageConnectionFactory().getClassFactory();
-            }
+//            if (classFactory == null) {
+//                LanguageConnectionContext lcc = destination.getLanguageConnectionContext();
+//                classFactory = lcc.getLanguageConnectionFactory().getClassFactory();
+//            }
             return new Visitor(destination).read(in);
         } catch (IllegalAccessException e) {
             throw new IOException(e);
@@ -437,23 +434,7 @@ public class ActivationSerializer {
         public void writeExternal(ObjectOutput out) throws IOException {
             out.writeBoolean(dvd.isNull());
             if (!dvd.isNull()) {
-                boolean useKryo = true;
-                if (dvd instanceof UserType && ((UserType) dvd).getObject() instanceof UDTBase) {
-                    // If this is a UDT or UDA, do not serialize using kryo
-                    useKryo = false;
-                    out.writeBoolean(useKryo);
-                    ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
-                    ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputBuffer);
-                    objectOutputStream.writeObject(dvd);
-                    objectOutputStream.flush();
-                    byte[] bytes = outputBuffer.toByteArray();
-                    out.writeInt(bytes.length);
-                    out.write(bytes);
-                    objectOutputStream.close();
-                } else {
-                    out.writeBoolean(useKryo);
-                    out.writeObject(dvd);
-                }
+                out.writeObject(dvd);
             } else {
                 out.writeInt(type);
             }
@@ -462,19 +443,7 @@ public class ActivationSerializer {
         @Override
         public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
             if(!in.readBoolean()) {
-                if (in.readBoolean()) {
-                    dvd = (DataValueDescriptor) in.readObject();
-                } else {
-                    // This is a UDT or UDA and was not serialized by Kryo
-                    int len = in.readInt();
-                    byte[] bytes = new byte[len];
-                    in.read(bytes, 0, len);
-                    ByteArrayInputStream input = new ByteArrayInputStream(bytes);
-                    UDTInputStream inputStream = new UDTInputStream(input, classFactory);
-                    dvd = (DataValueDescriptor)inputStream.readObject();
-                    inputStream.close();
-                }
-
+                dvd = (DataValueDescriptor) in.readObject();
             } else {
                 type = in.readInt();
             }

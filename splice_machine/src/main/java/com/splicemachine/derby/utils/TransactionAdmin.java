@@ -1,6 +1,8 @@
 package com.splicemachine.derby.utils;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.google.common.io.Closeables;
 import com.splicemachine.constants.SIConstants;
 import com.splicemachine.db.iapi.error.PublicAPI;
 import com.splicemachine.db.iapi.error.StandardException;
@@ -32,6 +34,7 @@ import com.splicemachine.utils.SpliceUtilities;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.log4j.Logger;
 
 import javax.management.MalformedObjectNameException;
 import javax.management.InstanceNotFoundException;
@@ -51,6 +54,7 @@ import java.util.List;
  *         Date: 2/20/14
  */
 public class TransactionAdmin{
+    private static final Logger LOG=Logger.getLogger(TransactionAdmin.class);
 
     private static MinimumTransactionWatcher matWatcher=new MinimumTransactionWatcher(new MinimumTransactionWatcher.MATReader(){
         @Override
@@ -292,6 +296,11 @@ public class TransactionAdmin{
 
     public static void initializeTransactionReader(){
         MinimumTransactionWatcher mat=matWatcher;
+        mat.start();
+    }
+
+    public static void shutdownTransactionReader(){
+        matWatcher.shutdown();
     }
 
     /******************************************************************************************************************/

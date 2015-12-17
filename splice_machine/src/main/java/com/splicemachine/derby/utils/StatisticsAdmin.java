@@ -271,7 +271,7 @@ public class StatisticsAdmin extends BaseAdminProcedures {
         try {
             schema = processSchema(schema);
             table = processTable(table);
-            TableDescriptor tableDesc = verifyTableExists(conn, schema, table);
+            TableDescriptor tableDesc = AdminUtilities.verifyTableExists(conn, schema, table);
             List<TableDescriptor> tableDescriptorList = new ArrayList<>();
             tableDescriptorList.add(tableDesc);
             authorize(tableDescriptorList);
@@ -362,7 +362,7 @@ public class StatisticsAdmin extends BaseAdminProcedures {
         try {
             schema = processSchema(schema);
             table = processTable(table);
-            verifyTableExists(conn, schema, table);
+            AdminUtilities.verifyTableExists(conn,schema,table);
             long[] conglomIds = SpliceAdmin.getConglomNumbers(conn, schema, table);
             assert conglomIds != null && conglomIds.length > 0;
 

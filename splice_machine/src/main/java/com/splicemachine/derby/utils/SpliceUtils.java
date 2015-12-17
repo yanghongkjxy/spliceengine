@@ -161,7 +161,7 @@ public class SpliceUtils extends SpliceUtilities {
         	return null;
         return PipelineUtils.fromCompressedBytes(instructions, SpliceObserverInstructions.class);
     	} catch (Exception e) {
-        	throw new RuntimeException();
+        	throw new RuntimeException(e);
         }
     }
 

@@ -205,7 +205,7 @@ public class HBaseColumnStatisticsStore implements ColumnStatisticsStore {
                 LOG.error("Unable to obtain transaction",e);
                 return;
             }
-            try(MeasuredResultScanner scanner = getScanner(baseTxn, -1, null)) {
+            try(MeasuredResultScanner scanner = getScanner(txn, -1, null)) {
                 Result nextRow;
                 EntryDecoder decoder = new EntryDecoder();
                 while ((nextRow = scanner.next()) != null) {

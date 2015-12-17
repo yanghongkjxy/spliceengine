@@ -237,12 +237,16 @@ public class CheckpointRowCompactor implements RowCompactor{
          */
         discardPoint = ts;
         compactionRow.clearDiscardedData(discardPoint+1);
-        return false;
+        return true;
     }
-    /* ****************************************************************************************************************/
-    /*private helper methods*/
 
-    private void setAccumulatedValue() throws IOException{
+    /**
+     * add the data from the accumulated cell to the end of the compaction row. If no data has been
+     * accumulated, nothing happens.
+     *
+     * @throws IOException shouldn't happen, but is possible
+     */
+    protected void setAccumulatedValue() throws IOException{
         if(!accumulator.hasAccumulated()) return; //nothing to do
         byte[] result = accumulator.result();
 
@@ -253,11 +257,28 @@ public class CheckpointRowCompactor implements RowCompactor{
                 checkpointVersion,KeyValue.Type.Put,
                 result,0,result.length);
         addCheckpoint(valueCell,checkpointTxn);
-        addCommitTimestamp(valueCell,checkpointTxn);
         compactionRow.append(valueCell);
         accumulator.reset();
         currentRowKey.reset();
     }
+
+    /**
+     * Reset this row compactor to allow it to accept more data.
+     */
+    protected void reset(){
+        this.setCommitTimestampVersions.clear();
+        this.emptyCheckpoints.clear();
+        this.visitedCheckpoints.clear();
+
+        this.checkpointVersion=-1;
+        this.discardPoint=-1;
+
+        this.currentRowKey.reset();
+        this.accumulator.reset();
+    }
+
+    /* ****************************************************************************************************************/
+    /*private helper methods*/
 
     private void processTombstone(Cell cell) throws IOException{
         long ts = cell.getTimestamp();
@@ -428,9 +449,7 @@ public class CheckpointRowCompactor implements RowCompactor{
         if(txn.getEffectiveState()==Txn.State.ROLLEDBACK) return false;
 
         if(cell.getValueLength()==0){
-            txn = transactionStore.getTransaction(cell.getTimestamp());
-            if(txn.getEffectiveState()!=Txn.State.ROLLEDBACK)
-                emptyCheckpoints.add(cell.getTimestamp());
+            emptyCheckpoints.add(cell.getTimestamp());
             return false;
         }
 
@@ -449,18 +468,6 @@ public class CheckpointRowCompactor implements RowCompactor{
             }
         }
         return txn;
-    }
-
-    private void reset(){
-        this.setCommitTimestampVersions.clear();
-        this.emptyCheckpoints.clear();
-        this.visitedCheckpoints.clear();
-
-        this.checkpointVersion=-1;
-        this.discardPoint=-1;
-
-        this.currentRowKey.reset();
-        this.accumulator.reset();
     }
 
     private TxnView getAndCacheCommittedTxn(Cell cell){

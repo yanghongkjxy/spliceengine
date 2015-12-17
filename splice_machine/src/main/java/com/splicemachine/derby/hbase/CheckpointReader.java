@@ -37,8 +37,18 @@ class CheckpointReader{
                             SDataLib dataLib,
                             MeasuredRegionScanner mrs,
                             MetricFactory metricFactory){
+       this(minimumActiveTimestamp, deleteHandler, accumulator, siFilter, siFilter.unwrapFilter().getTxnSupplier(),dataLib, mrs, metricFactory);
+    }
+
+    public CheckpointReader(final long minimumActiveTimestamp,
+                            final ReadHandler deleteHandler,
+                            RowAccumulator<Cell> accumulator,
+                            SIFilter<Cell> siFilter,
+                            final TxnSupplier txnSupplier,
+                            SDataLib dataLib,
+                            MeasuredRegionScanner mrs,
+                            MetricFactory metricFactory){
         this.accumulator =accumulator;
-        final TxnSupplier txnSupplier = siFilter.unwrapFilter().getTxnSupplier();
         final ByteSlice deleteRowKey = new ByteSlice();
         this.mr = new MergingReader<Cell>(accumulator,mrs,dataLib,
                 MergingReader.RowKeyFilter.NOOPFilter,Suppliers.ofInstance(siFilter),metricFactory){

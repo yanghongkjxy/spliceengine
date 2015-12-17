@@ -36,4 +36,9 @@ class IncrementingClock implements TickingClock{
     public long nanoTime(){
         return currentTime;
     }
+
+    @Override
+    public void sleep(long time, TimeUnit unit) throws InterruptedException{
+        currentTime+=unit.toMillis(time);
+    }
 }

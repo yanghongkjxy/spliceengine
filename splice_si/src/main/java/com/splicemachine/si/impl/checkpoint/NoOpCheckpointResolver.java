@@ -1,7 +1,5 @@
 package com.splicemachine.si.impl.checkpoint;
 
-import com.splicemachine.utils.ByteSlice;
-
 import java.io.IOException;
 
 /**
@@ -13,9 +11,10 @@ public class NoOpCheckpointResolver implements CheckpointResolver{
 
     private NoOpCheckpointResolver(){}
 
-    @Override public void resolveCheckpoint(ByteSlice rowKey,long checkpointTimestamp) throws IOException{ }
-
     @Override public void resolveCheckpoint(byte[] rowKeyArray,int offset,int length,long checkpointTimestamp) throws IOException{ }
+
+    @Override public void pauseCheckpointing(){ }
+    @Override public void resumeCheckpointing(){ }
 
     @Override public void resolveCheckpoint(Checkpoint... checkpoint) throws IOException{ }
 }

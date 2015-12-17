@@ -13,6 +13,8 @@ import java.util.Map;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import com.splicemachine.SpliceKryoRegistry;
+import com.splicemachine.utils.kryo.KryoPool;
 import org.apache.log4j.Logger;
 
 import com.splicemachine.db.iapi.error.StandardException;
@@ -235,7 +237,8 @@ public class SpliceObserverInstructions implements Externalizable {
 
             ParameterValueSet pvs = activation.getParameterValueSet().getClone();
 
-            Kryo kryo = SpliceDriver.getKryoPool().get();
+            KryoPool kryoPool=SpliceKryoRegistry.getInstance();
+            Kryo kryo = kryoPool.get();
             Output output = new Output(4096, -1);
             try {
                 KryoObjectOutput koo = new KryoObjectOutput(output, kryo);
@@ -244,7 +247,7 @@ public class SpliceObserverInstructions implements Externalizable {
                 throw new RuntimeException(e); //should never happen
             } finally {
                 output.flush();
-                SpliceDriver.getKryoPool().returnInstance(kryo);
+                kryoPool.returnInstance(kryo);
             }
             return new ActivationContext(pvs, setOps, statementAtomic, statementReadOnly,
                                          stmtText, true, stmtTimeout, output.toBytes());
@@ -284,13 +287,14 @@ public class SpliceObserverInstructions implements Externalizable {
         public Activation populateActivation(Activation activation, GenericStorablePreparedStatement statement,
                                              SpliceOperation topOperation) throws StandardException {
             try {
-                Kryo kryo = SpliceDriver.getKryoPool().get();
+                KryoPool instance=SpliceKryoRegistry.getInstance();
+                Kryo kryo = instance.get();
                 try {
                     Input input = new Input(activationData);
                     KryoObjectInput koi = new KryoObjectInput(input, kryo);
                     ActivationSerializer.readInto(koi, activation);
                 } finally {
-                    SpliceDriver.getKryoPool().returnInstance(kryo);
+                    instance.returnInstance(kryo);
                 }
             /*
 			 * Set the populated operations with their comparable operation
