@@ -155,8 +155,10 @@ public class MultiProbeTableScanOperation extends TableScanOperation  {
                     "No probe values found for multi-probe scan.");
         }
         this.sortRequired = sortRequired;
-        if(this.sortRequired!=RowOrdering.DONTCARE)
-            sortProbeValues();
+//        if(this.sortRequired!=RowOrdering.DONTCARE)
+//            This case will always throw NPE because probeValues is null
+//            This bug was added after merging changelist 932d9fca3cd0ac2cac27873170546986bb4a71e7 by Perry Trolard
+//            sortProbeValues();
         this.scanInformation = new MultiProbeDerbyScanInformation(
                 resultRowAllocator.getMethodName(),
                 startKeyGetter==null?null:startKeyGetter.getMethodName(),
@@ -172,6 +174,7 @@ public class MultiProbeTableScanOperation extends TableScanOperation  {
         recordConstructorTime();
     }
 
+/*
     private void sortProbeValues() {
 
     	if(sortRequired==RowOrdering.ASCENDING)
@@ -179,6 +182,7 @@ public class MultiProbeTableScanOperation extends TableScanOperation  {
         else
             Arrays.sort(probeValues,Collections.reverseOrder());
     }
+*/
 
     @Override
     public void init(SpliceOperationContext context) throws StandardException, IOException {
