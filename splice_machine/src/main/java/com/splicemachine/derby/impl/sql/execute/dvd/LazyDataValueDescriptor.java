@@ -62,11 +62,9 @@ public abstract class LazyDataValueDescriptor extends NullValueOpt implements Da
     public LazyDataValueDescriptor(DataValueDescriptor dvd){
         init(dvd);
     }
-private static int count = 0;
     protected void init(DataValueDescriptor dvd){
         this.dvd=dvd;
 //        typeFormatId=getTypeFormatId();
-        count++;
         deserialized=dvd!=null && !dvd.isNull();
         if (dvd == null) {
             if (deserialized)
