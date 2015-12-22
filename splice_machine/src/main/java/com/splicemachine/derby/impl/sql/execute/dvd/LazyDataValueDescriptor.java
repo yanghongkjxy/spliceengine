@@ -2,11 +2,8 @@ package com.splicemachine.derby.impl.sql.execute.dvd;
 
 import com.splicemachine.db.iapi.error.StandardException;
 import com.splicemachine.db.iapi.services.io.ArrayInputStream;
-import com.splicemachine.db.iapi.types.BooleanDataValue;
-import com.splicemachine.db.iapi.types.DataTypeDescriptor;
-import com.splicemachine.db.iapi.types.DataValueDescriptor;
+import com.splicemachine.db.iapi.types.*;
 import com.splicemachine.db.iapi.types.DataValueFactoryImpl.Format;
-import com.splicemachine.db.iapi.types.SQLBoolean;
 import com.splicemachine.derby.utils.marshall.dvd.DescriptorSerializer;
 import com.splicemachine.derby.utils.marshall.dvd.TimeValuedSerializer;
 import com.splicemachine.derby.utils.marshall.dvd.VersionedSerializers;
@@ -30,7 +27,7 @@ import java.util.Calendar;
  * in the variables below and in the subclasses. See the specific variables below for
  * rationale.
  */
-public abstract class LazyDataValueDescriptor implements DataValueDescriptor{
+public abstract class LazyDataValueDescriptor extends NullValueOpt implements DataValueDescriptor {
     private static final long serialVersionUID=3l;
     private static Logger LOG=Logger.getLogger(LazyDataValueDescriptor.class);
 
@@ -65,18 +62,18 @@ public abstract class LazyDataValueDescriptor implements DataValueDescriptor{
     public LazyDataValueDescriptor(DataValueDescriptor dvd){
         init(dvd);
     }
-
+private static int count = 0;
     protected void init(DataValueDescriptor dvd){
         this.dvd=dvd;
 //        typeFormatId=getTypeFormatId();
-        updateNullFlag();
+        count++;
         deserialized=dvd!=null && !dvd.isNull();
-    }
-
-    protected void updateNullFlag(){
-//        if(dvd==null || dvd.isNull()){
-//            isNull = bytes==null||length==0;
-//        }else isNull = false;
+        if (dvd == null) {
+            if (deserialized)
+                isNull = true;
+            // else the isNull value has been set already
+        } else
+            isNull = dvd.isNull();
     }
 
     public void initForDeserialization(LazyDataValueDescriptor ldvd) {
@@ -91,14 +88,15 @@ public abstract class LazyDataValueDescriptor implements DataValueDescriptor{
         this.bytes = bytes;
         this.offset = offset;
         this.length = length;
-        if(dvd!=null)
-            dvd.setToNull();
+        if (dvd != null) {
+            ((NullValueOpt)dvd).setIsNull(true);
+        }
 
         deserialized=false;
-        updateNullFlag();
         this.descendingOrder=desc;
         this.serializer=serializer;
         this.tableVersion=tableVersion;
+        isNull = localIsNull();
     }
 
     public boolean isSerialized(){
@@ -109,9 +107,18 @@ public abstract class LazyDataValueDescriptor implements DataValueDescriptor{
         return deserialized;
     }
 
+    protected void createNewDescriptor() {
+        dvd = newDescriptor();
+        if(dvd==null||((NullValueOpt)dvd).getIsNull())
+            isNull = bytes==null||length==0;
+        else isNull = false;
+
+    }
+
     protected void forceDeserialization(){
         if(dvd==null)
-            dvd = newDescriptor();
+            createNewDescriptor();
+
         if(isSerialized()&&!isDeserialized()){
             try{
                 serializer.decodeDirect(dvd,bytes,offset,length,descendingOrder);
@@ -121,6 +128,7 @@ public abstract class LazyDataValueDescriptor implements DataValueDescriptor{
                         this.getClass().getSimpleName(), serializer==null?"NULL": serializer.getClass().getSimpleName()),e);
             }
         }
+        isNull = localIsNull();;
     }
 
     protected abstract DataValueDescriptor newDescriptor();
@@ -166,6 +174,7 @@ public abstract class LazyDataValueDescriptor implements DataValueDescriptor{
             tableVersion=destinationVersion;
             forceSerialization(desc,destinationVersion);
         }
+        isNull = localIsNull();
     }
 
 
@@ -174,7 +183,9 @@ public abstract class LazyDataValueDescriptor implements DataValueDescriptor{
         bytes=null;
         offset=0;
         deserialized=true;
-        updateNullFlag();
+        if(dvd==null||((NullValueOpt)dvd).getIsNull())
+            isNull = true;
+        else isNull = false;
     }
 
     @Override
@@ -299,186 +310,192 @@ public abstract class LazyDataValueDescriptor implements DataValueDescriptor{
     @Override
     public boolean hasStream(){
         return false;
-//        forceDeserialization();
-//       return dvd.hasStream();
     }
 
     @Override
     public DataValueDescriptor recycle(){
-        restoreToNull();
+        if (dvd != null) {
+            ((NullValueOpt)dvd).setIsNull(true);
+        }
+        // needs to match resetForSerialization method
+        length=0;
+        bytes=null;
+        offset=0;
+        deserialized=true;
+        isNull = true;
         return this;
     }
 
     @Override
     public void setValueFromResultSet(ResultSet resultSet,int colNumber,boolean isNullable) throws StandardException, SQLException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValueFromResultSet(resultSet,colNumber,isNullable);
         resetForSerialization();
     }
 
     @Override
     public void setInto(PreparedStatement ps,int position) throws SQLException, StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setInto(ps,position);
         resetForSerialization();
     }
 
     @Override
     public void setInto(ResultSet rs,int position) throws SQLException, StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setInto(rs,position);
     }
 
     @Override
     public void setValue(int theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(double theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(float theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(short theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(long theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(byte theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(boolean theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(Object theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(RowId theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(byte[] theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setBigDecimal(Number bigDecimal) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setBigDecimal(bigDecimal);
         resetForSerialization();
     }
 
     @Override
     public void setValue(String theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(Blob theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(Clob theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(Time theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(Time theValue,Calendar cal) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue,cal);
         resetForSerialization();
     }
 
     @Override
     public void setValue(Timestamp theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(Timestamp theValue,Calendar cal) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue,cal);
         resetForSerialization();
     }
 
     @Override
     public void setValue(DateTime theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(Date theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
 
     @Override
     public void setValue(Date theValue,Calendar cal) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue,cal);
         resetForSerialization();
     }
 
     @Override
     public void setValue(DataValueDescriptor theValue) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theValue);
         resetForSerialization();
     }
@@ -492,7 +509,7 @@ public abstract class LazyDataValueDescriptor implements DataValueDescriptor{
 
     @Override
     public void normalize(DataTypeDescriptor dtd,DataValueDescriptor source) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.normalize(dtd,source);
         resetForSerialization();
     }
@@ -511,27 +528,31 @@ public abstract class LazyDataValueDescriptor implements DataValueDescriptor{
 
     @Override
     public String getTypeName(){
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         return dvd.getTypeName();
     }
 
     @Override
     public void setObjectForCast(Object value,boolean instanceOfResultType,String resultTypeClassName) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setObjectForCast(value,instanceOfResultType,resultTypeClassName);
         resetForSerialization();
     }
 
     @Override
     public void readExternalFromArray(ArrayInputStream ais) throws IOException, ClassNotFoundException{
-        if(dvd==null) dvd = newDescriptor();
-        dvd.readExternalFromArray(ais);
-        resetForSerialization();
+		try {
+			if(dvd==null) createNewDescriptor();
+			dvd.readExternalFromArray(ais);
+			resetForSerialization();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
     }
 
     @Override
     public int typePrecedence(){
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         return dvd.typePrecedence();
     }
 
@@ -718,7 +739,7 @@ public abstract class LazyDataValueDescriptor implements DataValueDescriptor{
 
     @Override
     public void setValue(InputStream theStream,int valueLength) throws StandardException{
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         dvd.setValue(theStream,valueLength);
         resetForSerialization();
     }
@@ -740,18 +761,23 @@ public abstract class LazyDataValueDescriptor implements DataValueDescriptor{
         return true;
     }
 
-    @Override
-    public boolean isNull(){
-        if(dvd==null||dvd.isNull())
+	private final boolean localIsNull()
+	{
+        if(dvd==null||((NullValueOpt)dvd).getIsNull())
             return bytes==null||length==0;
         else return false;
     }
 
     @Override
     public void restoreToNull(){
-        if(dvd!=null)
+        // needs to match resetForSerialization method
+        length=0;
+        bytes=null;
+        offset=0;
+        deserialized=true;
+        if (dvd != null)
             dvd.restoreToNull();
-        resetForSerialization();
+        isNull = true;
     }
 
     @Override
@@ -786,6 +812,7 @@ public abstract class LazyDataValueDescriptor implements DataValueDescriptor{
             this.length=data.length;
             tableVersion=in.readUTF();
             this.serializer=VersionedSerializers.forVersion(tableVersion,true).getEagerSerializer(getTypeFormatId());
+            this.isNull = this.localIsNull();
         }
 //        }else{
 //            isNull=true;
@@ -794,7 +821,7 @@ public abstract class LazyDataValueDescriptor implements DataValueDescriptor{
 
     @Override
     public int getTypeFormatId(){
-        if(dvd==null) dvd = newDescriptor();
+        if(dvd==null) createNewDescriptor();
         return dvd.getTypeFormatId();
 //        return typeFormatId;
     }

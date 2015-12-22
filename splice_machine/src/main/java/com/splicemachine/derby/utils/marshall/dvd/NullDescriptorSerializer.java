@@ -1,7 +1,12 @@
 package com.splicemachine.derby.utils.marshall.dvd;
 
 import com.google.common.io.Closeables;
+import com.splicemachine.db.iapi.types.DataType;
+import com.splicemachine.db.iapi.types.NullValueOpt;
 import com.splicemachine.db.shared.common.udt.UDTBase;
+import com.splicemachine.derby.impl.sql.execute.dvd.LazyDate;
+import com.splicemachine.derby.impl.sql.execute.dvd.LazyDecimal;
+import com.splicemachine.derby.impl.sql.execute.dvd.LazyVarchar;
 import com.splicemachine.encoding.Encoding;
 import com.splicemachine.encoding.MultiFieldDecoder;
 import com.splicemachine.encoding.MultiFieldEncoder;
@@ -16,6 +21,7 @@ import java.io.IOException;
  * Date: 4/2/14
  */
 public class NullDescriptorSerializer implements DescriptorSerializer{
+
 		private DescriptorSerializer delegate;
 		private final boolean sparse;
 
@@ -91,7 +97,14 @@ public class NullDescriptorSerializer implements DescriptorSerializer{
 
 		@Override
 		public void encode(MultiFieldEncoder fieldEncoder, DataValueDescriptor dvd, boolean desc) throws StandardException {
-				if(dvd==null||dvd.isNull()){
+				boolean isNullLocal;
+				if (dvd == null)
+					isNullLocal = true;
+				else if (dvd instanceof NullValueOpt)
+						isNullLocal = ((NullValueOpt)dvd).getIsNull();
+                else
+						isNullLocal = dvd.isNull();
+				if(isNullLocal) {
 						if (!sparse) encodeEmpty(fieldEncoder);
 						return;
 				}
