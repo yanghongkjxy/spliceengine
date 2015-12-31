@@ -2,7 +2,6 @@ package com.splicemachine.derby.utils.marshall.dvd;
 
 import com.google.common.io.Closeables;
 import com.splicemachine.db.iapi.types.DataType;
-import com.splicemachine.db.iapi.types.NullValueOpt;
 import com.splicemachine.db.shared.common.udt.UDTBase;
 import com.splicemachine.derby.impl.sql.execute.dvd.LazyDate;
 import com.splicemachine.derby.impl.sql.execute.dvd.LazyDecimal;
@@ -100,10 +99,8 @@ public class NullDescriptorSerializer implements DescriptorSerializer{
 				boolean isNullLocal;
 				if (dvd == null)
 					isNullLocal = true;
-				else if (dvd instanceof NullValueOpt)
-						isNullLocal = ((NullValueOpt)dvd).getIsNull();
                 else
-						isNullLocal = dvd.isNull();
+                    isNullLocal = dvd.isNull();
 				if(isNullLocal) {
 						if (!sparse) encodeEmpty(fieldEncoder);
 						return;

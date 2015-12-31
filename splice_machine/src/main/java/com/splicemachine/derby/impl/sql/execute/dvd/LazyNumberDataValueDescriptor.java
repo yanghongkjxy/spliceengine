@@ -116,7 +116,6 @@ public abstract class LazyNumberDataValueDescriptor extends LazyDataValueDescrip
             dvd = ndv = (NumberDataValue)newDescriptor();
         if(ndv instanceof VariableSizeDataValue){
             ((VariableSizeDataValue)ndv).setWidth(desiredWidth,desiredScale,errorOnTrunc);
-            //isNull = super.isNull();
         }else{
             throw new UnsupportedOperationException("Attempted to setWidth on wrapped "+ndv.getClass().getSimpleName()+" which does not implement VariableSizeDataValue");
         }

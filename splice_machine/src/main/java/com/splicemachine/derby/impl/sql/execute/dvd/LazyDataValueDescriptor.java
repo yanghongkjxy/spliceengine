@@ -27,7 +27,7 @@ import java.util.Calendar;
  * in the variables below and in the subclasses. See the specific variables below for
  * rationale.
  */
-public abstract class LazyDataValueDescriptor extends NullValueOpt implements DataValueDescriptor {
+public abstract class LazyDataValueDescriptor extends NullValueData implements DataValueDescriptor {
     private static final long serialVersionUID=3l;
     private static Logger LOG=Logger.getLogger(LazyDataValueDescriptor.class);
 
@@ -64,7 +64,6 @@ public abstract class LazyDataValueDescriptor extends NullValueOpt implements Da
     }
     protected void init(DataValueDescriptor dvd){
         this.dvd=dvd;
-//        typeFormatId=getTypeFormatId();
         deserialized=dvd!=null && !dvd.isNull();
         if (dvd == null) {
             if (deserialized)
@@ -87,14 +86,14 @@ public abstract class LazyDataValueDescriptor extends NullValueOpt implements Da
         this.offset = offset;
         this.length = length;
         if (dvd != null) {
-            ((NullValueOpt)dvd).setIsNull(true);
+            ((NullValueData)dvd).setIsNull(true);
         }
 
         deserialized=false;
         this.descendingOrder=desc;
         this.serializer=serializer;
         this.tableVersion=tableVersion;
-        isNull = localIsNull();
+        isNull = evaluateNull();
     }
 
     public boolean isSerialized(){
@@ -107,7 +106,7 @@ public abstract class LazyDataValueDescriptor extends NullValueOpt implements Da
 
     protected void createNewDescriptor() {
         dvd = newDescriptor();
-        if(dvd==null||((NullValueOpt)dvd).getIsNull())
+        if(dvd==null||dvd.isNull())
             isNull = bytes==null||length==0;
         else isNull = false;
 
@@ -126,7 +125,7 @@ public abstract class LazyDataValueDescriptor extends NullValueOpt implements Da
                         this.getClass().getSimpleName(), serializer==null?"NULL": serializer.getClass().getSimpleName()),e);
             }
         }
-        isNull = localIsNull();;
+        isNull = evaluateNull();;
     }
 
     protected abstract DataValueDescriptor newDescriptor();
@@ -172,7 +171,7 @@ public abstract class LazyDataValueDescriptor extends NullValueOpt implements Da
             tableVersion=destinationVersion;
             forceSerialization(desc,destinationVersion);
         }
-        isNull = localIsNull();
+        isNull = evaluateNull();
     }
 
 
@@ -181,7 +180,7 @@ public abstract class LazyDataValueDescriptor extends NullValueOpt implements Da
         bytes=null;
         offset=0;
         deserialized=true;
-        if(dvd==null||((NullValueOpt)dvd).getIsNull())
+        if(dvd==null||dvd.isNull())
             isNull = true;
         else isNull = false;
     }
@@ -313,7 +312,7 @@ public abstract class LazyDataValueDescriptor extends NullValueOpt implements Da
     @Override
     public DataValueDescriptor recycle(){
         if (dvd != null) {
-            ((NullValueOpt)dvd).setIsNull(true);
+            ((NullValueData)dvd).setIsNull(true);
         }
         // needs to match resetForSerialization method
         length=0;
@@ -759,9 +758,9 @@ public abstract class LazyDataValueDescriptor extends NullValueOpt implements Da
         return true;
     }
 
-	private final boolean localIsNull()
+	private final boolean evaluateNull()
 	{
-        if(dvd==null||((NullValueOpt)dvd).getIsNull())
+        if(dvd==null||((NullValueData)dvd).getIsNull())
             return bytes==null||length==0;
         else return false;
     }
@@ -780,7 +779,6 @@ public abstract class LazyDataValueDescriptor extends NullValueOpt implements Da
 
     @Override
     public void writeExternal(ObjectOutput out) throws IOException{
-//        out.writeInt(getTypeFormatId());
         boolean isN=isNull();
         out.writeBoolean(isN);
         if(!isN){
@@ -801,7 +799,6 @@ public abstract class LazyDataValueDescriptor extends NullValueOpt implements Da
 
     @Override
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException{
-//        typeFormatId=in.readInt();
         if(!in.readBoolean()){
             byte[] data=new byte[in.readInt()];
             in.readFully(data);
@@ -810,18 +807,14 @@ public abstract class LazyDataValueDescriptor extends NullValueOpt implements Da
             this.length=data.length;
             tableVersion=in.readUTF();
             this.serializer=VersionedSerializers.forVersion(tableVersion,true).getEagerSerializer(getTypeFormatId());
-            this.isNull = this.localIsNull();
+            this.isNull = this.evaluateNull();
         }
-//        }else{
-//            isNull=true;
-//        }
     }
 
     @Override
     public int getTypeFormatId(){
         if(dvd==null) createNewDescriptor();
         return dvd.getTypeFormatId();
-//        return typeFormatId;
     }
 
     @Override

@@ -225,7 +225,7 @@ public class JoinSelectionIT extends SpliceUnitTest  {
                 LO_MERGE_SORT_JOIN, methodWatcher);
     }
 
-    @Test
+    @Test @Ignore
     public void testInnerJoinWithNestedSubqueries() throws Exception {
     	fourthRowContainsQuery(
             format("explain SELECT a2.pid FROM %s a2 " +
