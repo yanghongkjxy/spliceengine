@@ -155,6 +155,8 @@
 								<option>-keep public class com.splicemachine.si.api.TxnStore { public *; }</option>
 								<option>-keep public class com.splicemachine.si.api.TxnSupplier { public *; }</option>
 								<option>-keep public class com.splicemachine.si.api.TxnView { public *; }</option>
+								<option>-keep public class com.splicemachine.si.api.Checkpointer { public *; }</option>
+								<option>-keep public class com.splicemachine.si.impl.checkpoint.BufferedCheckpointer { public *; }</option>
 								<option>-keep public class com.splicemachine.si.coprocessors.BaseSICompactionScanner { public *; protected boolean nextDirect(java.util.List, int); }</option>
 								<option>-keep public class com.splicemachine.si.coprocessors.RollForwardQueueMap { public *; }</option>
 								<option>-kee public class com.splicemachine.si.coprocessors.SIBaseObserver { public *; protected *; }</option>
@@ -188,6 +190,7 @@
 								<option>-keep public class com.splicemachine.si.impl.ActionFactory { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.ActiveWriteTxn { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.ActiveReadTxn { public *; }</option>
+								<option>-keep public class com.splicemachine.si.api.SIReadRequest { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.AdditiveWriteConflict { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.BaseSIFilter { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.BaseSIFilterPacked { public *; protected *;}</option>
@@ -218,6 +221,7 @@
 								<option>-keep public class com.splicemachine.si.impl.STableReaderDelegate { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.SimpleOperationFactory { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.MinimumTransactionWatcher { public *; }</option>	
+								<option>-keep public class com.splicemachine.si.impl.MinimumTransactionWatcher.MATReader { public *; }</option>	
 								<option>-keep public class com.splicemachine.si.impl.TxnLifecycleObserver{ public *; }</option>	
 								<option>-keep public class com.splicemachine.si.api.TxnFilterFactory { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.DefaultCellTypeParser { public *; }</option>
