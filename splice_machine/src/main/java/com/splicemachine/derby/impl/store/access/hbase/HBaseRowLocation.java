@@ -40,10 +40,12 @@ public class HBaseRowLocation extends DataType implements RowLocation {
 
     public HBaseRowLocation(byte[] rowKey) {
         this.slice = ByteSlice.wrap(rowKey);
+        isNull = evaluateNull();
     }
 
     public HBaseRowLocation(ByteSlice slice) {
         this.slice = slice;
+        isNull = evaluateNull();
     }
 
     /**
@@ -52,7 +54,9 @@ public class HBaseRowLocation extends DataType implements RowLocation {
      * CAUTION: returned object will share mutable ByteSlice and mutable byte[] array with this.
      */
     public HBaseRowLocation(HBaseRowLocation other) {
+
         this.slice = other.slice;
+        isNull = evaluateNull();
     }
 
     @Override
@@ -68,6 +72,7 @@ public class HBaseRowLocation extends DataType implements RowLocation {
         else {
             slice.set(theValue);
         }
+        isNull = evaluateNull();
     }
 
     @Override
@@ -96,6 +101,7 @@ public class HBaseRowLocation extends DataType implements RowLocation {
     @Override
     public void setValue(Object theValue) throws StandardException {
         this.slice = (ByteSlice) theValue;
+        isNull = evaluateNull();
     }
 
     /**
@@ -152,8 +158,8 @@ public class HBaseRowLocation extends DataType implements RowLocation {
         return StoredFormatIds.ACCESS_HEAP_ROW_LOCATION_V1_ID;
     }
 
-    @Override
-    public boolean isNull() {
+	private final boolean evaluateNull()
+	{
         return slice == null;
     }
 
