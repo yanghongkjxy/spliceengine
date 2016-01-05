@@ -238,9 +238,9 @@
 								<option>-keep public class com.splicemachine.si.impl.readresolve.SynchronousReadResolver { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.checkpoint.NoOpCheckpointResolver { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.checkpoint.AsyncCheckpointResolver { public *; }</option>
-								<option>-keep public class com.splicemachine.si.impl.checkpoint.PartitionCheckpointResolver public *; }</option>
-								<option>-keep public class com.splicemachine.si.impl.checkpoint.SharedCheckpointResolver public *; }</option>
-								<option>-keep public class com.splicemachine.si.impl.checkpoint.CheckpointFilter public *; }</option>
+								<option>-keep public class com.splicemachine.si.impl.checkpoint.PartitionCheckpointResolver { public *; }</option>
+								<option>-keep public class com.splicemachine.si.impl.checkpoint.SharedCheckpointResolver { public *; }</option>
+								<option>-keep public class com.splicemachine.si.impl.checkpoint.CheckpointFilter { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.region.AbstractV1TxnDecoder { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.region.AbstractV2TxnDecoder { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.region.ActiveTxnFilter { public *; }</option>
