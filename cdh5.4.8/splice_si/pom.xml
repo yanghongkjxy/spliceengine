@@ -135,6 +135,8 @@
 								<option>-keep public class com.splicemachine.si.api.SIFactory { public *; }</option>
 								<option>-keep public class com.splicemachine.si.api.SIFilter { public *; }</option>
 								<option>-keep public class com.splicemachine.si.api.TimestampSource { public *; }</option>
+								<option>-keep public class com.splicemachine.si.impl.MemoryTimestampSource { public *; }</option>
+								<option>-keep public class com.splicemachine.si.impl.CommittedTxn { public *; }</option>
 								<option>-keep public class com.splicemachine.si.api.TransactionLifecycle { public *; }</option>
 								<option>-keep public class com.splicemachine.si.api.TransactionManager { public *; }</option>
 								<option>-keep public class com.splicemachine.si.api.TransactionOperations { public *; }</option>
