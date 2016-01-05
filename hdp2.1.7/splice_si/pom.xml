@@ -221,7 +221,7 @@
 								<option>-keep public class com.splicemachine.si.impl.STableReaderDelegate { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.SimpleOperationFactory { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.MinimumTransactionWatcher { public *; }</option>	
-								<option>-keep public class com.splicemachine.si.impl.MinimumTransactionWatcher.MATReader { public *; }</option>	
+								<option>-keep public class com.splicemachine.si.impl.MinimumTransactionWatcher$MATReader { public *; }</option>	
 								<option>-keep public class com.splicemachine.si.impl.TxnLifecycleObserver{ public *; }</option>	
 								<option>-keep public class com.splicemachine.si.api.TxnFilterFactory { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.DefaultCellTypeParser { public *; }</option>

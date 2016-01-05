@@ -225,7 +225,7 @@
 								<option>-keep public class com.splicemachine.si.impl.NoopTxnFilter { public *; protected void doResolve(org.apache.hadoop.hbase.KeyValue, long); }</option>
 								<option>-keep public class com.splicemachine.si.impl.SparseTxn { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.MinimumTransactionWatcher { public *; }</option>
-								<option>-keep public class com.splicemachine.si.impl.MinimumTransactionWatcher.MATReader { public *; }</option>	
+								<option>-keep public class com.splicemachine.si.impl.MinimumTransactionWatcher$MATReader { public *; }</option>	
 								<option>-keep public class com.splicemachine.si.impl.SystemClock { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.Tracer { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.TransactionLifecycle { public *; }</option>
