@@ -124,7 +124,7 @@
 								<option>-keep public class com.splicemachine.si.api.CannotCommitException { public *; }</option>
 								<option>-keep public class com.splicemachine.si.api.ConstraintChecker { public *; }</option>
 								<option>-keep public class com.splicemachine.si.api.HTransactorFactory { public *; }</option>
-								<option>-keep public class com.splicemachine.si.api.ReadOnlyModificationException { public *; }</option>
+								<option>-keep public class com.splicemachine.si.api.ReadOnlyModificationException { public *; protected *; }</option>
 								<option>-keep public class com.splicemachine.si.api.ReadResolver { public *; }</option>
 								<option>-keep public class com.splicemachine.si.api.RollForward { public *; }</option>
 								<option>-keep public class com.splicemachine.si.api.RollForwardQueue { public *; }</option>
