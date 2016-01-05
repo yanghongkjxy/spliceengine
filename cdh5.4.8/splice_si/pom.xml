@@ -215,6 +215,7 @@
 								<option>-keep public class com.splicemachine.si.impl.STableReaderDelegate { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.SimpleOperationFactory { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.MinimumTransactionWatcher { public *; }</option>	
+								<option>-keep public class com.splicemachine.si.impl.TxnLifecycleObserver { public *; }</option>	
 								<option>-keep public class com.splicemachine.si.api.TxnFilterFactory { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.SimpleTxnFilter { public *; protected void doResolve(org.apache.hadoop.hbase.KeyValue, long); }</option>
 								<option>-keep public class com.splicemachine.si.impl.NoopTxnFilter { public *; protected void doResolve(org.apache.hadoop.hbase.KeyValue, long); }</option>
@@ -238,10 +239,7 @@
 								<option>-keep public class com.splicemachine.si.impl.WriteConflict { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.readresolve.NoOpReadResolver { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.readresolve.SynchronousReadResolver { public *; }</option>
-								<option>-keep public class com.splicemachine.si.impl.checkpoint.NoOpCheckpointResolver { public *; }</option>
-								<option>-keep public class com.splicemachine.si.impl.checkpoint.AsyncCheckpointResolver { public *; }</option>
-								<option>-keep public class com.splicemachine.si.impl.checkpoint.PartitionCheckpointResolver { public *; }</option>
-								<option>-keep public class com.splicemachine.si.impl.checkpoint.SharedCheckpointResolver { public *; }</option>
+								<option>-keep public class com.splicemachine.si.impl.checkpoint.CheckpointResolver { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.checkpoint.NoOpCheckpointResolver { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.checkpoint.AsyncCheckpointResolver { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.checkpoint.PartitionCheckpointResolver { public *; }</option>

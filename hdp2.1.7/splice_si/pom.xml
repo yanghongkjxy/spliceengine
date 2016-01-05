@@ -157,7 +157,7 @@
 								<option>-keep public class com.splicemachine.si.api.TxnView { public *; }</option>
 								<option>-keep public class com.splicemachine.si.coprocessors.BaseSICompactionScanner { public *; protected boolean nextDirect(java.util.List, int); }</option>
 								<option>-keep public class com.splicemachine.si.coprocessors.RollForwardQueueMap { public *; }</option>
-								<option>-keep public class com.splicemachine.si.coprocessors.SIBaseObserver { public *; protected *; }</option>
+								<option>-kee public class com.splicemachine.si.coprocessors.SIBaseObserver { public *; protected *; }</option>
 								<option>-keep public class com.splicemachine.si.coprocessors.SIFilter { public *; }</option>
 								<option>-keep public class com.splicemachine.si.coprocessors.SIFilterPacked { public *; }</option>
 								<option>-keep public class com.splicemachine.si.coprocessors.SIObserver { public *; }</option>
@@ -217,6 +217,7 @@
 								<option>-keep public class com.splicemachine.si.impl.STableReaderDelegate { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.SimpleOperationFactory { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.MinimumTransactionWatcher { public *; }</option>	
+								<option>-keep public class com.splicemachine.si.impl.TxnLifecycleObserver{ public *; }</option>	
 								<option>-keep public class com.splicemachine.si.api.TxnFilterFactory { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.DefaultCellTypeParser { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.CellTypeParser { public *; }</option>
@@ -239,6 +240,7 @@
 								<option>-keep public class com.splicemachine.si.impl.WriteConflict { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.readresolve.NoOpReadResolver { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.readresolve.SynchronousReadResolver { public *; }</option>
+								<option>-keep public class com.splicemachine.si.impl.checkpoint.CheckpointResolver { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.checkpoint.NoOpCheckpointResolver { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.checkpoint.AsyncCheckpointResolver { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.checkpoint.PartitionCheckpointResolver { public *; }</option>
