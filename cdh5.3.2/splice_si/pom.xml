@@ -161,6 +161,7 @@
 								<option>-keep public class com.splicemachine.si.coprocessors.SIFilter { public *; }</option>
 								<option>-keep public class com.splicemachine.si.coprocessors.SIFilterPacked { public *; }</option>
 								<option>-keep public class com.splicemachine.si.coprocessors.SIObserver { public *; }</option>
+								<option>-keep public class com.splicemachine.si.api.TxnFilterFactory { public *; }</option>
 								<option>-keep public class com.splicemachine.si.coprocessors.TimestampMasterObserver { public *; }</option>
 								<option>-keep public class com.splicemachine.si.coprocessors.TxnLifecycleEndpoint { public *; }</option>
 								<option>-keep public class com.splicemachine.si.data.api.HTableSource { public *; }</option>
