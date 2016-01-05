@@ -196,7 +196,8 @@
 								<option>-keep public class com.splicemachine.si.impl.HTransactorFactory { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.InheritingTxnView { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.KeepAliveScheduler { public *; }</option>
-								<option>-keep public class com.splicemachine.si.impl.KeyValueType { public *; }</option>
+								<option>-keep public class com.splicemachine.si.impl.NoopKeepAliveScheduler { public *; }</option>
+								<option>-keep public class com.splicemachine.si.impl.CellType { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.LazyTxnView { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.PackedTxnFilter { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.PushBackIterator { public *; }</option>
@@ -213,6 +214,7 @@
 								<option>-keep public class com.splicemachine.si.impl.STableReaderDelegate { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.SimpleOperationFactory { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.MinimumTransactionWatcher { public *; }</option>	
+								<option>-keep public class com.splicemachine.si.api.TxnFilterFactory { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.DefaultCellTypeParser { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.CellTypeParser { public *; }</option>
 								<option>-keep public class com.splicemachine.si.impl.SimpleTxnFilter { public *; protected void doResolve(org.apache.hadoop.hbase.KeyValue, long); }</option>
