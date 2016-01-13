@@ -84,7 +84,7 @@ public class UpdateMultiOperationIT{
                  * Note: this "correct" value is taken from Derby, which may not always be correct
                  * in reality(see DB-3675 for more information)
                  */
-                Assert.assertEquals("Incorrect return value!",new BigDecimal("5428906.39"),value);
+                Assert.assertEquals("Incorrect return value!",new BigDecimal("5428916.01"),value);
                 rowCount++;
             }
             Assert.assertEquals("Incorrect row count!",1l,rowCount);

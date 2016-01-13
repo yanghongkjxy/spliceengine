@@ -1,5 +1,3 @@
-package com.splicemachine.derby.impl.sql.execute.operations;
-
 
 import static com.splicemachine.test_tools.Rows.row;
 import static com.splicemachine.test_tools.Rows.rows;
@@ -2000,13 +1998,13 @@ public class WindowFunctionIT extends SpliceUnitTest {
                 "Diferença de Salário |\n"+
                     "----------------------\n"+
                     "     -9166.3333      |\n"+
-                    "      9333.6666      |\n"+
+                    "      9333.6667      |\n"+
                     "      -167.3333      |\n"+
                     "     -2500.0000      |\n"+
                     "     -2000.0000      |\n"+
                     "      4500.0000      |\n"+
-                    "     -3499.6666      |\n"+
-                    "     -2999.6666      |\n"+
+                    "     -3499.6667      |\n"+
+                    "     -2999.6667      |\n"+
                     "      6499.3333      |";
             assertEquals("\n"+sqlText+"\n",expected,TestUtils.FormattedResult.ResultFactory.toStringUnsorted(rs));
         }
@@ -2026,13 +2024,13 @@ public class WindowFunctionIT extends SpliceUnitTest {
                 "Diferença de Salário |\n"+
                     "----------------------\n"+
                     "     -9166.3333      |\n"+
-                    "      9333.6666      |\n"+
+                    "      9333.6667      |\n"+
                     "      -167.3333      |\n"+
                     "     -2500.0000      |\n"+
                     "     -2000.0000      |\n"+
                     "      4500.0000      |\n"+
-                    "     -3499.6666      |\n"+
-                    "     -2999.6666      |\n"+
+                    "     -3499.6667      |\n"+
+                    "     -2999.6667      |\n"+
                     "      6499.3333      |";
             assertEquals("\n"+sqlText+"\n",expected,TestUtils.FormattedResult.ResultFactory.toStringUnsorted(rs));
         }
@@ -2057,14 +2055,14 @@ public class WindowFunctionIT extends SpliceUnitTest {
         String expected =
             "NOME_DEP     | FUNCIONARIO | SALARIO |Média por Departamento |Diferença de Salário |\n" +
                 "----------------------------------------------------------------------------------------\n" +
-                "Recursos Humanos |   Luciano   |23500.00 |      14166.3333       |      9333.6666      |\n" +
+                "Recursos Humanos |   Luciano   |23500.00 |      14166.3333       |      9333.6667      |\n" +
                 "       IT        |   Nogare    |11999.00 |       5499.6666       |      6499.3333      |\n" +
                 "     Vendas      |    Diego    | 9000.00 |       4500.0000       |      4500.0000      |\n" +
                 "Recursos Humanos |  Zavaschi   |13999.00 |      14166.3333       |      -167.3333      |\n" +
                 "     Vendas      |   Amorim    | 2500.00 |       4500.0000       |     -2000.0000      |\n" +
                 "     Vendas      |   Fabiano   | 2000.00 |       4500.0000       |     -2500.0000      |\n" +
-                "       IT        |  Ferreira   | 2500.00 |       5499.6666       |     -2999.6666      |\n" +
-                "       IT        |   Felipe    | 2000.00 |       5499.6666       |     -3499.6666      |\n" +
+                "       IT        |  Ferreira   | 2500.00 |       5499.6666       |     -2999.6667      |\n" +
+                "       IT        |   Felipe    | 2000.00 |       5499.6666       |     -3499.6667      |\n" +
                 "Recursos Humanos |   Laerte    | 5000.00 |      14166.3333       |     -9166.3333      |";
         assertEquals("\n"+sqlText+"\n", expected, TestUtils.FormattedResult.ResultFactory.toStringUnsorted(rs));
         rs.close();
@@ -2086,25 +2084,25 @@ public class WindowFunctionIT extends SpliceUnitTest {
             "NOME_DEP     |Média por Departamento |\n" +
                 "------------------------------------------\n" +
                 "       IT        |        5.8825         |\n" +
-                "       IT        |        7.3531         |\n" +
-                "       IT        |        7.3531         |\n" +
-                "       IT        |        13.2356        |\n" +
+                "       IT        |        7.3532         |\n" +
+                "       IT        |        7.3532         |\n" +
+                "       IT        |        13.2357        |\n" +
                 "       IT        |        17.6461        |\n" +
-                "       IT        |        20.5873        |\n" +
+                "       IT        |        20.5874        |\n" +
                 "       IT        |        34.5598        |\n" +
                 "Recursos Humanos |        5.8825         |\n" +
-                "Recursos Humanos |        7.3531         |\n" +
-                "Recursos Humanos |        7.3531         |\n" +
-                "Recursos Humanos |        13.2356        |\n" +
+                "Recursos Humanos |        7.3532         |\n" +
+                "Recursos Humanos |        7.3532         |\n" +
+                "Recursos Humanos |        13.2357        |\n" +
                 "Recursos Humanos |        17.6461        |\n" +
-                "Recursos Humanos |        20.5873        |\n" +
+                "Recursos Humanos |        20.5874        |\n" +
                 "Recursos Humanos |        34.5598        |\n" +
                 "     Vendas      |        5.8825         |\n" +
-                "     Vendas      |        7.3531         |\n" +
-                "     Vendas      |        7.3531         |\n" +
-                "     Vendas      |        13.2356        |\n" +
+                "     Vendas      |        7.3532         |\n" +
+                "     Vendas      |        7.3532         |\n" +
+                "     Vendas      |        13.2357        |\n" +
                 "     Vendas      |        17.6461        |\n" +
-                "     Vendas      |        20.5873        |\n" +
+                "     Vendas      |        20.5874        |\n" +
                 "     Vendas      |        34.5598        |";
         assertEquals("\n"+sqlText+"\n", expected, TestUtils.FormattedResult.ResultFactory.toStringUnsorted(rs));
         rs.close();

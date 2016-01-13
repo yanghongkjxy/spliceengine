@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.splicemachine.db.iapi.types.SQLDecimal;
 import com.splicemachine.derby.test.framework.*;
 import com.splicemachine.homeless.TestUtils;
 import com.splicemachine.db.iapi.types.NumberDataValue;
@@ -74,7 +75,7 @@ public class ProjectRestrictOperationIT extends SpliceUnitTest  {
             BigDecimal se = rs.getBigDecimal(3);
             BigDecimal div = rs.getBigDecimal(4);
 
-            BigDecimal correctDiv = new BigDecimal(sc*sd).divide(se, NumberDataValue.MIN_DECIMAL_DIVIDE_SCALE, BigDecimal.ROUND_DOWN);
+            BigDecimal correctDiv = new BigDecimal(sc*sd).divide(se, NumberDataValue.MIN_DECIMAL_DIVIDE_SCALE, SQLDecimal.DEFAULT_ROUNDING_MODE);
             Assert.assertEquals("Incorrect division!",div.compareTo(correctDiv), 0);
 
             results.add(String.format("sc=%d,sd=%d,se=%f,div=%f",sc,sd,se,div));
@@ -269,7 +270,7 @@ public class ProjectRestrictOperationIT extends SpliceUnitTest  {
             int correctSum = sd+sc;
             int correctMult = sd*sc;
 
-            BigDecimal correctDiv = se.divide(new BigDecimal(sd), NumberDataValue.MIN_DECIMAL_DIVIDE_SCALE, BigDecimal.ROUND_DOWN);
+            BigDecimal correctDiv = se.divide(new BigDecimal(sd), NumberDataValue.MIN_DECIMAL_DIVIDE_SCALE, SQLDecimal.DEFAULT_ROUNDING_MODE);
 
             Assert.assertEquals("Incorrect diff!",correctDiff,diff);
             Assert.assertEquals("Incorrect sum!",correctSum,sum);
