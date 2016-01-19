@@ -70,7 +70,7 @@ public class ActivationSerializer {
 
     private static final List<FieldStorageFactory> factories;
     private static final ArrayFactory arrayFactory;
-    private static final ClassFactory classFactory;
+    // private static final ClassFactory classFactory;
 
     static{
         factories = Lists.newArrayList();
@@ -85,9 +85,9 @@ public class ActivationSerializer {
 
         //always add SerializableFactory last, because otherwise it'll swallow everything else.
         factories.add(new SerializableFactory());
-        LanguageConnectionContext lcc = (LanguageConnectionContext)
-                ContextService.getContextOrNull(LanguageConnectionContext.CONTEXT_ID);
-        classFactory = lcc.getLanguageConnectionFactory().getClassFactory();
+     //   LanguageConnectionContext lcc = (LanguageConnectionContext)
+     //           ContextService.getContextOrNull(LanguageConnectionContext.CONTEXT_ID);
+     //   classFactory = lcc.getLanguageConnectionFactory().getClassFactory();
 
     }
 
