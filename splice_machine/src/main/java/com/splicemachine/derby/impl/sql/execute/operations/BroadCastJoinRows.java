@@ -35,7 +35,7 @@ public class BroadCastJoinRows implements IJoinRowsIterator<ExecRow> {
         if(rightRowsSeen==null)
             rightRowsSeen = ctx.newCounter();
         ExecRow left = leftRows.next(ctx);
-        if (left != null){
+        if (left != null && pair != null){
             leftRowsSeen++;
             Iterator<ExecRow> rights = rightSideLookup.apply(left);
             if (rights == null){
