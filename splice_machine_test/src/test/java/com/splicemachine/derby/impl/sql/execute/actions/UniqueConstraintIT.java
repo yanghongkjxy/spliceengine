@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -276,6 +277,7 @@ public class UniqueConstraintIT {
     }
 
     @Test
+    @Ignore("DB-4548")
     public void uniqueConstraintEnforcedOnUpdate_updateMultipleRows() throws Exception {
         methodWatcher.executeUpdate("create table ZONING_09 (a int, b int unique)");
         methodWatcher.executeUpdate("insert into ZONING_09 values(1,1),(2,2)");
