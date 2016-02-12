@@ -433,6 +433,7 @@ public class TempTableIT {
      * Make sure the HBase table that backs a Splice temp table gets cleaned up at the end of the user session.
      * @throws Exception
      */
+    @Ignore("DB-4546")
     @Test
     public void testTempHBaseTableGetsDropped() throws Exception {
         long start = System.currentTimeMillis();
