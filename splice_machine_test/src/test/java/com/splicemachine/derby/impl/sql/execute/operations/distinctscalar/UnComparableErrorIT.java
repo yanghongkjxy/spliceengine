@@ -28,10 +28,10 @@ public class UnComparableErrorIT {
         try {
             spliceClassWatcher.executeQuery(String.format("select a.name as double_one, b.name as double_two " +
                     "from %s as a, %s as b " +
-                    "where a.name < b.name and a.pic = b.pic", TABLE_NAME, TABLE_NAME));
+                    "where a.name < b.name and a.pic = b.msg", TABLE_NAME, TABLE_NAME));
             Assert.fail();
         } catch (SQLSyntaxErrorException e) {
-            Assert.assertEquals("42822", e.getSQLState());
+            Assert.assertEquals("42846", e.getSQLState());
         }
     }
 
@@ -40,10 +40,10 @@ public class UnComparableErrorIT {
         try {
             spliceClassWatcher.executeQuery(String.format("select a.name as double_one, b.name as double_two " +
                     "from %s as a, %s as b " +
-                    "where a.name < b.name and a.msg = b.pic", TABLE_NAME, TABLE_NAME));
+                    "where a.name < b.name and a.pic = b.pic", TABLE_NAME, TABLE_NAME));
             Assert.fail();
         } catch (SQLSyntaxErrorException e) {
-            Assert.assertEquals("42818", e.getSQLState());
+            Assert.assertEquals("42822", e.getSQLState());
         }
     }
 }
