@@ -10,11 +10,11 @@ import java.sql.Types;
 /**
  * Created by ochnev on 11/25/15.
  */
-public class RowIdTest extends DataTypeIT {
+public class RowIdTestIT extends DataTypeIT {
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        RowIdTest it = new RowIdTest();
+        RowIdTestIT it = new RowIdTestIT();
         it.createTable();
     }
 
