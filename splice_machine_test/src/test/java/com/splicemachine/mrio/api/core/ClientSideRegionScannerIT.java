@@ -30,7 +30,6 @@ import com.splicemachine.mrio.api.core.ClientSideRegionScanner;
 import com.splicemachine.si.data.api.SDataLib;
 import com.splicemachine.si.impl.HTransactorFactory;
 
-@Ignore
 public class ClientSideRegionScannerIT extends BaseMRIOTest {
     private static final Logger LOG = Logger.getLogger(ClientSideRegionScannerIT.class);
     protected static String SCHEMA_NAME=ClientSideRegionScannerIT.class.getSimpleName();
@@ -85,7 +84,6 @@ public class ClientSideRegionScannerIT extends BaseMRIOTest {
 	@Rule public SpliceWatcher methodWatcher = new SpliceWatcher();
 
 	@Test
-	@Ignore
 	public void validateAccurateRecordsWithStoreFileAndMemstore() throws SQLException, IOException, InterruptedException {
 		int i = 0;
     	HBaseAdmin admin = null;

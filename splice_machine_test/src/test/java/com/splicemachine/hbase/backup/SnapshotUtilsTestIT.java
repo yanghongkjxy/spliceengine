@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import com.splicemachine.test.SlowTest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,11 +36,12 @@ import org.junit.Test;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.hbase.HBaseSupport;
 import com.splicemachine.hbase.HBaseSupportFactory;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test clone snapshots from the client
  */
-@Ignore
+@Category(SlowTest.class)
 public class SnapshotUtilsTestIT {
   final Log LOG = LogFactory.getLog(getClass());
 

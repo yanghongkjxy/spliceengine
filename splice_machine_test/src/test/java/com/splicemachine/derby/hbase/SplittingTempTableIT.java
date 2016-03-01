@@ -3,12 +3,14 @@ package com.splicemachine.derby.hbase;
 import com.google.common.collect.Maps;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.derby.test.framework.*;
+import com.splicemachine.test.SlowTest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.*;
+import org.junit.experimental.categories.Category;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
@@ -19,7 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
-@Ignore("Tests take FOREVER to run, so don't unignore them unless you REALLY want to")
+@Category(SlowTest.class)
+@Ignore("Ignored because it takes too long - run manually as needed")
 public class SplittingTempTableIT extends SpliceUnitTest {
 
     private static final String SCHEMA_NAME = SplittingTempTableIT.class.getSimpleName().toUpperCase();
@@ -223,7 +226,6 @@ public class SplittingTempTableIT extends SpliceUnitTest {
     }
 
     @Test
-    @Ignore
     public void testRepeatedMergeSortSixJoins() throws Exception {
         for(int i=0;i<100;i++){
             testMergeSortJoinSixJoins();
@@ -294,6 +296,7 @@ public class SplittingTempTableIT extends SpliceUnitTest {
     }
 
 		@Test
+        @Ignore
     public void testRepeatedMergeSortFiveJoins() throws Exception {
         for(int i=0;i<100;i++){
             testMergeSortJoinFiveJoins();
@@ -414,6 +417,7 @@ public class SplittingTempTableIT extends SpliceUnitTest {
     }
 
 		@Test
+        @Ignore
 		public void testRepeatedMergeSortJoinFourJoins() throws Throwable {
 				repeatedExecute(new Callable<Void>() {
 						@Override
@@ -451,7 +455,7 @@ public class SplittingTempTableIT extends SpliceUnitTest {
     }
 
     @Test
-//    @Ignore("Ignored because it takes forever and ever to run, and generates some 300 regions")
+    @Ignore("Ignored because it takes forever and ever to run, and generates some 300 regions")
     public void testRepeatedThreeJoinMSJ() throws Throwable {
 				repeatedExecute(new Callable<Void>() {
 						@Override

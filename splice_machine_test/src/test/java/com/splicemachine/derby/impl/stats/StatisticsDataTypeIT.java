@@ -16,7 +16,6 @@ import java.sql.*;
  * @author Scott Fines
  *         Date: 3/3/15
  */
-@Ignore
 public class StatisticsDataTypeIT {
     private static final int size=128;
     private static final SpliceWatcher classWatcher = new SpliceWatcher();

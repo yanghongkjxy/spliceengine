@@ -272,7 +272,6 @@ public class UpportIT extends SpliceUnitTest {
     }
 
     @Test
-    @Ignore
     public void testUpsertWithEmptyTableWillInsertDuplicatesReportedAsBad() throws Exception {
         CallableStatement statement =
                 conn.prepareCall("call SYSCS_UTIL.UPSERT_DATA_FROM_FILE(?,?,null,?,null,null,null,null,null,0,?)");

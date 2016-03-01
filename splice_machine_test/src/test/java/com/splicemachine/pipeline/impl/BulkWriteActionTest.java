@@ -22,7 +22,6 @@ public class BulkWriteActionTest {
 
 	
 	@Test
-	@Ignore
 	public void testCallerDisconnectedException() throws ExecutionException {
 		DefaultWriteConfiguration configuration = new DefaultWriteConfiguration(null);
 		Assert.assertEquals(WriteResponse.THROW_ERROR,configuration.globalError(new CallerDisconnectedException("Disconnected")));

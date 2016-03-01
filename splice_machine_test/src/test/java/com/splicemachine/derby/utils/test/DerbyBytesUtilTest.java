@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 
-@Ignore
 public class DerbyBytesUtilTest {
 	protected static J2SEDataValueFactory dvf = new J2SEDataValueFactory();
 
@@ -34,7 +33,7 @@ public class DerbyBytesUtilTest {
 		dvf.boot(false, new Properties());
 	}
 
-		@Test
+	@Test
 	public void generateIndexKeyTest() throws Exception {
 		byte[] indexKey1 = DerbyBytesUtil.generateIndexKey(
 				generateDataValueDescriptors("John", "Leach", 1l), null,null, false);
@@ -51,7 +50,6 @@ public class DerbyBytesUtilTest {
 				generateDataValueDescriptors("John", "Leach", 1l), -1, null,null,false);
 		Assert.assertTrue(Bytes.compareTo(indexKey3, indexKey4) < 0);
 		Assert.assertTrue(Bytes.compareTo(indexKey5, indexKey6) < 0);
-
 	}
 
 	@Test
@@ -68,40 +66,8 @@ public class DerbyBytesUtilTest {
 				DerbyBytesUtil.generateScanKeyForIndex( descriptors, ScanController.GT, null,null,false)) < 0);
 	}
 
-//	@Test
-//	public void testGenerateSortedHashScan() throws Exception {
-//		GenericScanQualifier gsq = new GenericScanQualifier();
-//		gsq.setQualifier(0, generateDataValueDescriptor("test1"),0,false,false,false);
-//		Qualifier[][] qs = new Qualifier[][] { new Qualifier[] { gsq } };
-//
-//		byte[] bytes = DerbyBytesUtil.generateSortedHashScan(qs,
-//				gsq.getOrderable());
-//
-//		// check that it deserializes correctly
-//		 RowKey rowKey = DerbyBytesUtil.getRowKey(gsq.getOrderable());
-//		 Object o = rowKey.deserialize(bytes);
-//		 assertEquals(gsq.getOrderable().getString(),(String)o);
-//	}
-
-    //removed--tested in the Encoding tests
-//	@Test
-//	public void testComparingIncrementedSortedHashScan() throws Exception {
-//		GenericScanQualifier gsq = new GenericScanQualifier();
-//		gsq.setQualifier(0, generateDataValueDescriptor("test1"),0,false,false,false);
-//		Qualifier[][] qs = new Qualifier[][] { new Qualifier[] { gsq } };
-//
-//		byte[] bytes = DerbyBytesUtil.generateSortedHashScan(qs,
-//				gsq.getOrderable());
-//
-//		// check that it deserializes correctly
-////		 RowKey rowKey = DerbyBytesUtil.getRowKey(gsq.getOrderable());
-////		 Object o = rowKey.deserialize(bytes);
-////		 assertEquals(gsq.getOrderable().getString(),(String)o);
-//
-//	}
-
-
-		@Test
+	@Test
+	@Ignore
 	public void testIndexGeneration() throws IOException {
         MultiFieldEncoder encoder = MultiFieldEncoder.create(2);
         byte[] testKey = encoder.encodeNext("John").encodeNext(11).build();
@@ -116,9 +82,9 @@ public class DerbyBytesUtilTest {
 		Assert.assertTrue(Bytes.compareTo(testKey, testKey2) > 0);
 	}
 
-		@Test
+	@Test
 	public void testIndexGenerationForHBaseRowLocationTestDeepCopy()
-			throws StandardException, IOException {
+        throws StandardException, IOException {
 		DataValueDescriptor[] descArray = new DataValueDescriptor[3];
 		descArray[0] = dvf.getNull(StoredFormatIds.SQL_CHAR_ID,
 				StringDataValue.COLLATION_TYPE_UCS_BASIC);
@@ -136,15 +102,15 @@ public class DerbyBytesUtilTest {
 	}
 
 	public DataValueDescriptor[] generateDataValueDescriptors(Object... objects)
-			throws StandardException {
+        throws StandardException {
 		List<DataValueDescriptor> descriptors = new ArrayList<DataValueDescriptor>();
 		for (Object object : objects)
 			descriptors.add(generateDataValueDescriptor(object));
 		return descriptors.toArray(new DataValueDescriptor[descriptors.size()]);
 	}
 
-		public DataValueDescriptor generateDataValueDescriptor(Object object)
-			throws StandardException {
+	public DataValueDescriptor generateDataValueDescriptor(Object object)
+		throws StandardException {
 		DataValueDescriptor desc = null;
 		if (object.getClass() == String.class) {
 			desc = dvf.getNull(StoredFormatIds.SQL_VARCHAR_ID,StringDataValue.COLLATION_TYPE_UCS_BASIC);

@@ -266,7 +266,7 @@ public class UniqueIndexIT extends SpliceUnitTest{
     }
 
     @Test
-    @Ignore("Takes forever, but is useful for tracking down race condition errors")
+    @Ignore("Takes forever, but is useful for tracking down race condition errors") // Actually, as of 29-Jan-2016, it just fails
     public void testRepeatedCanDeleteEntry() throws Exception{
         for(int i=0;i<100;i++){
             testCanDeleteEntry();

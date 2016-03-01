@@ -37,7 +37,6 @@ import static org.junit.Assert.assertTrue;
  * starting server.  See below for details.
  */
 @Category(SlowTest.class)
-@Ignore
 public class TableScanOperation_LargeRegionCount_IT {
 
     private static final String SCHEMA_NAME = TableScanOperation_LargeRegionCount_IT.class.getSimpleName().toUpperCase();

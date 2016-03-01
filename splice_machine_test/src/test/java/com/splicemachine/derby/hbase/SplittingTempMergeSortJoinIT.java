@@ -2,11 +2,13 @@ package com.splicemachine.derby.hbase;
 
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.derby.test.framework.*;
+import com.splicemachine.test.SlowTest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.junit.*;
+import org.junit.experimental.categories.Category;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
@@ -19,7 +21,9 @@ import java.util.List;
  * @author Scott Fines
  *         Date: 6/9/14
  */
-@Ignore("Ignored cause it take for super long")
+
+@Category(SlowTest.class)
+@Ignore("Ignored because it takes too long - run manually as needed")
 public class SplittingTempMergeSortJoinIT {
 
 		private static final String SCHEMA_NAME=SplittingTempMergeSortJoinIT.class.getSimpleName().toUpperCase();

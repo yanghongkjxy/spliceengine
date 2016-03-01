@@ -80,7 +80,7 @@ public class IndexRowToBaseRowOperationIT extends SpliceUnitTest {
 		Assert.assertTrue("incorrect number of rows returned", count > 0);
 	}
 	
-	@Ignore 
+	@Ignore
 	@Test
 	public void testExportTable() throws Exception{
 		Statement s = methodWatcher.getStatement();
@@ -132,7 +132,6 @@ public class IndexRowToBaseRowOperationIT extends SpliceUnitTest {
     }
 
     @Test
-    @Ignore
     public void testQualifiedIndexScan() throws Exception{
         PreparedStatement stmt = methodWatcher.prepareStatement("select " +
                 "s.schemaname,s.schemaid " +
