@@ -4,6 +4,8 @@ import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.constants.bytes.BytesUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import java.util.Date;
+
 /**
  * @author Scott Fines
  *         Date: 6/20/14
@@ -23,7 +25,9 @@ public class TxnUtils {
 				return Bytes.toLong(buffer, rowOffset + 1, rowLength - 1);
 		}
 
-	public static void main(String...args) throws Exception{
-		System.out.println(BytesUtil.toHex(getRowKey(16385l)));
+	public static void main(String...args){
+		long v = 1458940907109l;
+		System.out.println(Bytes.toStringBinary(getRowKey(v)));
+		System.out.println(new Date(v));
 	}
 }

@@ -4,6 +4,7 @@ import com.carrotsearch.hppc.LongArrayList;
 import com.carrotsearch.hppc.LongOpenHashSet;
 import com.splicemachine.constants.SIConstants;
 import com.splicemachine.si.api.ReadResolver;
+import com.splicemachine.si.api.Txn;
 import com.splicemachine.si.api.TxnSupplier;
 import com.splicemachine.si.api.TxnView;
 import com.splicemachine.si.data.api.IHTable;
@@ -13,6 +14,7 @@ import com.splicemachine.si.impl.store.IgnoreTxnCacheSupplier;
 import com.splicemachine.utils.ByteSlice;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 
@@ -248,6 +250,7 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
 
     private boolean isVisible(long txnId) throws IOException{
         TxnView toCompare=fetchTransaction(txnId);
+
         return myTxn.canSee(toCompare);
     }
 
@@ -255,6 +258,10 @@ public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
         TxnView toCompare=currentTxn;
         if(currentTxn==null || currentTxn.getTxnId()!=txnId){
             toCompare=transactionStore.getTransaction(txnId);
+            if(toCompare==null){
+                LOG.error("Unexpected: missing transaction with id "+txnId+", treating this transaction as rolled back.");
+                toCompare = new RolledBackTxn(txnId);
+            }
             currentTxn=toCompare;
         }
         return toCompare;
