@@ -36,7 +36,7 @@ public class RegionLoadStatistics{
                 heapSize = regionLoad.getStorefileSizeMB()+regionLoad.getMemStoreSizeMB();
                 rowSizeRatio = ((double)heapSize)/StatsConstants.regionMaxFileSize;
             }
-            long heapBytes = heapSize*1024*1024;
+            long heapBytes = heapSize*1024l*1024l;
             long numRows = (long)(StatsConstants.fallbackRegionRowCount*rowSizeRatio);
             if(numRows<StatsConstants.fallbackMinimumRowCount)
                 numRows = StatsConstants.fallbackMinimumRowCount;
