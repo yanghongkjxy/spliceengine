@@ -374,8 +374,6 @@ public class SelectivityIT extends SpliceUnitTest {
 
     @Test
     public void testLimitCosting() throws Exception {
-        int max = Integer.MAX_VALUE;
-        long v = max * 1024l*1024;
         rowsContainsQuery("explain select * from ts_low_cardinality {limit 10}", new Contains().add(1, "rows=10,"), methodWatcher);
     }
 
