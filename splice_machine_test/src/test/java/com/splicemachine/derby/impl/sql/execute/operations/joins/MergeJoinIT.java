@@ -2,18 +2,14 @@ package com.splicemachine.derby.impl.sql.execute.operations.joins;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.splicemachine.derby.test.TPCHIT;
 import com.splicemachine.derby.test.framework.*;
 import com.splicemachine.homeless.TestUtils;
-
 import com.splicemachine.test_tools.TableCreator;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.log4j.Logger;
 import org.junit.*;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
-
 import java.sql.*;
 import java.util.Arrays;
 import java.util.List;
@@ -295,6 +291,7 @@ public class MergeJoinIT extends SpliceUnitTest {
         new TableCreator(conn)
                 .withCreate("create table tab2 (a int, b int, c int, d int, primary key(a, b, c))")
                 .withInsert("insert into tab2 values(?,?,?,?)")
+                .withIndex("create index tab2i on tab2(a, c)")
                 .withRows(rows(
                         row(1, 0, 1, 200)))
                 .create();
@@ -537,6 +534,20 @@ public class MergeJoinIT extends SpliceUnitTest {
         }
         Assert.assertEquals(1, count);
     }
+
+    @Test
+    public void testRightIndexScan() throws Exception {
+        String sql = "select count(*)\n" +
+                "                from --splice-properties joinOrder=fixed\n" +
+                "                tab1 --splice-properties index=tabi\n" +
+                "                , tab2 --splice-properties joinStrategy=MERGE, index=tab2i\n" +
+                "                where tab1.a=1 and tab1.b=1 and tab1.b=tab2.c and tab2.a=1\n";
+
+        ResultSet rs = methodWatcher.executeQuery(sql);
+        Assert.assertTrue(rs.next());
+        Assert.assertEquals("incorrect row count", 1, rs.getInt(1));
+    }
+
     private static String getResource(String name) {
         return getResourceDirectory() + "tcph/data/" + name;
     }
