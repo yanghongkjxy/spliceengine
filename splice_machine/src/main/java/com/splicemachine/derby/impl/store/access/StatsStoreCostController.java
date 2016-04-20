@@ -8,6 +8,7 @@ import com.splicemachine.db.iapi.types.DataValueDescriptor;
 import com.splicemachine.db.iapi.types.RowLocation;
 import com.splicemachine.db.impl.store.access.conglomerate.GenericController;
 import com.splicemachine.derby.impl.stats.OverheadManagedTableStatistics;
+import com.splicemachine.derby.impl.stats.PartitionAverage;
 import com.splicemachine.derby.impl.stats.StatisticsStorage;
 import com.splicemachine.derby.impl.stats.StatsConstants;
 import com.splicemachine.derby.impl.store.access.base.OpenSpliceConglomerate;
@@ -218,32 +219,28 @@ public class StatsStoreCostController extends GenericController implements Store
         List<? extends PartitionStatistics> partStats = stats.partitionStatistics();
         long rowCount = 0l;
         int missingStatsCount = partStats.size();
+        long baseRowCount = 0;
         for(PartitionStatistics pStats:partStats){
+            if (pStats instanceof PartitionAverage)
+                continue;
             ColumnStatistics<DataValueDescriptor> cStats = pStats.columnStatistics(columnNumber);
             if(cStats!=null){
                 rowCount+= cStats.getDistribution().rangeSelectivity(start,stop,includeStart,includeStop);
                 missingStatsCount--;
+                baseRowCount += pStats.rowCount();
             }
         }
-        double rc = 0d;
         if(missingStatsCount==partStats.size()){
             /*
              * we have no statistics for this column, so fall back to an arbitrarily configured
              * selectivity criteria
              */
             return SpliceConstants.extraQualifierMultiplier;
-        }else if(missingStatsCount>0){
-            /*
-             * We are missing some statistics, but not others. Fill in the missing
-             * partitions with the average row count from all the other partitions
-             */
-            rc = ((double)rowCount)/(partStats.size()-missingStatsCount);
-            rc*=missingStatsCount;
         }
-        if (stats.rowCount() == 0)
+        if (baseRowCount == 0)
             return 0.0d;
-        rc+=rowCount;
-        double returnValue =rc/stats.rowCount();
+
+        double returnValue =1.0*rowCount/baseRowCount;
         assert returnValue >= 0.0d && returnValue <= 1.0d:"Incorrect Selectivity Fraction Returned from Statistics: Critical Error (DB-3729)";
         return returnValue;
     }
