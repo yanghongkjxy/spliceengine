@@ -75,16 +75,12 @@ public class StatisticsColumnMergeIT extends SpliceUnitTest{
             }
             ps.executeBatch();
         }
-        ps = methodWatcher.prepareStatement("call SYSCS_UTIL.SYSCS_SPLIT_TABLE(?,?)");
-        ps.setString(1, CLASS_NAME);
-        ps.setString(2, "T");
-        ps.execute();
 
         //split the table
         Configuration config = SpliceConfiguration.create();
         admin = new HBaseAdmin(config);
         long[] conglomId = SpliceAdmin.getConglomNumbers(conn, CLASS_NAME, TABLE);
-        hTableName = "splice:" + Long.toString(conglomId[0]);
+        hTableName = Long.toString(conglomId[0]);
         admin.split(hTableName);
         regionInfoList = admin.getTableRegions(Bytes.toBytes(hTableName));
         long totalWaitingTime = 1000 * 60;
