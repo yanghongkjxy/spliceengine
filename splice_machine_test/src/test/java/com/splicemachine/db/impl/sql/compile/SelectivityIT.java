@@ -390,4 +390,9 @@ public class SelectivityIT extends SpliceUnitTest {
             }
         }
     }
+
+    @Test
+    public void testTernaryOperator() throws Exception {
+        rowContainsQuery(2,"explain select distinct trim(cast(c1 as char(5))) as j from ts_nulls","outputRows=5,",methodWatcher);
+    }
 }
