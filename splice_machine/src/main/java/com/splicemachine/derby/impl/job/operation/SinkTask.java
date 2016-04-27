@@ -12,6 +12,7 @@ import com.splicemachine.derby.iapi.sql.execute.SpliceOperationContext;
 import com.splicemachine.derby.iapi.sql.execute.SpliceRuntimeContext;
 import com.splicemachine.derby.impl.job.ZkTask;
 import com.splicemachine.derby.impl.job.coprocessor.RegionTask;
+import com.splicemachine.derby.impl.job.scheduler.SchedulerPriorities;
 import com.splicemachine.derby.impl.sql.execute.operations.DMLWriteOperation;
 import com.splicemachine.derby.impl.sql.execute.operations.InsertOperation;
 import com.splicemachine.derby.impl.sql.execute.operations.OperationSink;
@@ -281,8 +282,6 @@ public class SinkTask extends ZkTask{
         return status.getStatus()==Status.CANCELLED;
     }
 
-    private static final double COST_SCALE_FACTOR=99/Math.log(1000000000000d);
-
     @Override
     public int getPriority(){
         if(instructions==null)
@@ -292,7 +291,7 @@ public class SinkTask extends ZkTask{
         if(cost<=1)
             return 0;
         else
-            return (int)(Math.log(cost)*COST_SCALE_FACTOR+1);
+            return (int)(Math.log(cost)*SchedulerPriorities.INSTANCE.getPriorityScaleFactor()+1);
     }
 
     public HRegion getRegion(){
@@ -321,7 +320,7 @@ public class SinkTask extends ZkTask{
     }
 
     /*******************************************************************************************************/
-		/*private helper methods*/
+    /*private helper methods*/
     private void closeOperationContext(SpliceOperationContext opContext) throws ExecutionException{
         if(opContext!=null){
             try{
