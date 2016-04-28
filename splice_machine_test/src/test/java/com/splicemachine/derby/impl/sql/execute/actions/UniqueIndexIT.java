@@ -480,7 +480,7 @@ public class UniqueIndexIT extends SpliceUnitTest{
         }
     }
 
-    @Test(timeout=10000)
+    @Test(timeout=20000)
     public void testCanInsertThenDeleteEntryInTransaction() throws Exception{
         try(Statement s = conn.createStatement()){
             s.executeUpdate("create unique index "+INDEX_M+" on "+TABLE_M+"(name)");
