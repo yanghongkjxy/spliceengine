@@ -119,7 +119,6 @@ public class SinkTask extends ZkTask{
         //make sure that our task id is properly set
         adjustScan(start,end);
         scan.setMaxVersions();
-
         this.region=rce.getRegion();
         super.prepareTask(start,end,rce,zooKeeper);
     }
@@ -287,7 +286,7 @@ public class SinkTask extends ZkTask{
         if(instructions==null)
             instructions=SpliceUtils.getSpliceObserverInstructions(scan);
         SpliceOperation topOperation=instructions.getTopOperation();
-        int niceness = topOperation.getQueryNiceness();
+        int niceness=topOperation.getQueryNiceness(spliceRuntimeContext);
         if(niceness>=0){
             return niceness;
         }
