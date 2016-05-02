@@ -42,6 +42,7 @@ import org.junit.experimental.categories.Category;
  * Test clone snapshots from the client
  */
 @Category(SlowTest.class)
+@Ignore("DB-5047: attempts to start mini hbase cluster during setup, which fails test in cdh5.4.10.")
 public class SnapshotUtilsTestIT {
   final Log LOG = LogFactory.getLog(getClass());
 
