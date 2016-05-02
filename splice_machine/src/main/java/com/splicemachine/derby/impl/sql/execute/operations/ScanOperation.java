@@ -2,6 +2,7 @@ package com.splicemachine.derby.impl.sql.execute.operations;
 
 import com.google.common.base.Strings;
 import com.splicemachine.constants.FixedSIConstants;
+import com.splicemachine.constants.SIConstants;
 import com.splicemachine.constants.SpliceConstants;
 import com.splicemachine.db.iapi.error.StandardException;
 import com.splicemachine.db.iapi.services.io.FormatableBitSet;
@@ -17,7 +18,7 @@ import com.splicemachine.derby.iapi.sql.execute.SpliceRuntimeContext;
 import com.splicemachine.derby.impl.store.access.hbase.HBaseRowLocation;
 import com.splicemachine.encoding.MultiFieldDecoder;
 import com.splicemachine.pipeline.exception.Exceptions;
-import com.splicemachine.si.api.SIReadRequest;import com.splicemachine.si.api.TransactionalRegion;
+import com.splicemachine.si.api.TransactionalRegion;
 import com.splicemachine.storage.EntryDecoder;
 import com.splicemachine.storage.EntryPredicateFilter;
 import com.splicemachine.utils.SpliceLogUtils;
@@ -55,6 +56,8 @@ public abstract class ScanOperation extends SpliceBaseOperation{
     protected boolean scanSet=false;
     protected String scanQualifiersField;
 
+    private transient String optimizerOverrides;
+
     public ScanOperation(){
         super();
     }
@@ -71,12 +74,14 @@ public abstract class ScanOperation extends SpliceBaseOperation{
                          int indexColItem,
                          boolean oneRowScan,
                          double optimizerEstimatedRowCount,
-                         double optimizerEstimatedCost) throws StandardException{
+                         double optimizerEstimatedCost,
+                         String optimizerOverrides) throws StandardException{
         super(activation,resultSetNumber,optimizerEstimatedRowCount,optimizerEstimatedCost);
         this.lockMode=lockMode;
         this.isolationLevel=isolationLevel;
         this.oneRowScan=oneRowScan;
         this.scanQualifiersField=scanQualifiersField;
+        this.optimizerOverrides = optimizerOverrides;
 
         this.scanInformation=new DerbyScanInformation(resultRowAllocator.getMethodName(),
                 startKeyGetter!=null?startKeyGetter.getMethodName():null,
@@ -121,6 +126,12 @@ public abstract class ScanOperation extends SpliceBaseOperation{
         return columnOrdering;
     }
 
+
+    @Override
+    public String getOptimizerOverrides(){
+        return optimizerOverrides;
+    }
+
     @Override
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException{
         super.readExternal(in);
@@ -128,6 +139,7 @@ public abstract class ScanOperation extends SpliceBaseOperation{
         lockMode=in.readInt();
         isolationLevel=in.readInt();
         scanInformation=(ScanInformation)in.readObject();
+        optimizerOverrides = in.readUTF();
     }
 
     @Override
@@ -137,6 +149,7 @@ public abstract class ScanOperation extends SpliceBaseOperation{
         out.writeInt(lockMode);
         out.writeInt(isolationLevel);
         out.writeObject(scanInformation);
+        out.writeUTF(optimizerOverrides);
     }
 
     @Override
@@ -275,11 +288,11 @@ public abstract class ScanOperation extends SpliceBaseOperation{
 
 
     protected void deSiify(Scan scan){
-		/*
-		 * Remove SI-specific behaviors from the scan, so that we can handle it ourselves correctly.
-		 */
-        //allow SI logic, but not packing, since we do the packing ourselves
-        scan.setAttribute(FixedSIConstants.SI_NEEDED,SIReadRequest.SI.encode());
+        /*
+         * Remove SI-specific behaviors from the scan, so that we can handle it ourselves correctly.
+         */
+        //exclude this from SI treatment, since we're doing it internally
+        scan.setAttribute(SIConstants.SI_NEEDED,null);
         scan.setMaxVersions();
         Map<byte[], NavigableSet<byte[]>> familyMap=scan.getFamilyMap();
         if(familyMap!=null){
