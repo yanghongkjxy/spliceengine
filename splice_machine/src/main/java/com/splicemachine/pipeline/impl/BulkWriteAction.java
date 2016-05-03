@@ -109,7 +109,7 @@ public class BulkWriteAction implements Callable<WriteStats> {
         this.retryCounter=metricFactory.newCounter();
         this.writeTimer=metricFactory.newTimer();
         this.maxFailedAttempts = writeConfiguration.getMaximumRetries();
-        this.maxRejectedAttempts = 2*maxFailedAttempts;
+        this.maxRejectedAttempts = 4*maxFailedAttempts;
     }
 
     @Override
