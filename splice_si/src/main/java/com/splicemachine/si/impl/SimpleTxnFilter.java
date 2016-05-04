@@ -26,6 +26,7 @@ import java.io.IOException;
  *         Date: 6/23/14
  */
 public class SimpleTxnFilter<Data> implements TxnFilter<Data>{
+    private static final Logger LOG=Logger.getLogger(SimpleTxnFilter.class);
     private final TxnSupplier transactionStore;
     private final TxnView myTxn;
     private final DataStore<Data, Mutation, Put, Delete, Get, Scan, IHTable> dataStore;
