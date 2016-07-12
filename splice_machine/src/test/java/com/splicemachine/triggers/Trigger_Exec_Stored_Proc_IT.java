@@ -5,6 +5,7 @@ import java.sql.*;
 import java.util.Collection;
 import java.util.Properties;
 
+import com.splicemachine.derby.test.framework.SpliceUnitTest;
 import com.splicemachine.derby.test.framework.TestConnection;
 import org.junit.*;
 import com.splicemachine.derby.test.framework.SpliceSchemaWatcher;
@@ -21,9 +22,9 @@ import org.sparkproject.guava.collect.Lists;
  * Note the dependency on user-defined stored procedures in this test class.<br/>
  * See {@link TriggerProcs} for instructions on adding/modifying store procedures.
  */
-@Ignore
+//@Ignore
 @RunWith(Parameterized.class)
-public class Trigger_Exec_Stored_Proc_IT {
+public class Trigger_Exec_Stored_Proc_IT  extends SpliceUnitTest {
 
     private static final String SCHEMA = Trigger_Exec_Stored_Proc_IT.class.getSimpleName();
 
@@ -85,7 +86,7 @@ public class Trigger_Exec_Stored_Proc_IT {
     @BeforeClass
     public static void setUpClass() throws Exception {
 
-        String storedProcsJarFilePath = TriggerProcs.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
+        String storedProcsJarFilePath = getHBaseDirectory()+"/target/sql-it/sql-it.jar";
         // Install the jar file of stored procedures.
         File jar = new File(storedProcsJarFilePath);
         Assert.assertTrue("Can't run test without " + storedProcsJarFilePath, jar.exists());
