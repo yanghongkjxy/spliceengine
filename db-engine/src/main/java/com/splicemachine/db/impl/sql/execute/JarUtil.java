@@ -92,11 +92,9 @@ public class JarUtil
 	public static long
 	install(LanguageConnectionContext lcc,
             String schemaName, String sqlName, String externalPath)
-		 throws StandardException
-	{
+		 throws StandardException {
 		JarUtil jutil = new JarUtil(lcc, schemaName, sqlName);
 		InputStream is = null;
-		
 		try {
 			is = openJarURL(externalPath);
 			return jutil.add(is);
@@ -132,7 +130,7 @@ public class JarUtil
         SchemaDescriptor sd = dd.getSchemaDescriptor(schemaName, null, true);
         try {
             notifyLoader(false);
-            dd.invalidateAllSPSPlans();
+            dd.invalidateAllSPSPlans(); // This will break other nodes, must do ddl
             UUID id = Monitor.getMonitor().getUUIDFactory().createUUID();
             final String jarExternalName = JarUtil.mkExternalName(
                 id, schemaName, sqlName, fr.getSeparatorChar());
