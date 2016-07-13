@@ -1,16 +1,15 @@
-Intermediate (manual build) standalone package.
+Intermediate (manual build) standalone packaging instructions.
 
 Steps to prepare
 1.  Make sure you've done a recent complete build so that all jars are available
 2.  Stop (stopdb.sh) and clean (cleandb.sh) first before packaging
 3.  Run copyjars.sh to bring in the lib jars
-4.  Remove libold and copyjars.sh
-5.  Tar up standalone directory
-6.  Deploy wherever
+4.  Remove libold and copyjars.sh and README-pkg files
+5.  Make sure there are (empty) db, log, and log/target directories under standalone
+5.  Tar up standalone directory - it is good to go
 
-Steps to deploy/run
+Steps to deploy/run (more detailed instructions under README file
 1.  Untar wherever
-2.  Make sure there are db, log, log/target, and lib directories under standalone.
 2.  Start database (cd bin; ./startdb.sh)
 3.  After database has started, you can connect (cd bin; ./sqlshell.sh)
 
