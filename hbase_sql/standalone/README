@@ -1,22 +1,31 @@
-Intermediate (manual build) standalone package.
+Welcome to the v2.0 Splice Machine standalone version.
 
-Steps to prepare
-1.  Make sure database is stopped (cd bin; ./stopdb) and clean (cd bin; ./cleandb.sh) - no error checking done yet
-2.  Copy ALL most recent jar files (excluding source) to standalone/lib directory (script TODO)
-3.  Tar up standalone directory
-4.  Deploy wherever
+Note that it currently ONLY supports CentOS or MacOS X at this time.
 
-Steps to deploy/run
-1.  Untar wherever
-2.  Make sure there are db, log, log/target, and lib directories under standalone.
-2.  Start database (cd bin; ./startdb.sh)
-3.  After database has started, you can connect (cd bin; ./sqlshell.sh)
+See the following to set up your CentOS instance:
+http://doc.splicemachine.com/InstallationGuide/InstallStandalone/Intro.InstallStandalone.html
 
-TODO:
-1.  True mvn package (including collection of jars)
-2.  splice-site.xml - needed?
-3.  Anything missing from the package?
-4.  Add error checking and other cleanups
-5.  Does Yarn state have to go into log/target?
+Additionally on CentOS, you will need to make ulimit changes (substituting your login username for
+"splice" in the file referred to below):
 
+$  cat /etc/security/limits.d/91-splice.conf
 
+splice   soft   nproc     16384
+splice   hard   nproc     16384
+splice   soft   nofile    16384
+splice   hard   nofile    16384
+
+Now download the standalone package from S3:
+https://s3.amazonaws.com/splice-temp-transfer/k2beta-standalone/standalone.tar.gz
+
+Steps to deploy/run:
+1.  Untar wherever you like (tar xzf standalone.tar.gz)
+2.  cd standalone
+3.  Start database (cd bin; ./startdb.sh)
+4.  After database has started (i.e. startdb.sh has completed), you can connect (cd bin; ./sqlshell.sh)
+5.  After another minute, the Spark UI will be available at http://<serveraddress-or-localhost>:4040
+6.  To stop the database use the stop command (cd bin; ./stopdb.sh)
+7.  To wipe the database, use the clean command (cd bin; ./cleandb.sh).  Make sure you stop first.
+
+Consult the Community Website (community.splicemachine.com) for tutorials, forums, and other guidance,
+or the documentation (doc.splicemachine.com) for more detailed product information.

@@ -1,0 +1,23 @@
+Intermediate (manual build) standalone package.
+
+Steps to prepare
+1.  Make sure you've done a recent complete build so that all jars are available
+2.  Stop (stopdb.sh) and clean (cleandb.sh) first before packaging
+3.  Run copyjars.sh to bring in the lib jars
+4.  Remove libold and copyjars.sh
+5.  Tar up standalone directory
+6.  Deploy wherever
+
+Steps to deploy/run
+1.  Untar wherever
+2.  Make sure there are db, log, log/target, and lib directories under standalone.
+2.  Start database (cd bin; ./startdb.sh)
+3.  After database has started, you can connect (cd bin; ./sqlshell.sh)
+
+TODO:
+1.  True mvn package (including collection of jars)
+2.  splice-site.xml - needed?
+3.  Anything missing from the package?  So far no
+4.  Does Yarn state have to go into log/target? (low priority)
+
+

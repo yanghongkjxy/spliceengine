@@ -16,7 +16,18 @@
 # anything started from maven exec, i.e., mvn exec:exec
 ##################################################################################
 
+# if server still running, fail - must stop first
+SPID=$(ps -ef | awk '/SpliceTestPlatform|SpliceSinglePlatform|SpliceTestClusterParticipant/ && !/awk/ {print $2}')
+ZPID=$(ps -ef | awk '/zoo/ && !/awk/ {print $2}')
+YPID=$(ps -ef | awk '/spliceYarn|SpliceTestYarnPlatform|CoarseGrainedScheduler|ExecutorLauncher/ && !/awk/ {print $2}')
+KPID=$(ps -ef | awk '/TestKafkaCluster/ && !/awk/ {print $2}')
+if [[ -n ${SPID} || -n ${ZPID} ]] || [[ -n ${YPID} || -n ${KPID} ]]; then
+     echo "Splice Machine is already running.  No action taken."
+     exit 1;
+fi
 
+
+echo "Starting the Splice Machine database..."
 BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 source ${BASE_DIR}/bin/functions.sh
 
@@ -157,4 +168,5 @@ echo
 #    echo
 #  done
 #fi
+echo "done."
 popd > /dev/null

@@ -7,15 +7,17 @@ DB_DIR="${BASE_DIR}"/db
 
 # Clean the Splice Machine database
 
-# TODO need to check if running
-# server still running - must stop first
-#	SPID=$(ps -ef | awk '/SpliceTestPlatform/ && !/awk/ {print $2}')
-#	ZPID=$(ps -ef | awk '/ZooKeeperServerMain/ && !/awk/ {print $2}')
-#    if [[ -n ${SPID} || -n ${ZPID} ]]; then
-#        echo "Splice still running and must be shut down. Run stop-splice.sh"
-#        exit 1;
-#    fi
-#fi
+# if server still running, fail - must stop first
+SPID=$(ps -ef | awk '/SpliceTestPlatform|SpliceSinglePlatform|SpliceTestClusterParticipant/ && !/awk/ {print $2}')
+ZPID=$(ps -ef | awk '/zoo/ && !/awk/ {print $2}')
+YPID=$(ps -ef | awk '/spliceYarn|SpliceTestYarnPlatform|CoarseGrainedScheduler|ExecutorLauncher/ && !/awk/ {print $2}')
+KPID=$(ps -ef | awk '/TestKafkaCluster/ && !/awk/ {print $2}')
+if [[ -n ${SPID} || -n ${ZPID} ]] || [[ -n ${YPID} || -n ${KPID} ]]; then
+     echo "Splice still running and must be shut down. Run stopdb.sh"
+     exit 1;
+fi
+
+echo "Cleaning the Splice Machine database..."
 
 /bin/rm -rf "${BASE_DIR}"/log/target/SpliceTestYarnPlatform
 /bin/rm -rf "${DB_DIR}"/zookeeper
@@ -23,3 +25,4 @@ DB_DIR="${BASE_DIR}"/db
 # TODO do I have to do this?
 # /bin/rm -rf "${BASE_DIR}"/lib/yarn-site.xml
 
+echo "done."
