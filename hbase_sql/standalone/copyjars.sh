@@ -10,16 +10,16 @@
 BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 
 # TODO - bulletproof
-mv lib libold
+rm -r lib
 mkdir lib
+
 cp ../target/dependency/*.jar lib
 cp ../target/hbase_sql*.jar lib
-cd lib
 
 # TODO - should remove others as well
-rm *mem*
+rm -f lib/*mem*
 
 # these hose CentOS
-rm *jasper*
+rm -f lib/*jasper*
 
 
