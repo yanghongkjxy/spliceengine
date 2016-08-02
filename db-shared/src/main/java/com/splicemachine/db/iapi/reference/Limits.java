@@ -31,12 +31,12 @@ public interface Limits
         * Various fixed Limits. DB2 related limits are prefixed with "DB2_".
         */
 
-	public static final int DB2_MAX_TRIGGER_RECURSION = 16; /* Maximum nesting level for triggers */
+	int DB2_MAX_TRIGGER_RECURSION = 16; /* Maximum nesting level for triggers */
 
 	/** Maximum number of indexes on a table */
-	public static final int DB2_MAX_INDEXES_ON_TABLE = 32767;
+	int DB2_MAX_INDEXES_ON_TABLE = 32767;
 	/* Maximum number of columns in a table */
-	public static final int DB2_MAX_COLUMNS_IN_TABLE = 1012;
+	int DB2_MAX_COLUMNS_IN_TABLE =1<<17 ; //set to 131K
 
 	/* Maximum number of columns in a view */
 	public static final int DB2_MAX_COLUMNS_IN_VIEW = 5000;
