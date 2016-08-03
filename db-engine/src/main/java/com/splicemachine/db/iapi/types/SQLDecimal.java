@@ -43,6 +43,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 import com.splicemachine.db.iapi.types.DataValueFactoryImpl.Format;
+import com.yahoo.sketches.theta.UpdateSketch;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.OrderedBytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
@@ -1255,5 +1256,9 @@ public final class SQLDecimal extends NumberDataType implements VariableSizeData
      */
 	public void setScale(int scale) {
 		this.scale = scale;
+	}
+
+	@Override
+	public void updateThetaSketch(UpdateSketch updateSketch) {
 	}
 }

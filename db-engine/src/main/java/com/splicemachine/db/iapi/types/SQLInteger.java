@@ -46,6 +46,7 @@ import java.sql.ResultSet;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import com.splicemachine.db.iapi.types.DataValueFactoryImpl.Format;
+import com.yahoo.sketches.theta.UpdateSketch;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.OrderedBytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
@@ -786,6 +787,11 @@ public final class SQLInteger
 				setToNull();
 		else
 			value = OrderedBytes.decodeInt32(src);
+	}
+
+	@Override
+	public void updateThetaSketch(UpdateSketch updateSketch) {
+		updateSketch.update(value);
 	}
 	
 }

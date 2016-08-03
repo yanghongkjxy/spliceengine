@@ -52,6 +52,7 @@ import java.sql.SQLException;
 
 import java.util.Calendar;
 import com.splicemachine.db.iapi.types.DataValueFactoryImpl.Format;
+import com.yahoo.sketches.theta.UpdateSketch;
 import org.apache.commons.lang.SerializationUtils;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.OrderedBytes;
@@ -704,4 +705,11 @@ public class UserType extends DataType
 		else
 			value = SerializationUtils.deserialize(OrderedBytes.decodeBlobVar(src));
 	}
+
+	@Override
+	public void updateThetaSketch(UpdateSketch updateSketch) {
+		if (!isNull())
+		updateSketch.update(SerializationUtils.serialize(SerializationUtils.serialize((Serializable)value)));
+	}
+
 }
