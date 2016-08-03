@@ -71,8 +71,8 @@
         <obfuscate.si.tag/>
         <ij.connection.port>1527</ij.connection.port>
         <skip.staticanalysis>${skip.sa}</skip.staticanalysis>
-        <maven.compiler.source>1.7</maven.compiler.source>
-        <maven.compiler.target>1.7</maven.compiler.target>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
         <spark.version>1.6.2</spark.version>
         <!-- Dependency added so Splice Machine will use the shaded libraries for Guava and Netty -->
         <!-- TODO: Remove CDH version dependency in favor of generic apache hbase spark assembly -->
@@ -148,11 +148,6 @@
             <dependency>
                 <groupId>com.splicemachine</groupId>
                 <artifactId>utilities</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.splicemachine</groupId>
-                <artifactId>stats</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -471,8 +466,8 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.3</version>
                     <configuration>
-                        <source>1.7</source>
-                        <target>1.7</target>
+                        <source>1.8</source>
+                        <target>1.8</target>
                         <encoding>UTF-8</encoding>
                         <compilerArgs>
                             <arg>-XDignore.symbol.file</arg>
@@ -642,7 +637,6 @@
                 <module>sqlj-it-procs</module>
                 <module>txn-it-procs</module>
                 <module>utilities</module>
-                <module>stats</module>
                 <module>db-build</module>
                 <module>db-shared</module>
                 <module>db-engine</module>
