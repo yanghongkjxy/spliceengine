@@ -33,7 +33,6 @@ import com.splicemachine.db.iapi.sql.execute.ExecRow;
 import com.splicemachine.db.iapi.sql.execute.ExecutionFactory;
 import com.splicemachine.db.iapi.types.*;
 import com.splicemachine.db.impl.sql.execute.ValueRow;
-import com.yahoo.sketches.theta.Sketch;
 import java.sql.Types;
 
 /**
@@ -46,9 +45,7 @@ public class SYSCOLUMNSTATISTICSRowFactory extends CatalogRowFactory {
     public static final int CONGLOMID      = 1;
     public static final int PARTITIONID    = 2;
     public static final int COLUMNID       = 3;
-    public static final int QUANTILE_DATA           = 4;
-    public static final int FREQUENCY_DATA           = 5;
-    public static final int THETA_DATA           = 6;
+    public static final int DATA           = 4;
 
     protected static final int SYSCOLUMNSTATISTICS_INDEX1_ID = 0;
     protected static final int SYSCOLUMNSTATISTICS_INDEX2_ID = 1;
@@ -87,17 +84,12 @@ public class SYSCOLUMNSTATISTICSRowFactory extends CatalogRowFactory {
             row.setColumn(CONGLOMID, new SQLLongint(cd.getConglomerateId()));
             row.setColumn(PARTITIONID, new SQLVarchar(cd.getPartitionId()));
             row.setColumn(COLUMNID, new SQLInteger(cd.getColumnId()));
-            row.setColumn(QUANTILE_DATA,new UserType(cd.getQuantileSketch()));
-            row.setColumn(FREQUENCY_DATA,new UserType(cd.getFrequencySketch()));
-            row.setColumn(THETA_DATA,new UserType(cd.getThetaSketch()));
+            row.setColumn(DATA, new UserType(cd.getStats()));
         } else {
             row.setColumn(CONGLOMID,new SQLLongint());
             row.setColumn(PARTITIONID,new SQLVarchar());
             row.setColumn(COLUMNID,new SQLInteger());
-            row.setColumn(QUANTILE_DATA,new UserType());
-            row.setColumn(FREQUENCY_DATA,new UserType());
-            row.setColumn(THETA_DATA,new UserType());
-
+            row.setColumn(DATA,new UserType());
         }
         return row;
     }
@@ -110,16 +102,13 @@ public class SYSCOLUMNSTATISTICSRowFactory extends CatalogRowFactory {
         String partitionId = col.getString();
         col = row.getColumn(COLUMNID);
         int colNum = col.getInt();
-        DataValueDescriptor col1 = row.getColumn(QUANTILE_DATA);
-        DataValueDescriptor col2 = row.getColumn(FREQUENCY_DATA);
-        DataValueDescriptor col3 = row.getColumn(THETA_DATA);
+        col = row.getColumn(DATA);
+        Object colStats = (Object)col.getObject();
+
         return new ColumnStatsDescriptor(conglomId,
                 partitionId,
                 colNum,
-                (com.yahoo.sketches.quantiles.ItemsSketch)col1.getObject(),
-                (com.yahoo.sketches.frequencies.ItemsSketch)col2.getObject(),
-                (Sketch) col3.getObject()
-                );
+                colStats);
     }
 
     @Override
@@ -128,13 +117,8 @@ public class SYSCOLUMNSTATISTICSRowFactory extends CatalogRowFactory {
                 SystemColumnImpl.getColumn("CONGLOM_ID", Types.BIGINT, false),
                 SystemColumnImpl.getColumn("PARTITION_ID",Types.VARCHAR,false),
                 SystemColumnImpl.getColumn("COLUMN_ID",Types.INTEGER,false),
-                SystemColumnImpl.getJavaColumn("QUANTILE_DATA",
-                        com.yahoo.sketches.quantiles.ItemsSketch.class.getCanonicalName(),false),
-                SystemColumnImpl.getJavaColumn("FREQUENCY_DATA",
-                        com.yahoo.sketches.frequencies.ItemsSketch.class.getCanonicalName(),false),
-                SystemColumnImpl.getJavaColumn("THETA_DATA",
-                        Sketch.class.getCanonicalName(),false)
-
+                SystemColumnImpl.getJavaColumn("DATA",
+                        "com.splicemachine.stats.ColumnStatistics",false)
         };
     }
 

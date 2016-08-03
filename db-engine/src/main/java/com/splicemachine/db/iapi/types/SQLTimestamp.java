@@ -36,7 +36,6 @@ import com.splicemachine.db.iapi.services.i18n.LocaleFinder;
 import com.splicemachine.db.iapi.services.cache.ClassSize;
 import com.splicemachine.db.iapi.util.StringUtil;
 import com.splicemachine.db.iapi.util.ReuseFactory;
-import com.yahoo.sketches.theta.UpdateSketch;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.OrderedBytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
@@ -1657,10 +1656,4 @@ public final class SQLTimestamp extends DataType
 				setIsNull(false);
 			}
 	    }
-
-	@Override
-	public void updateThetaSketch(UpdateSketch updateSketch) {
-		updateSketch.update(new int[]{encodedDate,encodedTime,nanos});
-	}
-
 }

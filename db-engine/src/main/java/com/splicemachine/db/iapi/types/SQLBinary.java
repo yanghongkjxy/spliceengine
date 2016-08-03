@@ -40,7 +40,6 @@ import com.splicemachine.db.iapi.services.io.InputStreamUtil;
 import com.splicemachine.db.iapi.services.sanity.SanityManager;
 import com.splicemachine.db.iapi.services.i18n.MessageService;
 import com.splicemachine.db.iapi.services.cache.ClassSize;
-import com.yahoo.sketches.theta.UpdateSketch;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.OrderedBytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
@@ -1441,8 +1440,4 @@ abstract class SQLBinary
 			dataValue = OrderedBytes.decodeBlobVar(src);
 	}
 
-	@Override
-	public void updateThetaSketch(UpdateSketch updateSketch) {
-		updateSketch.update(dataValue);
-	}
 }

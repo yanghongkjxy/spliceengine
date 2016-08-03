@@ -25,14 +25,7 @@
 
 package com.splicemachine.db.iapi.sql.dictionary;
 
-import com.yahoo.sketches.quantiles.ItemsSketch;
-import com.yahoo.sketches.theta.Sketch;
-
 /**
- *
- * Column Statistics Descriptor for the column statistics descriptor.
- *
- *
  * @author Scott Fines
  *         Date: 2/25/15
  */
@@ -40,46 +33,20 @@ public class ColumnStatsDescriptor  extends TupleDescriptor {
     private long conglomerateId;
     private String partitionId;
     private int columnId;
-    private com.yahoo.sketches.quantiles.ItemsSketch quantileSketch;
-    private com.yahoo.sketches.frequencies.ItemsSketch frequencySketch;
-    private Sketch thetaSketch;
+    private Object object;
 
     public ColumnStatsDescriptor(long conglomerateId,
                                  String partitionId,
                                  int columnId,
-                                 com.yahoo.sketches.quantiles.ItemsSketch quantileSketch,
-                                 com.yahoo.sketches.frequencies.ItemsSketch frequencySketch,
-                                 Sketch thetaSketch) {
+                                 Object object) {
         this.conglomerateId = conglomerateId;
         this.partitionId = partitionId;
         this.columnId = columnId;
-        this.quantileSketch = quantileSketch;
-        this.frequencySketch = frequencySketch;
-        this.thetaSketch = thetaSketch;
+        this.object = object;
     }
 
-    public int getColumnId() {
-        return columnId;
-    }
-
-    public long getConglomerateId() {
-        return conglomerateId;
-    }
-
-    public String getPartitionId() {
-        return partitionId;
-    }
-
-    public ItemsSketch getQuantileSketch() {
-        return quantileSketch;
-    }
-
-    public com.yahoo.sketches.frequencies.ItemsSketch getFrequencySketch() {
-        return frequencySketch;
-    }
-
-    public Sketch getThetaSketch() {
-        return thetaSketch;
-    }
-
+    public int getColumnId() { return columnId; }
+    public long getConglomerateId() { return conglomerateId; }
+    public String getPartitionId() { return partitionId; }
+    public Object getStats() { return object; }
 }

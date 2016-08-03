@@ -15,9 +15,6 @@
 package com.splicemachine.db.iapi.types;
 
 import com.splicemachine.db.iapi.error.StandardException;
-import com.yahoo.sketches.frequencies.ErrorType;
-import com.yahoo.sketches.frequencies.ItemsSketch;
-import com.yahoo.sketches.theta.UpdateSketch;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
@@ -28,8 +25,6 @@ import org.apache.spark.sql.catalyst.expressions.codegen.UnsafeRowWriter;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
-
-import java.util.Arrays;
 
 /**
  *
@@ -113,33 +108,5 @@ public class SQLDoubleTest {
                 Assert.assertEquals("1 incorrect",value1.getDouble(),value1a.getDouble(),0.0d);
                 Assert.assertEquals("2 incorrect",value2.getDouble(),value2a.getDouble(),0.0d);
             }
-        @Test
-        public void testStatistics() throws StandardException {
-                SQLDouble value1 = new SQLDouble();
-                DataValueDescriptorStatistics stats = new DataValueDescriptorStatisticsImpl(value1);
-                SQLDouble sqlDouble;
-                for (int i = 1; i<= 10000; i++) {
-                        if (i>=5000 && i < 6000)
-                                sqlDouble = new SQLDouble();
-                        else if (i>=1000 && i< 2000)
-                                sqlDouble = new SQLDouble(1000+i%20);
-                        else
-                                sqlDouble = new SQLDouble(i);
-                        stats.update(sqlDouble);
-                }
-                Assert.assertEquals(1000,stats.nullCount());
-                Assert.assertEquals(9000,stats.notNullCount());
-                Assert.assertEquals(10000,stats.totalCount());
-                Assert.assertEquals(new SQLDouble(10000),stats.maxValue());
-                Assert.assertEquals(new SQLDouble(1),stats.minValue());
-                Assert.assertEquals(1000,stats.selectivity(null));
-                Assert.assertEquals(1000,stats.selectivity(new SQLDouble()));
-                Assert.assertEquals(51,stats.selectivity(new SQLDouble(1010)));
-                Assert.assertEquals(1,stats.selectivity(new SQLDouble(9000)));
-                Assert.assertEquals(1000.0d,(double) stats.rangeSelectivity(new SQLDouble(1000),new SQLDouble(2000),true,false),50.0d);
-                Assert.assertEquals(500.0d,(double) stats.rangeSelectivity(new SQLDouble(),new SQLDouble(500),true,false),50.0d);
-                Assert.assertEquals(4000.0d,(double) stats.rangeSelectivity(new SQLDouble(5000),new SQLDouble(),true,false),50.0d);
-        }
-
-
+    
 }
