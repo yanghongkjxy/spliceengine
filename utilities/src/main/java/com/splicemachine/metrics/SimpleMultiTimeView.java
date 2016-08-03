@@ -27,6 +27,7 @@ public class SimpleMultiTimeView implements MultiTimeView {
 		private long totalUserTime;
 		private long startTimestamp = Long.MAX_VALUE;
 		private long stopTimestamp;
+	private long numEntries;
 
 		private final LongLongFolder wallTimeFolder;
 		private final LongLongFolder cpuFolder;
@@ -62,5 +63,11 @@ public class SimpleMultiTimeView implements MultiTimeView {
 				totalUserTime = userFolder.fold(totalUserTime,timeView.getUserTime());
 				startTimestamp = startTimestampFolder.fold(startTimestamp,timeView.getStartWallTimestamp());
 				stopTimestamp = stopTimestampFolder.fold(stopTimestamp,timeView.getStopWallTimestamp());
+			numEntries++;
 		}
+
+	@Override
+	public long getNumEntries(){
+		return numEntries;
+	}
 }

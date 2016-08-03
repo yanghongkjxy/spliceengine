@@ -97,7 +97,13 @@ public class Metrics {
 
 		private static MultiTimeView NOOP_MULTI_TIME_VIEW = new MultiTimeView() {
 				@Override public void update(TimeView timeView) {  }
-				@Override public long getWallClockTime() { return 0; }
+
+			@Override
+			public long getNumEntries(){
+				return 0L;
+			}
+
+			@Override public long getWallClockTime() { return 0; }
 				@Override public long getCpuTime() { return 0; }
 				@Override public long getUserTime() { return 0; }
 				@Override public long getStopWallTimestamp() { return 0; }
