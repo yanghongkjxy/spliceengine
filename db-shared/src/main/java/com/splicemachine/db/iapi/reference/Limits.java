@@ -45,7 +45,7 @@ public interface Limits
 	public static final int DB2_MAX_PARAMS_IN_STORED_PROCEDURE = 90;
 
 	/* Maximum number of elements in a select list */
-	public static final int DB2_MAX_ELEMENTS_IN_SELECT_LIST = 1012;
+	public static final int DB2_MAX_ELEMENTS_IN_SELECT_LIST = DB2_MAX_COLUMNS_IN_TABLE;
 	/* Maximum number of columns in a group by list */
 	public static final int DB2_MAX_ELEMENTS_IN_GROUP_BY = 32677;
 	/* Maximum number of columns in an order by list */
