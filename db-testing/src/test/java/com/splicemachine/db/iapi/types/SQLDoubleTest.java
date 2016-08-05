@@ -15,9 +15,8 @@
 package com.splicemachine.db.iapi.types;
 
 import com.splicemachine.db.iapi.error.StandardException;
-import com.yahoo.sketches.frequencies.ErrorType;
-import com.yahoo.sketches.frequencies.ItemsSketch;
-import com.yahoo.sketches.theta.UpdateSketch;
+import com.splicemachine.db.iapi.stats.ItemStatistics;
+import com.splicemachine.db.iapi.stats.ColumnStatisticsImpl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
@@ -28,8 +27,6 @@ import org.apache.spark.sql.catalyst.expressions.codegen.UnsafeRowWriter;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
-
-import java.util.Arrays;
 
 /**
  *
@@ -114,9 +111,9 @@ public class SQLDoubleTest {
                 Assert.assertEquals("2 incorrect",value2.getDouble(),value2a.getDouble(),0.0d);
             }
         @Test
-        public void testStatistics() throws StandardException {
+        public void testColumnStatistics() throws StandardException {
                 SQLDouble value1 = new SQLDouble();
-                DataValueDescriptorStatistics stats = new DataValueDescriptorStatisticsImpl(value1);
+                ItemStatistics stats = new ColumnStatisticsImpl(value1);
                 SQLDouble sqlDouble;
                 for (int i = 1; i<= 10000; i++) {
                         if (i>=5000 && i < 6000)

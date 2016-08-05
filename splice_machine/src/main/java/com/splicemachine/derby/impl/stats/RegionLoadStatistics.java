@@ -32,6 +32,7 @@ import com.splicemachine.storage.PartitionLoad;
  *         Date: 6/8/15
  */
 public class RegionLoadStatistics{
+    /*
     public static GlobalStatistics getParameterStatistics(String table, List<Partition> partitions) throws StandardException{
         SConfiguration config =EngineDriver.driver().getConfiguration();
 
@@ -74,9 +75,9 @@ public class RegionLoadStatistics{
             partitionStats.add(FakedPartitionStatistics.create(table,partition.getName(),
                     numRows,
                     heapSize,
-                    Collections.<ColumnStatistics>emptyList()));
+                    Collections.<ItemStatistics>emptyList()));
         }
         return new GlobalStatistics(table,partitionStats);
     }
-
+    */
 }

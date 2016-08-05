@@ -26,7 +26,6 @@ import com.splicemachine.derby.impl.store.access.base.OpenSpliceConglomerate;
 import com.splicemachine.derby.impl.store.access.base.SpliceConglomerate;
 import com.splicemachine.derby.impl.store.access.hbase.HBaseConglomerate;
 import com.splicemachine.si.api.txn.TxnView;
-import com.splicemachine.stats.ColumnStatistics;
 import com.splicemachine.uuid.Snowflake;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -36,25 +35,17 @@ import java.util.BitSet;
  * @author Scott Fines
  *         Date: 3/10/15
  */
-public class IndexStatsCostController extends StatsStoreCostController {
+public class IndexStatsCostController {
+    /*
     private final int totalColumns;
     private final double baseRowIdLength;
     private final IndexTableStatistics indexStats;
     private int[] indexColToHeapColMap;
     private final OverheadManagedTableStatistics baseTableStatistics;
-
     @SuppressFBWarnings(value = "DLS_DEAD_LOCAL_STORE",justification = "Potential side effect variable, even though it's dead")
     public IndexStatsCostController(ConglomerateDescriptor cd,
                                     OpenSpliceConglomerate indexConglomerate,
                                     Conglomerate heapConglomerate) throws StandardException {
-        /*
-         * This looks a bit weird, because indexConglomerate is actually the index conglomerate,
-         * so our super class is actually looking at the cost to just scan in the index. We
-         * need to use the base table statistics in order to get the proper column
-         * selectivity, so we lookup the base table statistics here, but we use the index
-         * statistics when estimating the fetch cost.
-         *
-         */
         super(indexConglomerate);
         BaseSpliceTransaction bst = (BaseSpliceTransaction)indexConglomerate.getTransaction();
         @SuppressWarnings("unused") TxnView txn = bst.getActiveStateTxn();
@@ -118,7 +109,7 @@ public class IndexStatsCostController extends StatsStoreCostController {
 
     @Override
     public long cardinality(int columnNumber){
-        ColumnStatistics<DataValueDescriptor> colStats=getColumnStats(baseTableStatistics,columnNumber);
+        ItemStatistics<DataValueDescriptor> colStats=getColumnStats(baseTableStatistics,columnNumber);
         if(colStats!=null)
             return colStats.cardinality();
         return 0;
@@ -133,5 +124,6 @@ public class IndexStatsCostController extends StatsStoreCostController {
     public double baseRowCount() {
         return baseTableStatistics.rowCount();
     }
+    */
 
 }

@@ -2,22 +2,22 @@ package com.splicemachine.db.impl.sql.execute;
 
 import com.splicemachine.db.iapi.error.StandardException;
 import com.splicemachine.db.iapi.sql.execute.ExecRow;
+import com.splicemachine.db.iapi.stats.ItemStatistics;
 import com.splicemachine.db.iapi.types.DataValueDescriptor;
-import com.splicemachine.db.iapi.types.DataValueDescriptorStatistics;
-import com.splicemachine.db.iapi.types.DataValueDescriptorStatisticsImpl;
+import com.splicemachine.db.iapi.stats.ColumnStatisticsImpl;
 /**
  * Created by jleach on 8/1/16.
  */
 public class StatisticsRow extends ValueRow {
-    private DataValueDescriptorStatistics[] statistics;
+    private ItemStatistics[] statistics;
 
     public StatisticsRow(ExecRow execRow) throws StandardException {
         assert execRow!=null:"ExecRow passed in is null";
         this.setRowArray(execRow.getRowArray());
-        statistics = new DataValueDescriptorStatistics[execRow.nColumns()];
+        statistics = new ItemStatistics[execRow.nColumns()];
         for (int i = 0; i< execRow.nColumns(); i++) {
             DataValueDescriptor dvd = execRow.getColumn(i+1);
-            statistics[i] = new DataValueDescriptorStatisticsImpl(dvd);
+            statistics[i] = new ColumnStatisticsImpl(dvd);
         }
     }
 
