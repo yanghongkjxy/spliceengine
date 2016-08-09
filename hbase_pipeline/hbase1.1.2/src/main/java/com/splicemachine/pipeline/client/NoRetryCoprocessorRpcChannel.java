@@ -15,6 +15,7 @@
 
 package com.splicemachine.pipeline.client;
 
+import com.google.common.base.Throwables;
 import com.google.protobuf.*;
 import com.splicemachine.hbase.SpliceRpcController;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -26,6 +27,7 @@ import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.SpliceRetryingCaller;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -35,6 +37,9 @@ import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
+
+import static org.apache.hadoop.hbase.protobuf.ProtobufUtil.getRemoteException;
+import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
 
 /**
  * @author Scott Fines
@@ -88,7 +93,20 @@ public class NoRetryCoprocessorRpcChannel extends CoprocessorRpcChannel {
 	}
 
 
-	@Override
+    //	@Override --diff. versions of HDP either do or do not require this method signature
+    protected Message callExecService(Descriptors.MethodDescriptor methodDescriptor,
+                                      Message message,Message responsePrototype) throws IOException{
+        SpliceRpcController rpcController = new SpliceRpcController();
+        Message m = callExecService(rpcController,methodDescriptor,message,responsePrototype);
+        if(rpcController.failed()){
+            Throwable t=Throwables.getRootCause(rpcController.getThrowable());
+            if(t instanceof IOException) throw (IOException)t;
+            else throw new IOException(t);
+        }
+        return m;
+    }
+
+    //	@Override --diff. versions of HDP either do or do not require this method signature
 	protected Message callExecService(final RpcController rpcController,Descriptors.MethodDescriptor method,Message request,Message responsePrototype) throws IOException {
 		if (LOG.isTraceEnabled()) {
 			LOG.trace("Call: "+method.getName()+", "+request.toString());
@@ -110,9 +128,16 @@ public class NoRetryCoprocessorRpcChannel extends CoprocessorRpcChannel {
 						return call(); //TODO -sf- is this correct? I think we need to do something with timeouts here
 					}
 
-					public ClientProtos.CoprocessorServiceResponse call() throws Exception {
+					ClientProtos.CoprocessorServiceResponse call() throws Exception {
 						byte[] regionName = getLocation().getRegionInfo().getRegionName();
-						return ProtobufUtil.execService(rpcController,getStub(),call,regionName);
+                        ClientProtos.CoprocessorServiceRequest request = ClientProtos.CoprocessorServiceRequest.newBuilder()
+                                .setCall(call).setRegion(
+                                        RequestConverter.buildRegionSpecifier(REGION_NAME, regionName)).build();
+                        try {
+                            return getStub().execService(rpcController, request);
+                        } catch (ServiceException se) {
+                            throw getRemoteException(se);
+                        }
 					}
 				};
 		SpliceRetryingCall<ClientProtos.CoprocessorServiceResponse> wrapperCall = new SpliceRetryingCaller<>(callable);

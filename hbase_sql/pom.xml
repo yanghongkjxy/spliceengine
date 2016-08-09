@@ -542,7 +542,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>1.9.1</version>
+                <version>1.12</version>
                 <executions>
                     <execution>
                         <id>add-platform-source</id>
@@ -566,6 +566,9 @@
                             <sources>
                                 <source>${envHbase}/src/test/java</source>
                             </sources>
+                            <resources>
+                                <directory>${envHbase}/src/test/resources</directory>
+                            </resources>
                         </configuration>
                     </execution>
                 </executions>
@@ -574,6 +577,9 @@
         <resources>
             <resource>
                 <directory>${envHbase}/src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>${envHbase}/src/test/resources</directory>
             </resource>
             <resource>
                 <directory>src/main/resources</directory>
@@ -805,6 +811,7 @@
                                 <argument>-Dcom.sun.management.jmxremote.port=10102</argument>
                                 <argument>-Dsplice.authentication=NATIVE</argument>
                                 <argument>-Dcom.splicemachine.enableLegacyAsserts=true</argument>
+                                <argument>-Dplatform=${envClassifier}</argument>
                                 <argument>-Xmx6g</argument>
                                 <argument>-Xms1g</argument>
                                 <!-- Spark Sys props -->

@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -234,7 +235,7 @@ public class HBaseSITestEnv implements SITestEnv{
         configuration.setInt("hbase.regionserver.port", basePort + 2);
         configuration.setInt("hbase.regionserver.info.port", basePort + 3);
 
-        testUtility.startMiniCluster(1);
+        testUtility.startMiniCluster(1,1,0,null,null,null,false);
         ZkUtils.getZkManager().initialize(HConfiguration.getConfiguration());
         ZkUtils.initializeZookeeper();
     }

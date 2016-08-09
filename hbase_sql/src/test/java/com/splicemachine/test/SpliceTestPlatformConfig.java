@@ -20,7 +20,9 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 import static com.google.common.collect.Lists.transform;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.ServiceLoader;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -43,6 +45,7 @@ import com.splicemachine.derby.hbase.SpliceIndexObserver;
 import com.splicemachine.si.data.hbase.coprocessor.SIObserver;
 import com.splicemachine.si.data.hbase.coprocessor.TxnLifecycleEndpoint;
 import com.splicemachine.utils.BlockingProbeEndpoint;
+import org.apache.log4j.Logger;
 
 /**
  * HBase configuration for SpliceTestPlatform and SpliceTestClusterParticipant.
@@ -198,8 +201,27 @@ class SpliceTestPlatformConfig {
         //
         config.setBoolean("hbase.snapshot.enabled", true);
 
+        //Distribution-specific configuration
+        configureDistributionLogic(config);
+
         HConfiguration.reloadConfiguration(config);
         return HConfiguration.unwrapDelegate();
+    }
+
+    private static void configureDistributionLogic(Configuration config){
+        ServiceLoader<PlatformConfigurator> loader = ServiceLoader.load(PlatformConfigurator.class);
+        Iterator<PlatformConfigurator> cfgs = loader.iterator();
+        if(!cfgs.hasNext()){
+            Logger.getLogger(SpliceTestPlatformConfig.class).info("No platform configurators found");
+            return;
+        }
+
+        PlatformConfigurator next=cfgs.next();
+        Logger.getLogger(SpliceTestPlatformConfig.class).info("Found platform configurator "+ next);
+        next.platformSpecificConfigure(config);
+        if(cfgs.hasNext()) //only allow one platform
+            throw new IllegalArgumentException("Does not allow multiple platform-specific configurations!");
+
     }
 
 
