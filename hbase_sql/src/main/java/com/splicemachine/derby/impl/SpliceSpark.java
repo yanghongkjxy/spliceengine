@@ -16,6 +16,9 @@
 package com.splicemachine.derby.impl;
 
 import java.io.IOException;
+
+import com.splicemachine.pipeline.client.SpliceRpcClient;
+import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -78,6 +81,7 @@ public class SpliceSpark {
 
                 //make sure the configuration is correct
                 SConfiguration config=driver.getConfiguration();
+                ((HConfiguration)config).unwrapDelegate().set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY,SpliceRpcClient.class.getCanonicalName());
                 //boot derby components
                 new EngineLifecycleService(new DistributedDerbyStartup(){
                     @Override public void distributedStart() throws IOException{ }

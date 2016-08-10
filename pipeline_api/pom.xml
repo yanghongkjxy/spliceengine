@@ -40,6 +40,16 @@
             <artifactId>commons-lang3</artifactId>
             <version>3.1</version>
         </dependency>
+        <dependency>
+            <groupId>com.splicemachine</groupId>
+            <artifactId>utilities</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.spark</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

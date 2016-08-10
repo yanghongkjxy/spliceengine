@@ -853,6 +853,7 @@
                                 <argument>-Dsplice.spark.executor.extraJavaOptions=-XX:MaxPermSize=128m
                                     -Dhbase.rootdir=${project.build.directory}/hbase
                                     -Dlog4j.configuration=${log4j.config.uri}
+                                    -Dplatform=${envClassifier}
                                     -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=4020
                                     -enableassertions
                                 </argument>
@@ -925,6 +926,7 @@
                                 <argument>-Djava.awt.headless=true</argument>
                                 <argument>-Dlog4j.configuration=${log4j.config.uri}</argument>
                                 <argument>-Djava.net.preferIPv4Stack=true</argument>
+                                <argument>-Dplatform=${envClassifier}</argument>
                                 <argument>-Xmx4g</argument>
                                 <argument>-Xmn128m</argument>
                                 <argument>-XX:+UseConcMarkSweepGC</argument>

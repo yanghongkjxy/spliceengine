@@ -19,10 +19,13 @@ import com.splicemachine.derby.impl.SpliceSpark;
 import com.splicemachine.derby.stream.iapi.OperationContext;
 import org.apache.log4j.Logger;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.rdd.RDD;
+import org.apache.spark.serializer.JavaSerializationStream;
 import scala.collection.JavaConversions;
 import scala.collection.Seq;
 import scala.reflect.ClassTag;
 
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -126,7 +129,9 @@ public class StreamableRDD<T> {
             @Override
             public Object call() {
                 SpliceSpark.getContext().sc().setLocalProperties(properties);
-                String[] results = (String[]) SpliceSpark.getContext().sc().runJob(streamed.rdd(), new FunctionAdapter(), objects, tag);
+                RDD<String> rdd=streamed.rdd();
+                FunctionAdapter functionAdapter=new FunctionAdapter();
+                String[] results = (String[]) SpliceSpark.getContext().sc().runJob(rdd,functionAdapter, objects, tag);
                 for (String o2: results) {
                     if ("STOP".equals(o2)) {
                         return "STOP";
@@ -136,5 +141,6 @@ public class StreamableRDD<T> {
             }
         });
     }
+
 
 }

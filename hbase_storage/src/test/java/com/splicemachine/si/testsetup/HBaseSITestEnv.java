@@ -18,6 +18,7 @@ package com.splicemachine.si.testsetup;
 import java.io.IOException;
 import java.util.Random;
 
+import com.splicemachine.access.api.SConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -78,7 +79,7 @@ public class HBaseSITestEnv implements SITestEnv{
     private Clock clock;
     private TxnStore txnStore;
     private TimestampSource timestampSource;
-    private HBaseTestingUtility testUtility;
+    protected HBaseTestingUtility testUtility;
 
     public HBaseSITestEnv(){
         this(Level.ERROR);
@@ -87,7 +88,6 @@ public class HBaseSITestEnv implements SITestEnv{
     public HBaseSITestEnv(Level baseLoggingLevel){
         configureLogging(baseLoggingLevel);
         Configuration conf = HConfiguration.unwrapDelegate();
-        conf.set("fs.defaultFS", "file:///");
         try{
             startCluster(conf);
             SIEnvironment hEnv=loadSIEnvironment();
@@ -207,17 +207,7 @@ public class HBaseSITestEnv implements SITestEnv{
 
     private void startCluster(Configuration conf) throws Exception{
         int basePort = getNextBasePort();
-        // -> MapR work-around
-        conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "file:///");
-        conf.set("fs.default.name", "file:///");
-        conf.set("fs.hdfs.client", "org.apache.hadoop.hdfs.DistributedFileSystem");
-        System.setProperty("zookeeper.sasl.client", "false");
-        System.setProperty("zookeeper.sasl.serverconfig", "fake");
-        // <- MapR work-around
-        conf.setInt("hbase.master.port", basePort);
-        conf.setInt("hbase.master.info.port", basePort + 1);
-        conf.setInt("hbase.regionserver.port", basePort + 2);
-        conf.setInt("hbase.regionserver.info.port", basePort + 3);
+        conf=transformConfiguration(conf,basePort);
 
         testUtility = new HBaseTestingUtility(conf);
 
@@ -235,9 +225,30 @@ public class HBaseSITestEnv implements SITestEnv{
         configuration.setInt("hbase.regionserver.port", basePort + 2);
         configuration.setInt("hbase.regionserver.info.port", basePort + 3);
 
-        testUtility.startMiniCluster(1,1,0,null,null,null,false);
-        ZkUtils.getZkManager().initialize(HConfiguration.getConfiguration());
+        bootMiniCluster();
+        SConfiguration sConf=HConfiguration.reloadConfiguration(configuration);
+        ZkUtils.getZkManager().initialize(sConf);
         ZkUtils.initializeZookeeper();
+    }
+
+    protected void bootMiniCluster() throws Exception{
+        testUtility.startMiniCluster();
+    }
+
+    protected Configuration transformConfiguration(final Configuration conf,int basePort){
+        // -> MapR work-around
+        conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "file:///");
+        conf.set("fs.default.name", "file:///");
+//        conf.set("fs.hdfs.client", "org.apache.hadoop.hdfs.DistributedFileSystem");
+        System.setProperty("zookeeper.sasl.client", "false");
+        System.setProperty("zookeeper.sasl.serverconfig", "fake");
+        // <- MapR work-around
+        conf.setInt("hbase.master.port", basePort);
+        conf.setInt("hbase.master.info.port", basePort + 1);
+        conf.setInt("hbase.regionserver.port", basePort + 2);
+        conf.setInt("hbase.regionserver.info.port", basePort + 3);
+
+        return conf;
     }
 
     private static int getNextBasePort() {
