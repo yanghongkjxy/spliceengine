@@ -26,6 +26,7 @@ import com.splicemachine.derby.utils.marshall.dvd.VersionedSerializers;
 import com.splicemachine.encoding.MultiFieldEncoder;
 import com.splicemachine.primitives.Bytes;
 import com.splicemachine.utils.SpliceLogUtils;
+import com.yahoo.sketches.theta.UpdateSketch;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
@@ -44,7 +45,7 @@ import java.util.Calendar;
  * in the variables below and in the subclasses. See the specific variables below for
  * rationale.
  */
-public abstract class LazyDataValueDescriptor extends NullValueData implements DataValueDescriptor {
+public abstract class LazyDataValueDescriptor extends DataType implements DataValueDescriptor {
     private static final long serialVersionUID=3l;
     private static Logger LOG=Logger.getLogger(LazyDataValueDescriptor.class);
 
@@ -923,6 +924,12 @@ public abstract class LazyDataValueDescriptor extends NullValueData implements D
             data[i] ^=0xff;
         }
         return data;
+    }
+
+    @Override
+    public void updateThetaSketch(UpdateSketch updateSketch) {
+        forceDeserialization();
+        dvd.updateThetaSketch(updateSketch);
     }
 }
 

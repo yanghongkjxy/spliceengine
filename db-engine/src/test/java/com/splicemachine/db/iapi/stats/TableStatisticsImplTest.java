@@ -12,27 +12,10 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-
-package com.splicemachine.si.impl.readresolve;
-
-import com.splicemachine.si.impl.rollforward.RegionSegment;
+package com.splicemachine.db.iapi.stats;
 
 /**
- *
- * Created by jleach on 12/11/15.
+ * Created by jleach on 8/5/16.
  */
-public class RegionSegmentContext{
-    private final RegionSegment segment;
-
-    public RegionSegmentContext(RegionSegment segment){
-        this.segment=segment;
-    }
-
-    public void rowResolved(){
-        segment.rowResolved();
-    }
-
-    public void complete(){
-        segment.markCompleted();
-    }
+public class TableStatisticsImplTest {
 }

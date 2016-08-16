@@ -29,13 +29,15 @@ import com.splicemachine.db.iapi.services.io.FormatableBitSet;
 import com.splicemachine.db.iapi.sql.Row;
 import com.splicemachine.db.iapi.types.DataValueDescriptor;
 
+import java.util.Comparator;
+
 /**
  * Execution sees this extension of Row that provides connectivity
  * to the Storage row interface and additional methods for manipulating
  * Rows in execution's ResultSets.
  *
  */
-public interface ExecRow extends Row, KeyableRow {
+public interface ExecRow extends Row, KeyableRow, Comparable<ExecRow>, Comparator<ExecRow> {
 
 	/**
 	 * Clone the Row and its contents.
@@ -97,4 +99,5 @@ public interface ExecRow extends Row, KeyableRow {
 		Get a new DataValueDescriptor[]
 	 */
 	public void getNewObjectArray();
+
 }

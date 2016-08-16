@@ -139,60 +139,6 @@ public class StatisticsCollector {
         }
     }
 
-    protected long getRemoteReadTime(long rowCount) throws ExecutionException{
-        /*
-         * for base table scans, we want to do something akin to a self-join here. Really what we
-         * need to do is read a sample of rows remotely, and measure their overall latency. That way,
-         * we will know (roughly) the cost of reading this table.
-         *
-         * However, we don't want to measure the latency of reading from this region, since it would
-         * be much more efficient than we normally would want. Instead, we try and pick regions
-         * which do not contain the partitionScan. Of course, if the region contains everything,
-         * then who cares.
-         *
-         * Once a region is selected, we read in some rows using a scanner, measure the average latency,
-         * and then use that to estimate how long it would take to read us remotely
-         */
-        //TODO -sf- randomize this a bit so we don't hotspot a region
-        int fetchSampleSize=EngineDriver.driver().getConfiguration().getIndexFetchSampleSize();
-        Timer remoteReadTimer = Metrics.newWallTimer();
-        DataScan scan = SIDriver.driver().getOperationFactory().newDataScan(txn);
-        scan.startKey(SIConstants.EMPTY_BYTE_ARRAY).stopKey(SIConstants.EMPTY_BYTE_ARRAY);
-        int n =2;
-        long totalOpenTime = 0;
-        long totalCloseTime = 0;
-        int iterations = 0;
-        try(Partition table = SIDriver.driver().getTableFactory().getTable(Long.toString(tableConglomerateId))){
-            while(n<fetchSampleSize){
-                scan.batchCells(n).cacheRows(n);
-                long openTime=System.nanoTime();
-                long closeTime;
-                try(DataResultScanner scanner=table.openResultScanner(scan)){
-                    totalOpenTime+=(System.nanoTime()-openTime);
-                    int pos=0;
-                    remoteReadTimer.startTiming();
-                    DataResult result;
-                    while(pos<n && (result=scanner.next())!=null){
-                        pos++;
-                    }
-                    remoteReadTimer.tick(pos);
-                    closeTime=System.nanoTime();
-                }
-                totalCloseTime+=(System.nanoTime()-closeTime);
-                iterations++;
-                n<<=1;
-            }
-
-        }catch(IOException e){
-            throw new ExecutionException(e);
-        }
-        //stash the scanner open and scanner close times
-        openScannerTimeMicros=totalOpenTime/(1000*iterations);
-        closeScannerTimeMicros=totalCloseTime/(1000*iterations);
-        double latency=((double)remoteReadTimer.getTime().getWallClockTime())/remoteReadTimer.getNumEvents();
-        return Math.round(latency*rowCount);
-    }
-
     protected List<ColumnStatistics> getFinalColumnStats(ColumnStatsCollector<DataValueDescriptor>[] dvdCollectors) {
         List<ColumnStatistics> columnStats = new ArrayList<>(dvdCollectors.length);
         for (int i = 0; i < dvdCollectors.length; i++) {

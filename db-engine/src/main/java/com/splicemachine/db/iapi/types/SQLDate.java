@@ -35,6 +35,7 @@ import com.splicemachine.db.iapi.services.sanity.SanityManager;
 import com.splicemachine.db.iapi.services.cache.ClassSize;
 import com.splicemachine.db.iapi.services.i18n.LocaleFinder;
 import com.splicemachine.db.iapi.util.StringUtil;
+import com.yahoo.sketches.theta.UpdateSketch;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.OrderedBytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
@@ -1378,4 +1379,9 @@ public final class SQLDate extends DataType
 			encodedDate = OrderedBytes.decodeInt32(src);
 			setIsNull(false);
 		}
+
+	@Override
+	public void updateThetaSketch(UpdateSketch updateSketch) {
+		updateSketch.update(encodedDate);
+	}
 }

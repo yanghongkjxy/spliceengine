@@ -68,6 +68,7 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Calendar;
 
+import com.yahoo.sketches.theta.UpdateSketch;
 import org.apache.hadoop.hbase.types.OrderedString;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.OrderedBytes;
@@ -3380,5 +3381,10 @@ public class SQLChar
     @Override
     public void decodeFromKey(PositionedByteRange src) throws StandardException {
         value = OrderedBytes.decodeString(src);
+    }
+
+    @Override
+    public void updateThetaSketch(UpdateSketch updateSketch) {
+        updateSketch.update(value);
     }
 }

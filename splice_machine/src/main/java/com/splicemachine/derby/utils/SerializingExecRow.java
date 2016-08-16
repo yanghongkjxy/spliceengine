@@ -202,4 +202,14 @@ public class SerializingExecRow implements ExecRow, Externalizable {
     public int compareTo(int[] ints, ExecRow execRow) {
         return delegate.compareTo(ints, execRow);
     }
+
+    @Override
+    public int compareTo(ExecRow o) {
+        return delegate.compareTo(o);
+    }
+
+    @Override
+    public int compare(ExecRow o1, ExecRow o2) {
+        return o1.compareTo(o2);
+    }
 }

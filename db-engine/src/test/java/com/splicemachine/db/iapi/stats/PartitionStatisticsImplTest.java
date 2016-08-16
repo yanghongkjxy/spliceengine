@@ -12,17 +12,10 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-
-package com.splicemachine.derby.impl.stats;
-
-import com.splicemachine.db.iapi.sql.dictionary.PhysicalStatsDescriptor;
-import java.util.List;
+package com.splicemachine.db.iapi.stats;
 
 /**
- * @author Scott Fines
- *         Date: 3/9/15
+ * Created by jleach on 8/4/16.
  */
-public interface PhysicalStatisticsStore {
-
-    List<PhysicalStatsDescriptor> allPhysicalStats();
+public class PartitionStatisticsImplTest {
 }

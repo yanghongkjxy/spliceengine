@@ -156,4 +156,13 @@ public class SerializingIndexRow implements ExecIndexRow,Externalizable {
         return valueRow.compareTo(ints,execRow);
     }
 
+	@Override
+	public int compareTo(ExecRow o) {
+		return valueRow.compareTo(o);
+	}
+
+	@Override
+	public int compare(ExecRow o1, ExecRow o2) {
+		return o1.compareTo(o2);
+	}
 }

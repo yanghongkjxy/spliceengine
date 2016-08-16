@@ -34,6 +34,7 @@ import com.splicemachine.si.api.txn.WriteConflict;
 import com.splicemachine.utils.SpliceLogUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.log4j.Logger;
+import org.apache.spark.sql.DataFrame;
 import org.sparkproject.guava.collect.Lists;
 
 import java.io.IOException;
