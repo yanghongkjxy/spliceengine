@@ -20,11 +20,14 @@ import com.splicemachine.db.iapi.reference.SQLState;
 
 import javax.sql.DataSource;
 import java.io.PrintWriter;
-import java.sql.*;
-import java.util.*;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -96,142 +99,84 @@ public class ClusteredDataSource implements DataSource{
      */
     private static final Logger LOGGER = Logger.getLogger(ClusteredDataSource.class.getName());
 
-    private final String database;
-    private final ConnectionSelectionStrategy selectionStrategy;
-    private final PoolSizingStrategy sizingStrategy;
+    private final ServerList serverList;
+    private final ServerPoolFactory poolFactory;
+    private final AtomicBoolean closed = new AtomicBoolean();
+    private final boolean validateConnections;
 
-    private final List<ServerPool> activeServers=new CopyOnWriteArrayList<>();
-    private final String[] initialServerList;
-    private final AtomicInteger serverChoice=new AtomicInteger(0);
+    private final ScheduledExecutorService maintainer;
+    private final ServerDiscovery serverDiscovery;
+    private final long discoveryWindow;
+    private final long heartbeatWindow;
 
-    private final BlackList<ServerPool> blackListedServers=new BlackList<ServerPool>(){
-        @Override
-        protected void cleanupResources(ServerPool element){
-            cleanupDeadServer(element);
-        }
-    };
+    private final AtomicReference<FutureTask<Void>> discoveryTask = new AtomicReference<>(null);
 
-    private final ScheduledExecutorService maintenanceThread;
-    private final ServerPoolFactory serverPoolFactory;
-    private final long heartbeatInterval;
-    private final String user;
-    private final String password;
-
-    private volatile int loginTimeout=0;
-    private AtomicBoolean closed = new AtomicBoolean(false);
-
-    public ClusteredDataSource(String[] initialServers,
-                               String database,
-                               String user,
-                               String password,
-                               PoolSizingStrategy poolSizingStrategy,
-                               ConnectionSelectionStrategy selectionStrategy,
-                               ServerPoolFactory serverPoolFactory,
-                               long heartbeatPeriod,
-                               long serverCheckPeriod){
-        this.initialServerList = initialServers;
-        this.database=database;
-        this.selectionStrategy=selectionStrategy;
-        this.sizingStrategy=poolSizingStrategy;
-        this.serverPoolFactory = serverPoolFactory;
-        this.heartbeatInterval = heartbeatPeriod;
-        this.user = user;
-        this.password = password;
-        this.maintenanceThread=Executors.newSingleThreadScheduledExecutor(new ThreadFactory(){
-            @Override
-            @SuppressWarnings("NullableProblems")
-            public Thread newThread(Runnable r){
-                Thread t=new Thread(r);
-                t.setDaemon(true);
-                t.setName("ClusterDataSource-maintainer");
-                return t;
-            }
-        });
-
-        setupServers(initialServers,heartbeatPeriod);
-        submitMaintenance(serverCheckPeriod);
+    public static ClusteredDataSourceBuilder newBuilder(){
+        return new ClusteredDataSourceBuilder();
     }
+
+    ClusteredDataSource(ServerList serverList,
+                        ServerPoolFactory poolFactory,
+                        ServerDiscovery serverDiscovery,
+                        ScheduledExecutorService maintainer,
+                        boolean validateConnections,
+                        long discoveryWindow,long heartbeatWindow){
+        this.serverList = serverList;
+        this.poolFactory = poolFactory;
+        this.validateConnections = validateConnections;
+        this.maintainer = maintainer;
+        this.discoveryWindow=discoveryWindow;
+        this.serverDiscovery = serverDiscovery;
+        this.heartbeatWindow = heartbeatWindow;
+    }
+
+    public void start(){
+        Discovery command=new Discovery();
+        schedule(command);
+    }
+
 
     @Override
     public Connection getConnection() throws SQLException{
-        checkClosed();
-        if(activeServers.size()<=0)
-            throw new SQLException("There are no active and available servers; blacklisted nodes:"+blackListedServers.toString(),
-                    SQLState.AUTH_DATABASE_CONNECTION_REFUSED,1);
+        if(closed.get())
+            throw new SQLException("DataSource is closed",SQLState.ALREADY_CLOSED);
+        Connection conn=tryAcquire();
+        if(conn!=null) return conn;
 
-        try{
-            sizingStrategy.acquirePermit();
-        }catch(InterruptedException e){
-            //reset the interrupt flag
-            Thread.currentThread().interrupt();
-            throw new SQLException("Interrupted during connection acquisition",SQLState.CONN_INTERRUPT);
-        }
-
-        int serverPos;
-        boolean shouldContinue;
-        do{
-            int previous=serverChoice.get();
-            serverPos=selectionStrategy.nextServer(previous,activeServers.size());
-
-            shouldContinue=!serverChoice.compareAndSet(previous,serverPos);
-        }while(shouldContinue);
-
-        int numtries=activeServers.size();
-        int p=serverPos;
-        while(numtries>0){
-
-            /*
-             * We take a modulo here because it is possible that the activeServers list
-             * was changed between when we made the successful CAS operation above and
-             * when we reached this point; this means the list may have shrunk, so we need
-             * to adjust for that. It's *HIGHLY* unlikely to occur, but safety is our
-             * first priority!
-             */
-            ServerPool sp=activeServers.get(p%activeServers.size());
-            if(sp.isDead()){
-                cleanupDeadServer(sp);
-            }else{
-                Connection conn=sp.tryAcquireConnection(true);
-                if(conn!=null)
-                    return conn;
-            }
-
-            p=p+1;
-            numtries--;
-        }
         /*
-         * If we reached here, we couldn't find any active Connections to work with,
-         * which means we should create a new one. We create a new one at the specified
-         * serverPos
-         *
-         * Normally we wouldn't catch the runtime exceptions here, since they are a programemr
-         * error. However, there is an inherent race condition: we are performing an unsynchronized
-         * read-then-write operation here (reading the size of the list, then performing an access against it).
-         * This means that we could read the size of the list, only to have the list shrink out from under us,
-         * causing one of two potential problems: an ArrayIndexOutOfBoundsException(if we are looking off the end
-         * of the list), or an ArithmeticException (if the server size is zero). In the event of the server size
-         * being zero, we want to fail right away, but an IndexOutOfBounds should just trigger another read attempt
+         * If we get to this point, then we tried to get a connection from an underlying pool,
+         * but all pools are currently full. To that end, we go back to the original server pool
+         * list and attempt to get a new connection; if that doesn't work, then we will fail
          */
-        while(true){
+        Iterator<ServerPool> activeServers = serverList.activeServers(); //get a new list
+        while(activeServers.hasNext()){
+            ServerPool serverPool = activeServers.next();
             try{
-                return activeServers.get(serverPos%activeServers.size()).newConnection();
-            }catch(ArithmeticException ae){
-                throw new SQLException("There are no active and available servers; blacklisted nodes:"+blackListedServers.toString(),
-                        SQLState.AUTH_DATABASE_CONNECTION_REFUSED,1);
-            }catch(IndexOutOfBoundsException ignored){ }
+                conn = serverPool.tryAcquireConnection(validateConnections); //try the pool one more time
+                if(conn!=null) return conn;
+                else return serverPool.newConnection(); //try to get a new connection, but if that fails we keep trying
+            }catch(SQLException se){
+                if(!ClientErrors.isNetworkError(se)){
+                    throw se;
+                }
+                logError("getConnection("+serverPool.serverName+")",se,Level.INFO);
+                if(serverPool.isDead())
+                    serverList.serverDead(serverPool);
+            }
         }
+
+        throw new SQLException("Unable to acquire a connection to any server: blacklisted nodes:"+serverList.blacklist(),SQLState.NO_CURRENT_CONNECTION);
     }
+
 
     @Override
     public Connection getConnection(String username,String password) throws SQLException{
-        throw new SQLFeatureNotSupportedException("Cannot Pool multiple connections with different users");
+        throw new SQLFeatureNotSupportedException("Username and password must be set when datasource is constructed");
     }
-
-
 
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException{
-        throw new SQLException("Unable to unwrap interface: "+iface,SQLState.UNABLE_TO_UNWRAP,1);
+        throw new SQLFeatureNotSupportedException("unwrap");
     }
 
     @Override
@@ -241,56 +186,39 @@ public class ClusteredDataSource implements DataSource{
 
     @Override
     public PrintWriter getLogWriter() throws SQLException{
-        throw new SQLFeatureNotSupportedException("getLogWriter not supported");
+        throw new SQLFeatureNotSupportedException("getLogWriter");
     }
 
     @Override
     public void setLogWriter(PrintWriter out) throws SQLException{
-        throw new SQLFeatureNotSupportedException("setLogWriter not supported");
-    }
-
-    @Override
-    public Logger getParentLogger() throws SQLFeatureNotSupportedException{
-        throw new SQLFeatureNotSupportedException("getParentLogger not supported");
+        throw new SQLFeatureNotSupportedException("setLogWriter");
     }
 
     @Override
     public void setLoginTimeout(int seconds) throws SQLException{
-        checkClosed();
-        this.loginTimeout=seconds;
+        throw new SQLFeatureNotSupportedException("setLoginTimeout"); //TODO -sf- implement this
     }
 
     @Override
     public int getLoginTimeout() throws SQLException{
-        return loginTimeout;
+        return 0;
     }
 
-    @SuppressWarnings("WeakerAccess")
-    public Set<String> blacklistedServers(){
-        return blackListedServers.currentBlacklist();
+    @Override
+    public Logger getParentLogger() throws SQLFeatureNotSupportedException{
+        throw new SQLFeatureNotSupportedException("getParentLogger");
     }
-
-    Set<String> activeServers(){
-        Set<String> activeServerNames = new HashSet<>(activeServers.size());
-        for(ServerPool sp:activeServers){
-           activeServerNames.add(sp.serverName);
-        }
-        return activeServerNames;
-    }
-
-    static final String DEFAULT_ACTIVE_SERVER_QUERY="call SYSCS_UTIL.SYSCS_GET_ACTIVE_SERVERS()";
 
     public void close() throws SQLException{
-        if(!closed.compareAndSet(false,true)) return; //we are already closed
+        if(!closed.compareAndSet(false,true)) return;
+        ServerPool[] clear=serverList.clear();
         SQLException se = null;
-        for(ServerPool sp:activeServers){
+        for(ServerPool sp:clear){
             try{
                 sp.close();
             }catch(SQLException e){
                 if(se==null) se = e;
-                else {
-                    se.setNextException(e);
-                }
+                else se.setNextException(e);
             }
         }
         if(se!=null)
@@ -298,181 +226,114 @@ public class ClusteredDataSource implements DataSource{
     }
 
     @SuppressWarnings("WeakerAccess")
-    protected Set<String> detectServers(){
-        int numTries=activeServers.size();
-        do{
-            try(Connection conn=alwaysGetConnection()){
-                try(Statement s=conn.createStatement()){
-                    try(ResultSet rs=s.executeQuery(DEFAULT_ACTIVE_SERVER_QUERY)){
-                        Set<String> servers=new TreeSet<>();
-                        while(rs.next()){
-                            String server=rs.getString(1);
-                            String port = rs.getString(2);
-                            servers.add(server+":"+port);
-                        }
-                        return servers;
-                    }
-                }
-            }catch(SQLException se){
-                logError("detectServers()",se);
-                numTries--;
-            }
-        }while(numTries>0);
-        return Collections.emptySet();
+    public void detectServers() throws SQLException{
+        performDiscovery(new Discovery());
     }
 
-
-    @SuppressWarnings("WeakerAccess")
-    public void performServiceDiscovery(){
-        Set<String> servers=detectServers();
-        //remove dead nodes
-        for(ServerPool sp : activeServers){
-            if(servers.remove(sp.serverName))
-                continue; //this server is still active, nothing to worry about
-
-            blackListedServers.blacklist(sp);
-            /*
-             * This is safe only as long as we are using
-             * one of that java.util.concurrent collections, which makes use of weak
-             * iteration and doesn't prohibit concurrent modification.
-             */
-            activeServers.remove(sp);
+    private void logError(String operation,Throwable t,Level logLevel){
+        String errorMessage="error during "+operation+":";
+        if(t instanceof SQLException){
+            SQLException se=(SQLException)t;
+            errorMessage+="["+se.getSQLState()+"]";
         }
-            /*
-             * Servers still in the server list are "new", in the sense that they
-             * were either dead (and came back alive), or are newly added to the cluster.
-             * Either way, add them in to the active servers list
-             */
-        for(String newServer:servers){
-            ServerPool sp = newServerPool(newServer);
-            activeServers.add(sp);
-            blackListedServers.whitelist(sp);
+        if(t.getMessage()!=null)
+            errorMessage+=t.getMessage();
 
-            startHeartbeat(heartbeatInterval,sp);
-        }
+        LOGGER.log(logLevel,errorMessage,t);
     }
 
-    /* ****************************************************************************************************************/
-    /*private helper methods*/
-
-    private void setupServers(String[] initialServers,long heartbeatInterval){
-        for(String server:initialServers){
-            ServerPool sp = newServerPool(server);
-            activeServers.add(sp);
-            startHeartbeat(heartbeatInterval,sp);
-        }
-    }
-
-    private Connection alwaysGetConnection() throws SQLException{
-        SQLException noConnection;
-        try{
-            return getConnection();
-        }catch(SQLException se){
-            //if no server was found, we need to try and connect to one of the initial nodes, otherwise explode
-            if(!se.getSQLState().equals(SQLState.AUTH_DATABASE_CONNECTION_REFUSED)){
-                throw se;
-            }else noConnection = se;
-        }
-        for(String initialServer:initialServerList){
-            ServerPool sp = newServerPool(initialServer);
-            try{
-                Connection conn=sp.newConnection(); //TODO -sf- carry user name and password with us
-                if(conn!=null){
-                    activeServers.add(sp);
-                    startHeartbeat(heartbeatInterval,sp);
-                    return conn;
-                }
-            }catch(SQLException e){
-                noConnection.setNextException(e);
-            }
-        }
-        //we can't get access to any server in the list, so we have to explode
-        throw noConnection;
-    }
-
-    private void startHeartbeat(long heartbeatInterval,ServerPool sp){
-        if(heartbeatInterval>0)
-            maintenanceThread.schedule(new Heartbeat(sp,heartbeatInterval),heartbeatInterval,TimeUnit.MILLISECONDS);
-    }
-
-    private void submitMaintenance(long serverCheckPeriod){
-        if(serverCheckPeriod>0){
-            ServerDiscovery command=new ServerDiscovery(serverCheckPeriod);
-            maintenanceThread.scheduleWithFixedDelay(command,0,serverCheckPeriod,TimeUnit.MILLISECONDS);
-        }
-    }
-
-    private void cleanupDeadServer(ServerPool sp){
-        blackListedServers.blacklist(sp);
-        activeServers.remove(sp);
-        try{
-            sp.close();
-        }catch(SQLException e){
-            logError("close("+sp+")",e);
-        }
-    }
-
-    private ServerPool newServerPool(String newServer){
-        return serverPoolFactory.newServerPool(newServer,database,user,password,sizingStrategy,blackListedServers);
-    }
-
-    private void logError(String operation,SQLException se){
-        LOGGER.log(Level.SEVERE,"error during "+operation+":"+se.toString(),se);
-    }
-
-
-    private class ServerDiscovery implements Runnable{
-        private final long discoveryDelay;
-
-        ServerDiscovery(long discoveryDelay){
-            this.discoveryDelay=discoveryDelay;
+    private class Discovery implements Runnable,Callable<Void>{
+        @Override
+        public void run(){
+            performDiscovery(this);
         }
 
         @Override
-        public void run(){
-            performServiceDiscovery();
+        public Void call() throws Exception{
+            List<String> newServers = serverDiscovery.detectServers();
+            ServerPool[] servers = new ServerPool[newServers.size()];
+            int i=0;
+            for(String server:newServers){
+                ServerPool serverPool=poolFactory.newServerPool(server);
+                servers[i] =serverPool;
+                if(heartbeatWindow>0)
+                    maintainer.schedule(new Heartbeat(serverPool),heartbeatWindow,TimeUnit.MILLISECONDS);
+                i++;
+            }
+            serverList.setServerList(servers);
+            return null;
+        }
+    }
 
-            if(LOGGER.isLoggable(Level.FINER))
-                LOGGER.log(Level.FINER,"After server checks: blacklistedServers = {0}",blackListedServers);
-
-            if(activeServers.size()<=0){
-                /*
-                 * We were not able to connect to ANY servers in the cluster: This is pretty catastrophic.
-                 * We are going to move everyone to the blacklist as expected, but we are also going to
-                 * shorten our retry schedule (so that we try again in half the normal maintenance period)
-                 */
-                maintenanceThread.schedule(this,discoveryDelay/2,TimeUnit.MILLISECONDS);
+    private Connection tryAcquire() throws SQLException{
+        Iterator<ServerPool> activeServers = serverList.activeServers();
+        while(activeServers.hasNext()){
+            ServerPool serverPool = activeServers.next();
+            try{
+                Connection conn = serverPool.tryAcquireConnection(validateConnections);
+                if(conn!=null) return conn;
+            }catch(SQLException se){
+                if(!ClientErrors.isNetworkError(se)){
+                    throw se;
+                }
+                logError("getConnection("+serverPool.serverName+")",se,Level.INFO);
+                if(serverPool.isDead())
+                    serverList.serverDead(serverPool);
             }
         }
+        return null;
+    }
+
+    private void performDiscovery(Callable<Void> callable){
+        FutureTask<Void> running;
+        do{
+            running = discoveryTask.get();
+            if(running!=null){
+                try{
+                    running.get();
+                }catch(InterruptedException e){
+                    Thread.currentThread().interrupt();
+                }catch(ExecutionException e){
+                    //this shouldn't happen, but just in case, we'll re-throw
+                    throw new RuntimeException(e.getCause());
+                }
+                return;
+            }else{
+                FutureTask<Void> pTask =new FutureTask<>(callable);
+                if(discoveryTask.compareAndSet(null,pTask)){
+                    running = pTask;
+                    break;
+                }
+            }
+        }while(true);
+        running.run();
+        discoveryTask.set(null);
+    }
+
+    private void schedule(Runnable command){
+        maintainer.scheduleAtFixedRate(command,
+                0L,discoveryWindow,
+                TimeUnit.MILLISECONDS);
     }
 
     private class Heartbeat implements Runnable{
-        private final ServerPool sp;
-        private final long heartbeatInterval;
+        private ServerPool server;
 
-        Heartbeat(ServerPool sp,long heartbeatInterval){
-            this.sp=sp;
-            this.heartbeatInterval=heartbeatInterval;
+        Heartbeat(ServerPool server){
+            this.server=server;
         }
 
         @Override
         public void run(){
-            try{
-                if(sp.heartbeat()){
-                    blackListedServers.whitelist(sp); //in case it had been blacklisted, but we are now alive again
-                    maintenanceThread.schedule(this,heartbeatInterval,TimeUnit.MILLISECONDS);
-                }else{
-                    cleanupDeadServer(sp);
-                }
-            }catch(SQLException se){
-                logError("heartbeat("+sp+")",se);
-                cleanupDeadServer(sp);
+            server.heartbeat();
+            if(server.isDead()){
+                try{
+                    serverList.serverDead(server);
+                }catch(SQLException ignored){ } //ignore the exception cause we don't really care
+            }else{
+                maintainer.schedule(this,heartbeatWindow,TimeUnit.MILLISECONDS);
             }
-        }
-    }
 
-    private void checkClosed() throws SQLException{
-        if(closed.get())
-            throw new SQLException("DataSource closed",SQLState.PHYSICAL_CONNECTION_ALREADY_CLOSED);
+        }
     }
 }

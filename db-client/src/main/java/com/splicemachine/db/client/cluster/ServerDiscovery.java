@@ -16,17 +16,14 @@
 
 package com.splicemachine.db.client.cluster;
 
+import java.sql.SQLException;
+import java.util.List;
+
 /**
  * @author Scott Fines
- *         Date: 8/15/16
+ *         Date: 9/14/16
  */
-interface FailureDetector{
+public interface ServerDiscovery{
 
-    void success();
-
-    void failed();
-
-    boolean isAlive();
-
-    void kill();
+    List<String> detectServers() throws SQLException;
 }

@@ -27,6 +27,10 @@ package com.splicemachine.db.client.cluster;
  *         Date: 8/23/16
  */
 public class InfinitePoolSize implements PoolSizingStrategy{
+    public static PoolSizingStrategy INSTANCE = new InfinitePoolSize();
+
+    private InfinitePoolSize(){}
+
     @Override public void acquirePermit(){ }
     @Override public void releasePermit(){ }
     @Override public int singleServerPoolSize(){ return Integer.MAX_VALUE; }

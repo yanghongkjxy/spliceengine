@@ -25,11 +25,13 @@ import org.mockito.stubbing.Answer;
 import javax.sql.DataSource;
 import java.net.ConnectException;
 import java.sql.*;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -40,29 +42,33 @@ import static org.mockito.Mockito.when;
  */
 public class ClusteredDataSourceTest{
 
+    private static final ScheduledExecutorService ses = mock(ScheduledExecutorService.class);
+    private static final Answer<ScheduledFuture<?>> answer=new Answer<ScheduledFuture<?>>(){
+        @Override
+        public ScheduledFuture<?> answer(InvocationOnMock invocation) throws Throwable{
+            ((Runnable)invocation.getArguments()[0]).run();
+            return null;
+        }
+    };
+    static{
+        when(ses.scheduleAtFixedRate(any(Runnable.class),anyLong(),anyLong(),any(TimeUnit.class))).then(answer);
+    }
+
+
+
+
     @Test
     public void canGetConnectionFromSingleServer() throws Exception{
-       PoolSizingStrategy pss = new PoolSizingStrategy(){
-           @Override public void acquirePermit(){ }
-           @Override public void releasePermit(){ }
-
-           @Override
-           public int singleServerPoolSize(){
-               return 10;
-           }
-       };
+       PoolSizingStrategy pss = InfinitePoolSize.INSTANCE;
 
         ConnectionSelectionStrategy css = ConnectionStrategy.ROUND_ROBIN;
 
         FailureDetectorFactory failureDetectorFactory=new FailureDetectorFactory(){
             @Override public FailureDetector newFailureDetector(){
-                //don't have the failure detector advance
-                return new DeadlineFailureDetector(10){
-                    @Override protected long currentTime(){ return 1L; }
-                };
+                return new DeadlineFailureDetector(Long.MAX_VALUE);
             }
         };
-        ServerPoolFactory spf = new ConfiguredServerPoolFactory(failureDetectorFactory){
+        ServerPoolFactory spf = new ConfiguredServerPoolFactory("test","tu","tp",failureDetectorFactory,pss){
             @Override
             protected DataSource newDataSource(String serverId,
                                                String database,
@@ -78,18 +84,23 @@ public class ClusteredDataSourceTest{
                 return ds;
             }
         };
-        ClusteredDataSource cds = new ClusteredDataSource(new String[]{"testServer:1527"},"test","tu","tp",pss,css,spf,0,0);
+
+        ServerList sl = new ServerList(css,new ServerPool[]{});
+        ServerDiscovery discovery = new ServerDiscovery(){
+            @Override
+            public List<String> detectServers() throws SQLException{
+                return Arrays.asList("testServer:1527");
+            }
+        };
+        ClusteredDataSource cds = new ClusteredDataSource(sl,spf,discovery, ses,false,0L,0);
+        cds.start();
         Connection c = cds.getConnection();
         Assert.assertNotNull("Did not get a non-null connection!",c);
     }
 
     @Test
     public void throwsErrorWithNoServers() throws Exception{
-        PoolSizingStrategy pss = new PoolSizingStrategy(){
-            @Override public void acquirePermit(){ }
-            @Override public void releasePermit(){ }
-            @Override public int singleServerPoolSize(){ return 10; }
-        };
+        PoolSizingStrategy pss = InfinitePoolSize.INSTANCE;
 
         ConnectionSelectionStrategy css = ConnectionStrategy.ROUND_ROBIN;
 
@@ -101,7 +112,7 @@ public class ClusteredDataSourceTest{
                 };
             }
         };
-        ServerPoolFactory spf = new ConfiguredServerPoolFactory(failureDetectorFactory){
+        ServerPoolFactory spf = new ConfiguredServerPoolFactory("test","tu","tp",failureDetectorFactory,pss){
             @Override
             protected DataSource newDataSource(String serverId,
                                                String database,
@@ -117,23 +128,25 @@ public class ClusteredDataSourceTest{
                 return ds;
             }
         };
-        ClusteredDataSource cds = new ClusteredDataSource(new String[]{},"test","tu","tp",pss,css,spf,0,0);
+        ServerDiscovery sd = new ServerDiscovery(){
+            @Override
+            public List<String> detectServers() throws SQLException{
+                return Collections.emptyList();
+            }
+        };
+        ClusteredDataSource cds = new ClusteredDataSource(new ServerList(css,new ServerPool[]{}),spf,sd, ses,false,0L,0);
+        cds.start();
         try{
             cds.getConnection();
             Assert.fail("Did not throw exception!");
         }catch(SQLException se){
-            Assert.assertEquals("Incorrect SQLState!",
-                    SQLState.AUTH_DATABASE_CONNECTION_REFUSED,se.getSQLState());
+            Assert.assertEquals("Incorrect SQLState!", SQLState.NO_CURRENT_CONNECTION,se.getSQLState());
         }
     }
 
     @Test
     public void throwsErrorWithDerbyConnectionRefused() throws Exception{
-        PoolSizingStrategy pss = new PoolSizingStrategy(){
-            @Override public void acquirePermit(){ }
-            @Override public void releasePermit(){ }
-            @Override public int singleServerPoolSize(){ return 10; }
-        };
+        PoolSizingStrategy pss = InfinitePoolSize.INSTANCE;
 
         ConnectionSelectionStrategy css = ConnectionStrategy.ROUND_ROBIN;
 
@@ -146,25 +159,24 @@ public class ClusteredDataSourceTest{
             }
         };
         //in this case, we want to use derby's logic so that we know we actually try to connect
-        ServerPoolFactory spf = new ConfiguredServerPoolFactory(failureDetectorFactory);
-        ClusteredDataSource cds = new ClusteredDataSource(new String[]{"localhost:60000"},"test","tu","tp",pss,css,spf,0,0);
+        ServerPoolFactory spf = new ConfiguredServerPoolFactory("test","tu","tp",failureDetectorFactory,pss);
+        ServerList sl = new ServerList(css,new ServerPool[]{});
+        ServerDiscovery sd = new ConnectionServerDiscovery(new String[]{"localhost:60000"},sl,spf);
+        ClusteredDataSource cds = new ClusteredDataSource(new ServerList(css,new ServerPool[]{}),spf,sd, ses,false,0L,0);
+        cds.detectServers();
         try{
             cds.getConnection();
             Assert.fail("Did not throw exception!");
         }catch(SQLException se){
             se.printStackTrace();
             Assert.assertEquals("Incorrect SQLState!",
-                    SQLState.AUTH_DATABASE_CONNECTION_REFUSED,se.getSQLState());
+                    SQLState.NO_CURRENT_CONNECTION,se.getSQLState());
         }
     }
 
     @Test
     public void blacklistsServerWithConnectionRefused() throws Exception{
-        PoolSizingStrategy pss = new PoolSizingStrategy(){
-            @Override public void acquirePermit(){ }
-            @Override public void releasePermit(){ }
-            @Override public int singleServerPoolSize(){ return 10; }
-        };
+        PoolSizingStrategy pss = InfinitePoolSize.INSTANCE;
 
         ConnectionSelectionStrategy css = new ConnectionSelectionStrategy(){
             @Override public int nextServer(int previous,int numServers){ return 0; }
@@ -172,14 +184,16 @@ public class ClusteredDataSourceTest{
 
         FailureDetectorFactory failureDetectorFactory=new FailureDetectorFactory(){
             @Override public FailureDetector newFailureDetector(){
-                //don't have the failure detector advance
-                return new DeadlineFailureDetector(10){
-                    @Override protected long currentTime(){ return 1L; }
+                return new DeadlineFailureDetector(Long.MAX_VALUE){
+                    @Override
+                    public void failed(){
+                        kill();
+                        super.failed();
+                    }
                 };
             }
         };
-        //in this case, we want to use derby's logic so that we know we actually try to connect
-        ServerPoolFactory spf = new ConfiguredServerPoolFactory(failureDetectorFactory){
+        ServerPoolFactory spf = new ConfiguredServerPoolFactory("test","tu","tp",failureDetectorFactory,pss){
             @Override
             protected DataSource newDataSource(String serverId,
                                                String database,
@@ -187,7 +201,8 @@ public class ClusteredDataSourceTest{
                                                String password){
                 DataSource ds=mock(DataSource.class);
                 if(serverId.equals("failServer")){
-                    SQLNonTransientConnectionException e = new SQLNonTransientConnectionException(new ConnectException("Connection refused"));
+                    SQLNonTransientConnectionException e = new SQLNonTransientConnectionException(
+                            null,SQLState.AUTH_DATABASE_CONNECTION_REFUSED,new ConnectException("Connection refused"));
                     try{
                         when(ds.getConnection(anyString(),anyString())).thenThrow(e);
                         when(ds.getConnection()).thenThrow(e);
@@ -207,37 +222,35 @@ public class ClusteredDataSourceTest{
                 return ds;
             }
         };
-        ClusteredDataSource cds = new ClusteredDataSource(new String[]{"failServer","successServer"},"test","tu","tp",pss,css,spf,0,0);
+        ServerList sl = new ServerList(css,new ServerPool[]{});
+        ServerDiscovery sd = new ServerDiscovery(){
+            @Override public List<String> detectServers() throws SQLException{ return Arrays.asList("failServer","successServer"); }
+        };
+        ClusteredDataSource cds = new ClusteredDataSource(sl,spf,sd,ses,false,100L,0);
+        cds.detectServers();
         Connection c=cds.getConnection();
         Assert.assertNotNull("Returned a null connection!",c);
         Assert.assertFalse("Returned a closed connection!",c.isClosed());
 
 
-        Set<String> blacklistedServers=cds.blacklistedServers();
+        Collection<String> blacklistedServers=sl.blacklist();
         Assert.assertEquals("Incorrect # of blacklisted servers",1,blacklistedServers.size());
         Assert.assertTrue("Did not contain correct server!",blacklistedServers.contains("failServer"));
     }
 
     @Test
     public void serviceDiscoveryAddsServer() throws Exception{
-        PoolSizingStrategy pss = new PoolSizingStrategy(){
-            @Override public void acquirePermit(){ }
-            @Override public void releasePermit(){ }
-            @Override public int singleServerPoolSize(){ return 10; }
-        };
+        PoolSizingStrategy pss = InfinitePoolSize.INSTANCE;
 
         ConnectionSelectionStrategy css = ConnectionStrategy.ROUND_ROBIN;
 
         FailureDetectorFactory failureDetectorFactory=new FailureDetectorFactory(){
             @Override public FailureDetector newFailureDetector(){
                 //don't have the failure detector advance
-                return new DeadlineFailureDetector(10){
-                    @Override protected long currentTime(){ return 1L; }
-                };
+                return new DeadlineFailureDetector(Long.MAX_VALUE);
             }
         };
-        //in this case, we want to use derby's logic so that we know we actually try to connect
-        ServerPoolFactory spf = new ConfiguredServerPoolFactory(failureDetectorFactory){
+        ServerPoolFactory spf = new ConfiguredServerPoolFactory("test","tu","tp",failureDetectorFactory,pss){
             @Override
             protected DataSource newDataSource(String serverId,
                                                String database,
@@ -256,12 +269,10 @@ public class ClusteredDataSourceTest{
                         }
                     });
                     when(rs.getString(1)).thenAnswer(new Answer<String>(){
-                        @Override
-                        public String answer(InvocationOnMock invocation) throws Throwable{
-                            return servers.next();
-                        }
+                        @Override public String answer(InvocationOnMock invocation) throws Throwable{ return servers.next(); }
                     });
-                    when(s.executeQuery(ClusteredDataSource.DEFAULT_ACTIVE_SERVER_QUERY)).thenReturn(rs);
+                    when(rs.getString(2)).thenReturn("1527");
+                    when(s.executeQuery(ConnectionServerDiscovery.DEFAULT_ACTIVE_SERVER_QUERY)).thenReturn(rs);
                     when(conn.createStatement()).thenReturn(s);
                     when(ds.getConnection()).thenReturn(conn);
                     when(ds.getConnection(anyString(),anyString())).thenReturn(conn);
@@ -271,35 +282,34 @@ public class ClusteredDataSourceTest{
                 return ds;
             }
         };
-        ClusteredDataSource cds = new ClusteredDataSource(new String[]{"oldServer"},"test","tu","tp",pss,css,spf,0,0);
+        ServerList sl = new ServerList(css,new ServerPool[]{spf.newServerPool("oldServer")});
+        ServerDiscovery d = new ConnectionServerDiscovery(new String[]{"oldServer"},sl,spf);
 
-        cds.performServiceDiscovery();
-        Set<String> activeServers = cds.activeServers();
+        ClusteredDataSource cds = new ClusteredDataSource(sl,spf,d,ses,false,0,0);
+        Set<String> activeServers = sl.liveServers();
+        Assert.assertEquals("Incorrect default size!",1,activeServers.size());
+        Assert.assertTrue("Did not contain oldServer",activeServers.contains("oldServer"));
+
+        cds.detectServers();
+        activeServers = sl.liveServers();
         Assert.assertEquals("Did not add a new server!",2,activeServers.size());
-        Assert.assertTrue("Did not contain oldServer!",activeServers.contains("oldServer"));
-        Assert.assertTrue("Did not contain newServer!",activeServers.contains("newServer"));
+        Assert.assertTrue("Did not contain oldServer!",activeServers.contains("oldServer:1527"));
+        Assert.assertTrue("Did not contain newServer!",activeServers.contains("newServer:1527"));
     }
 
     @Test
     public void serviceDiscoveryRemovesServer() throws Exception{
-        PoolSizingStrategy pss = new PoolSizingStrategy(){
-            @Override public void acquirePermit(){ }
-            @Override public void releasePermit(){ }
-            @Override public int singleServerPoolSize(){ return 10; }
-        };
+        PoolSizingStrategy pss =InfinitePoolSize.INSTANCE;
 
         ConnectionSelectionStrategy css = ConnectionStrategy.ROUND_ROBIN;
 
         FailureDetectorFactory failureDetectorFactory=new FailureDetectorFactory(){
             @Override public FailureDetector newFailureDetector(){
-                //don't have the failure detector advance
-                return new DeadlineFailureDetector(10){
-                    @Override protected long currentTime(){ return 1L; }
-                };
+                return new DeadlineFailureDetector(Long.MAX_VALUE);
             }
         };
         //in this case, we want to use derby's logic so that we know we actually try to connect
-        ServerPoolFactory spf = new ConfiguredServerPoolFactory(failureDetectorFactory){
+        ServerPoolFactory spf = new ConfiguredServerPoolFactory("test","tu","tp",failureDetectorFactory,pss){
             @Override
             protected DataSource newDataSource(String serverId,
                                                String database,
@@ -308,15 +318,7 @@ public class ClusteredDataSourceTest{
                 DataSource ds = mock(DataSource.class);
                 if(serverId.equals("deadServer")){
                     try{
-                        Answer<Connection> answer=new Answer<Connection>(){
-                            @Override
-                            public Connection answer(InvocationOnMock invocation) throws Throwable{
-                                Assert.fail("Should not get a connection from deadServer!");
-                                return null;
-                            }
-                        };
-                        when(ds.getConnection()).then(answer);
-                        when(ds.getConnection(anyString(),anyString())).then(answer);
+                        when(ds.getConnection()).thenThrow(new SQLNonTransientConnectionException(null,SQLState.CONNECT_SOCKET_EXCEPTION,new ConnectException("Connection refused")));
                     }catch(SQLException se){
                         throw new RuntimeException(se);
                     }
@@ -338,7 +340,8 @@ public class ClusteredDataSourceTest{
                                 return servers.next();
                             }
                         });
-                        when(s.executeQuery(ClusteredDataSource.DEFAULT_ACTIVE_SERVER_QUERY)).thenReturn(rs);
+                        when(rs.getString(2)).thenReturn("1527");
+                        when(s.executeQuery(ConnectionServerDiscovery.DEFAULT_ACTIVE_SERVER_QUERY)).thenReturn(rs);
                         when(conn.createStatement()).thenReturn(s);
                         when(ds.getConnection()).thenReturn(conn);
                         when(ds.getConnection(anyString(),anyString())).thenReturn(conn);
@@ -349,12 +352,17 @@ public class ClusteredDataSourceTest{
                 return ds;
             }
         };
-        ClusteredDataSource cds = new ClusteredDataSource(new String[]{"deadServer","oldServer"},"test","tu","tp",pss,css,spf,0,0);
+        ServerList sl = new ServerList(css,new ServerPool[]{spf.newServerPool("oldServer"),spf.newServerPool("deadServer")});
+        ServerDiscovery sd = new ConnectionServerDiscovery(new String[]{"oldServer","deadServer"},sl,spf);
+        ClusteredDataSource cds = new ClusteredDataSource(sl,spf,sd,ses,false,0L,0);
+        Set<String> activeServers = sl.liveServers();
+        Assert.assertEquals("Incorrect size!",2,activeServers.size());
 
-        cds.performServiceDiscovery();
-        Set<String> activeServers = cds.activeServers();
+        cds.detectServers();
+
+        activeServers = sl.liveServers();
         Assert.assertEquals("Did not remove deadServer!",1,activeServers.size());
-        Assert.assertTrue("Did not contain oldServer!",activeServers.contains("oldServer"));
+        Assert.assertTrue("Did not contain oldServer!",activeServers.contains("oldServer:1527"));
         Assert.assertFalse("Still contains deadServer!",activeServers.contains("deadServer"));
 
         //get a few connections just to make sure that we don't ever call newDataSource
