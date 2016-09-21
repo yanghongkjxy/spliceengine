@@ -29,18 +29,15 @@ import java.util.Set;
  *         Date: 8/18/16
  */
 class ClusterConnectionManager{
-    private final ClusteredConnection sourceConn;
     private Properties connectionProperties;
     private final ClusteredDataSource poolSource;
     private RefCountedConnection currentConn;
 
     private final Set<ClusteredStatement> openStatements =Collections.newSetFromMap(new IdentityHashMap<ClusteredStatement, Boolean>());
 
-    ClusterConnectionManager(ClusteredConnection sourceConn,
-                             ClusteredDataSource poolSource,
+    ClusterConnectionManager(ClusteredDataSource poolSource,
                              Properties connectionProperties){
         this.poolSource=poolSource;
-        this.sourceConn = sourceConn;
         this.connectionProperties=connectionProperties;
     }
 
@@ -125,39 +122,22 @@ class ClusterConnectionManager{
         return autoCommit;
     }
 
-    public Statement createStatement(int resultSetType,int resultSetConcurrency,int resultSetHoldability) throws SQLException{
-        reopenConnectionIfNecessary();
-        Statement delegate = currentConn.element().createStatement(resultSetType,resultSetConcurrency,resultSetHoldability);
-        ClusteredStatement cs = new ClusteredStatement(currentConn,sourceConn,delegate);
-        registerStatement(cs);
-        queryRan = true;
-
-        return cs;
+    private static final int DEFAULT_EXECUTION_RETRY = 3;
+    int maxExecutionRetry(){
+        return DEFAULT_EXECUTION_RETRY; //TODO -sf- implement
     }
 
-    public PreparedStatement prepareStatement(String sql,int resultSetType,int resultSetConcurrency,int resultSetHoldability) throws SQLException{
-        reopenConnectionIfNecessary();
-        PreparedStatement delegate = currentConn.element().prepareStatement(sql,resultSetType,resultSetConcurrency,resultSetHoldability);
-        ClusteredPreparedStatement cps = new ClusteredPreparedStatement(currentConn,sourceConn,delegate);
-        registerStatement(cps);
-        queryRan=true;
-
-        return cps;
+    /*
+     * Force a new current connection. Used when you KNOW that you've gotten an error that requires trying
+     * a different server.
+     */
+    void forceAcquireConnection() throws SQLException{
+       doReopen();
     }
 
-    public CallableStatement prepareCall(String sql,int resultSetType,int resultSetConcurrency,int resultSetHoldability) throws SQLException{
+    RefCountedConnection acquireConnection() throws SQLException{
         reopenConnectionIfNecessary();
-        CallableStatement delegate = currentConn.element().prepareCall(sql,resultSetType,resultSetConcurrency,resultSetHoldability);
-        ClusteredCallableStatement cps = new ClusteredCallableStatement(currentConn,sourceConn,delegate);
-        registerStatement(cps);
-        queryRan=true;
-
-        return cps;
-    }
-
-    public DatabaseMetaData getMetaData() throws SQLException{
-        reopenConnectionIfNecessary();
-        return currentConn.element().getMetaData();
+        return currentConn;
     }
 
     TxnIsolation getTxnIsolation(){
@@ -174,9 +154,9 @@ class ClusterConnectionManager{
         return currentConn!=null && !autoCommit && queryRan;
     }
 
-    private void registerStatement(ClusteredStatement cs){
-        currentConn.acquire();
+    void registerStatement(ClusteredStatement cs){
         openStatements.add(cs);
+        queryRan = true;
     }
 
     void releaseStatement(ClusteredStatement clusteredStatement){
@@ -188,6 +168,10 @@ class ClusterConnectionManager{
     private void reopenConnectionIfNecessary() throws SQLException{
         if(hasOpenConnection()) return;
 
+        doReopen();
+    }
+
+    private void doReopen() throws SQLException{
         Connection conn = this.poolSource.getConnection(); //TODO -sf- do username/password here
         conn.setAutoCommit(autoCommit);
         conn.setTransactionIsolation(isolationLevel.level);

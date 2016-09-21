@@ -30,6 +30,11 @@ import java.sql.SQLException;
 class ClientErrors{
     private ClientErrors(){} //ha-hah! you can't make me!
 
+    static boolean willDisconnect(SQLException se){
+        //TODO -sf- this is almost certainly not perfectly correct
+        return ClientErrors.isNetworkError(se);
+    }
+
     /**
      * Determine if the client error is in fact a transient error--that is, if
      * retrying the command on the same server stands a reasonable chance of working.

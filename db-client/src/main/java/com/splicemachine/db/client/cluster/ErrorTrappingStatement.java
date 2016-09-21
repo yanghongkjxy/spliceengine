@@ -25,14 +25,20 @@ import java.sql.*;
 abstract class ErrorTrappingStatement implements Statement{
     protected Statement delegate;
 
+    public ErrorTrappingStatement(){}
+
     ErrorTrappingStatement(Statement delegate){
         this.delegate=delegate;
+    }
+
+    protected Statement getDelegate() throws SQLException{
+        return delegate;
     }
 
     @Override
     public ResultSet executeQuery(String sql) throws SQLException{
         try{
-            return delegate.executeQuery(sql);
+            return getDelegate().executeQuery(sql);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -42,7 +48,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public int executeUpdate(String sql) throws SQLException{
         try{
-            return delegate.executeUpdate(sql);
+            return getDelegate().executeUpdate(sql);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -52,7 +58,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public void close() throws SQLException{
         try{
-            delegate.close();
+            getDelegate().close();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -62,7 +68,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public int getMaxFieldSize() throws SQLException{
         try{
-            return delegate.getMaxFieldSize();
+            return getDelegate().getMaxFieldSize();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -72,7 +78,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public void setMaxFieldSize(int max) throws SQLException{
         try{
-            delegate.setMaxFieldSize(max);
+            getDelegate().setMaxFieldSize(max);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -82,7 +88,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public int getMaxRows() throws SQLException{
         try{
-            return delegate.getMaxRows();
+            return getDelegate().getMaxRows();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -92,7 +98,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public void setMaxRows(int max) throws SQLException{
         try{
-            delegate.setMaxRows(max);
+            getDelegate().setMaxRows(max);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -102,7 +108,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public void setEscapeProcessing(boolean enable) throws SQLException{
         try{
-            delegate.setEscapeProcessing(enable);
+            getDelegate().setEscapeProcessing(enable);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -112,7 +118,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public int getQueryTimeout() throws SQLException{
         try{
-            return delegate.getQueryTimeout();
+            return getDelegate().getQueryTimeout();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -122,7 +128,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public void setQueryTimeout(int seconds) throws SQLException{
         try{
-            delegate.setQueryTimeout(seconds);
+            getDelegate().setQueryTimeout(seconds);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -132,7 +138,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public void cancel() throws SQLException{
         try{
-            delegate.cancel();
+            getDelegate().cancel();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -142,7 +148,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public SQLWarning getWarnings() throws SQLException{
         try{
-            return delegate.getWarnings();
+            return getDelegate().getWarnings();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -152,7 +158,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public void clearWarnings() throws SQLException{
         try{
-            delegate.clearWarnings();
+            getDelegate().clearWarnings();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -162,7 +168,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public void setCursorName(String name) throws SQLException{
         try{
-            delegate.setCursorName(name);
+            getDelegate().setCursorName(name);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -172,7 +178,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public boolean execute(String sql) throws SQLException{
         try{
-            return delegate.execute(sql);
+            return getDelegate().execute(sql);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -182,7 +188,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public ResultSet getResultSet() throws SQLException{
         try{
-            return delegate.getResultSet();
+            return getDelegate().getResultSet();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -192,7 +198,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public int getUpdateCount() throws SQLException{
         try{
-            return delegate.getUpdateCount();
+            return getDelegate().getUpdateCount();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -202,7 +208,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public boolean getMoreResults() throws SQLException{
         try{
-            return delegate.getMoreResults();
+            return getDelegate().getMoreResults();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -212,7 +218,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public void setFetchDirection(int direction) throws SQLException{
         try{
-            delegate.setFetchDirection(direction);
+            getDelegate().setFetchDirection(direction);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -222,7 +228,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public int getFetchDirection() throws SQLException{
         try{
-            return delegate.getFetchDirection();
+            return getDelegate().getFetchDirection();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -232,7 +238,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public void setFetchSize(int rows) throws SQLException{
         try{
-            delegate.setFetchSize(rows);
+            getDelegate().setFetchSize(rows);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -242,7 +248,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public int getFetchSize() throws SQLException{
         try{
-            return delegate.getFetchSize();
+            return getDelegate().getFetchSize();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -252,7 +258,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public int getResultSetConcurrency() throws SQLException{
         try{
-            return delegate.getResultSetConcurrency();
+            return getDelegate().getResultSetConcurrency();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -262,7 +268,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public int getResultSetType() throws SQLException{
         try{
-            return delegate.getResultSetType();
+            return getDelegate().getResultSetType();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -272,7 +278,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public void addBatch(String sql) throws SQLException{
         try{
-            delegate.addBatch(sql);
+            getDelegate().addBatch(sql);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -282,7 +288,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public void clearBatch() throws SQLException{
         try{
-            delegate.clearBatch();
+            getDelegate().clearBatch();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -292,7 +298,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public int[] executeBatch() throws SQLException{
         try{
-            return delegate.executeBatch();
+            return getDelegate().executeBatch();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -302,7 +308,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public Connection getConnection() throws SQLException{
         try{
-            return delegate.getConnection();
+            return getDelegate().getConnection();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -312,7 +318,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public boolean getMoreResults(int current) throws SQLException{
         try{
-            return delegate.getMoreResults(current);
+            return getDelegate().getMoreResults(current);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -322,7 +328,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public ResultSet getGeneratedKeys() throws SQLException{
         try{
-            return delegate.getGeneratedKeys();
+            return getDelegate().getGeneratedKeys();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -332,7 +338,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public int executeUpdate(String sql,int autoGeneratedKeys) throws SQLException{
         try{
-            return delegate.executeUpdate(sql,autoGeneratedKeys);
+            return getDelegate().executeUpdate(sql,autoGeneratedKeys);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -342,7 +348,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public int executeUpdate(String sql,int[] columnIndexes) throws SQLException{
         try{
-            return delegate.executeUpdate(sql,columnIndexes);
+            return getDelegate().executeUpdate(sql,columnIndexes);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -352,7 +358,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public int executeUpdate(String sql,String[] columnNames) throws SQLException{
         try{
-            return delegate.executeUpdate(sql,columnNames);
+            return getDelegate().executeUpdate(sql,columnNames);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -362,7 +368,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public boolean execute(String sql,int autoGeneratedKeys) throws SQLException{
         try{
-            return delegate.execute(sql,autoGeneratedKeys);
+            return getDelegate().execute(sql,autoGeneratedKeys);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -372,7 +378,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public boolean execute(String sql,int[] columnIndexes) throws SQLException{
         try{
-            return delegate.execute(sql,columnIndexes);
+            return getDelegate().execute(sql,columnIndexes);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -382,7 +388,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public boolean execute(String sql,String[] columnNames) throws SQLException{
         try{
-            return delegate.execute(sql,columnNames);
+            return getDelegate().execute(sql,columnNames);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -392,7 +398,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public int getResultSetHoldability() throws SQLException{
         try{
-            return delegate.getResultSetHoldability();
+            return getDelegate().getResultSetHoldability();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -402,7 +408,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public boolean isClosed() throws SQLException{
         try{
-            return delegate.isClosed();
+            return getDelegate().isClosed();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -412,7 +418,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public void setPoolable(boolean poolable) throws SQLException{
         try{
-            delegate.setPoolable(poolable);
+            getDelegate().setPoolable(poolable);
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -422,7 +428,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public boolean isPoolable() throws SQLException{
         try{
-            return delegate.isPoolable();
+            return getDelegate().isPoolable();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -432,7 +438,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public void closeOnCompletion() throws SQLException{
         try{
-            delegate.closeOnCompletion();
+            getDelegate().closeOnCompletion();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -442,7 +448,7 @@ abstract class ErrorTrappingStatement implements Statement{
     @Override
     public boolean isCloseOnCompletion() throws SQLException{
         try{
-            return delegate.isCloseOnCompletion();
+            return getDelegate().isCloseOnCompletion();
         }catch(SQLException e){
             reportError(e);
             throw e;
@@ -451,12 +457,12 @@ abstract class ErrorTrappingStatement implements Statement{
 
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException{
-        return delegate.unwrap(iface);
+        return getDelegate().unwrap(iface);
     }
 
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException{
-        return delegate.isWrapperFor(iface);
+        return getDelegate().isWrapperFor(iface);
     }
 
     protected abstract void reportError(Throwable t);

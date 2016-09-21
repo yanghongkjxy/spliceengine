@@ -105,7 +105,7 @@ public class ClusteredDriver implements Driver{
                     .build();
 
             cds.detectServers(); //run a detection to fill out all the servers
-            return new ClusteredConnection(cds,true,augmentedProperties);
+            return new ClusteredConnection(url,cds,true,augmentedProperties);
         }catch(SqlException se){
             throw se.getSQLException();
         }

@@ -31,6 +31,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static com.splicemachine.db.client.cluster.ClusterUtil.logError;
+
 /**
  * Maintains a pool of active connections to a cluster of servers. This does <em>not</em>
  * manage direct network access, only the connections themselves.
@@ -159,7 +161,7 @@ public class ClusteredDataSource implements DataSource{
                 if(!ClientErrors.isNetworkError(se)){
                     throw se;
                 }
-                logError("getConnection("+serverPool.serverName+")",se,Level.INFO);
+                logError(LOGGER,"getConnection("+serverPool.serverName+")",se,Level.INFO);
                 if(serverPool.isDead())
                     serverList.serverDead(serverPool);
             }
@@ -230,17 +232,6 @@ public class ClusteredDataSource implements DataSource{
         performDiscovery(new Discovery());
     }
 
-    private void logError(String operation,Throwable t,Level logLevel){
-        String errorMessage="error during "+operation+":";
-        if(t instanceof SQLException){
-            SQLException se=(SQLException)t;
-            errorMessage+="["+se.getSQLState()+"]";
-        }
-        if(t.getMessage()!=null)
-            errorMessage+=t.getMessage();
-
-        LOGGER.log(logLevel,errorMessage,t);
-    }
 
     private class Discovery implements Runnable,Callable<Void>{
         @Override
@@ -276,7 +267,7 @@ public class ClusteredDataSource implements DataSource{
                 if(!ClientErrors.isNetworkError(se)){
                     throw se;
                 }
-                logError("getConnection("+serverPool.serverName+")",se,Level.INFO);
+                logError(LOGGER,"getConnection("+serverPool.serverName+")",se,Level.INFO);
                 if(serverPool.isDead())
                     serverList.serverDead(serverPool);
             }

@@ -31,9 +31,14 @@ class ClusteredConnection implements Connection{
     private final ClusterConnectionManager connectionManager;
     private final boolean closeDataSourceOnClose;
     private boolean closed = false;
+    private final String url;
 
-    ClusteredConnection(ClusteredDataSource dataSource,boolean closeDataSourceOnClose,Properties connectionproperties){
-        this.connectionManager = new ClusterConnectionManager(this,dataSource,connectionproperties);
+    ClusteredConnection(String connectUrl,
+            ClusteredDataSource dataSource,
+                        boolean closeDataSourceOnClose,
+                        Properties connectionproperties){
+        this.url = connectUrl;
+        this.connectionManager = new ClusterConnectionManager(dataSource,connectionproperties);
         this.closeDataSourceOnClose = closeDataSourceOnClose;
     }
 
@@ -53,20 +58,20 @@ class ClusteredConnection implements Connection{
     }
 
     @Override
-    @SuppressWarnings("MagicConstant")
+    @SuppressWarnings("MagicConstant") //getHoldability() will return the correct value, the linter just can't tell
     public Statement createStatement(int resultSetType,int resultSetConcurrency) throws SQLException{
         //use the current connection's default holdability
         return createStatement(resultSetType, resultSetConcurrency,getHoldability());
     }
 
     @Override
-    @SuppressWarnings("MagicConstant")
+    @SuppressWarnings("MagicConstant") //getHoldability() will return the correct value, the linter just can't tell
     public PreparedStatement prepareStatement(String sql,int resultSetType,int resultSetConcurrency) throws SQLException{
         return prepareStatement(sql,resultSetType,resultSetConcurrency,getHoldability());
     }
 
     @Override
-    @SuppressWarnings("MagicConstant")
+    @SuppressWarnings("MagicConstant") //getHoldability() will return the correct value, the linter just can't tell
     public CallableStatement prepareCall(String sql,int resultSetType,int resultSetConcurrency) throws SQLException{
         return prepareCall(sql,resultSetType,resultSetConcurrency,getHoldability());
     }
@@ -74,19 +79,45 @@ class ClusteredConnection implements Connection{
     @Override
     public Statement createStatement(int resultSetType,int resultSetConcurrency,int resultSetHoldability) throws SQLException{
         checkClosed();
-        return connectionManager.createStatement(resultSetType,resultSetConcurrency,resultSetHoldability);
+        ClusteredStatement cs = new ClusteredStatement(this,connectionManager,
+                resultSetType,
+                resultSetConcurrency,
+                resultSetHoldability,
+                connectionManager.maxExecutionRetry());
+        connectionManager.registerStatement(cs);
+        return cs;
     }
 
     @Override
     public PreparedStatement prepareStatement(String sql,int resultSetType,int resultSetConcurrency,int resultSetHoldability) throws SQLException{
         checkClosed();
-        return connectionManager.prepareStatement(sql,resultSetType,resultSetConcurrency,resultSetHoldability);
+        ClusteredPreparedStatement cps = new ClusteredPreparedStatement(this,connectionManager,
+                sql,
+                resultSetType,
+                resultSetConcurrency,
+                resultSetHoldability,
+                connectionManager.maxExecutionRetry());
+        connectionManager.registerStatement(cps);
+        return cps;
     }
 
     @Override
     public CallableStatement prepareCall(String sql,int resultSetType,int resultSetConcurrency,int resultSetHoldability) throws SQLException{
         checkClosed();
-        return connectionManager.prepareCall(sql,resultSetType,resultSetConcurrency,resultSetHoldability);
+        ClusteredCallableStatement cps = new ClusteredCallableStatement(this,connectionManager,
+                sql,
+                resultSetType,
+                resultSetConcurrency,
+                resultSetHoldability,
+                connectionManager.maxExecutionRetry());
+
+        connectionManager.registerStatement(cps);
+        return cps;
+    }
+
+    @Override
+    public DatabaseMetaData getMetaData() throws SQLException{
+        return new ClusteredMetaData(this,url,connectionManager,connectionManager.maxExecutionRetry());
     }
 
     @Override
@@ -102,11 +133,6 @@ class ClusteredConnection implements Connection{
     @Override
     public PreparedStatement prepareStatement(String sql,String[] columnNames) throws SQLException{
         throw new UnsupportedOperationException("IMPLEMENT");
-    }
-
-    @Override
-    public DatabaseMetaData getMetaData() throws SQLException{
-        return connectionManager.getMetaData();
     }
 
     @Override
@@ -141,21 +167,25 @@ class ClusteredConnection implements Connection{
 
     @Override
     public Savepoint setSavepoint() throws SQLException{
+        checkClosed();
         throw new UnsupportedOperationException("IMPLEMENT");
     }
 
     @Override
     public Savepoint setSavepoint(String name) throws SQLException{
+        checkClosed();
         throw new UnsupportedOperationException("IMPLEMENT");
     }
 
     @Override
     public void rollback(Savepoint savepoint) throws SQLException{
+        checkClosed();
         throw new UnsupportedOperationException("IMPLEMENT");
     }
 
     @Override
     public void releaseSavepoint(Savepoint savepoint) throws SQLException{
+        checkClosed();
         throw new UnsupportedOperationException("IMPLEMENT");
     }
 
