@@ -37,12 +37,7 @@ public class ServerListTest{
 
     @Test
     public void functionsWithEmptyServerList() throws Exception{
-        ServerList sl = new ServerList(new ConnectionSelectionStrategy(){
-            @Override
-            public int nextServer(int previous,int numServers){
-                return 1;
-            }
-        },new ServerPool[]{});
+        ServerList sl = new ServerList((previous,numServers)->1,new ServerPool[]{});
 
         Iterator<ServerPool> spIter=sl.activeServers();
         Assert.assertFalse("Returns a server!",spIter.hasNext());
@@ -54,12 +49,7 @@ public class ServerListTest{
         ServerPool active = new ServerPool(mock(DataSource.class),
                 "testServer",1,fd,mock(PoolSizingStrategy.class),Integer.MAX_VALUE);
 
-        ServerList sl = new ServerList(new ConnectionSelectionStrategy(){
-            @Override
-            public int nextServer(int previous,int numServers){
-                return 1;
-            }
-        },new ServerPool[]{active});
+        ServerList sl = new ServerList((previous,numServers)->1,new ServerPool[]{active});
 
         Iterator<ServerPool> spIter=sl.activeServers();
         Assert.assertTrue("Did not see active servers!",spIter.hasNext());
@@ -75,12 +65,7 @@ public class ServerListTest{
         ServerPool active = new ServerPool(mock(DataSource.class),
                 "testServer",1,fd,mock(PoolSizingStrategy.class),Integer.MAX_VALUE);
 
-        ServerList sl = new ServerList(new ConnectionSelectionStrategy(){
-            @Override
-            public int nextServer(int previous,int numServers){
-                return 1;
-            }
-        },new ServerPool[]{active});
+        ServerList sl = new ServerList((previous,numServers)->1,new ServerPool[]{active});
 
         Iterator<ServerPool> spIter=sl.activeServers();
         Assert.assertFalse("Has a server!",spIter.hasNext());
@@ -95,12 +80,7 @@ public class ServerListTest{
                 "activeServer",1,new DeadlineFailureDetector(Long.MAX_VALUE),
                 mock(PoolSizingStrategy.class),Integer.MAX_VALUE);
 
-        ServerList sl = new ServerList(new ConnectionSelectionStrategy(){
-            @Override
-            public int nextServer(int previous,int numServers){
-                return 1;
-            }
-        },new ServerPool[]{dead,active});
+        ServerList sl = new ServerList((previous,numServers)->1,new ServerPool[]{dead,active});
 
         Iterator<ServerPool> spIter=sl.activeServers();
         Assert.assertTrue("Did not see active servers!",spIter.hasNext());
@@ -113,12 +93,7 @@ public class ServerListTest{
     @Test
     public void returnsNothingWhenEmpty() throws Exception{
 
-        ServerList sl = new ServerList(new ConnectionSelectionStrategy(){
-            @Override
-            public int nextServer(int previous,int numServers){
-                return 1;
-            }
-        },new ServerPool[]{});
+        ServerList sl = new ServerList((previous,numServers)->1,new ServerPool[]{});
 
         Iterator<ServerPool> spIter=sl.activeServers();
         Assert.assertFalse("Has a server!",spIter.hasNext());
@@ -138,12 +113,7 @@ public class ServerListTest{
             }
         }).when(mock).heartbeat();
 
-        ServerList sl = new ServerList(new ConnectionSelectionStrategy(){
-            @Override
-            public int nextServer(int previous,int numServers){
-                return 1;
-            }
-        },new ServerPool[]{mock});
+        ServerList sl = new ServerList((previous,numServers)->1,new ServerPool[]{mock});
 
         Iterator<ServerPool> spIter=sl.activeServers();
         Assert.assertTrue("Did not see active servers!",spIter.hasNext());
@@ -160,18 +130,16 @@ public class ServerListTest{
 
     @Test
     public void newServerListRemovesOldServers() throws Exception{
+        DeadlineFailureDetector failureDetector=new DeadlineFailureDetector(1){
+            @Override public boolean isAlive(){ return false; }
+        };
         ServerPool dead = new ServerPool(mock(DataSource.class),
-                "deadServer",1,new DeadlineFailureDetector(1),mock(PoolSizingStrategy.class),Integer.MAX_VALUE);
+                "deadServer",1,failureDetector,mock(PoolSizingStrategy.class),Integer.MAX_VALUE);
         ServerPool active = new ServerPool(mock(DataSource.class),
                 "activeServer",1,new DeadlineFailureDetector(Long.MAX_VALUE),
                 mock(PoolSizingStrategy.class),Integer.MAX_VALUE);
 
-        ServerList sl = new ServerList(new ConnectionSelectionStrategy(){
-            @Override
-            public int nextServer(int previous,int numServers){
-                return 1;
-            }
-        },new ServerPool[]{dead,active});
+        ServerList sl = new ServerList((previous,numServers)->1,new ServerPool[]{dead,active});
 
         sl.setServerList(new ServerPool[]{active});
 
@@ -185,18 +153,16 @@ public class ServerListTest{
 
     @Test
     public void newServerListAddsNewServers() throws Exception{
+        DeadlineFailureDetector failureDetector=new DeadlineFailureDetector(1){
+            @Override public boolean isAlive(){ return false; }
+        };
         ServerPool dead = new ServerPool(mock(DataSource.class),
-                "deadServer",1,new DeadlineFailureDetector(1),mock(PoolSizingStrategy.class),Integer.MAX_VALUE);
+                "deadServer",1,failureDetector,mock(PoolSizingStrategy.class),Integer.MAX_VALUE);
         ServerPool active = new ServerPool(mock(DataSource.class),
                 "activeServer",1,new DeadlineFailureDetector(Long.MAX_VALUE),
                 mock(PoolSizingStrategy.class),Integer.MAX_VALUE);
 
-        ServerList sl = new ServerList(new ConnectionSelectionStrategy(){
-            @Override
-            public int nextServer(int previous,int numServers){
-                return 1;
-            }
-        },new ServerPool[]{dead,active});
+        ServerList sl = new ServerList((previous,numServers)->1,new ServerPool[]{dead,active});
 
         Iterator<ServerPool> spIter=sl.activeServers();
         Assert.assertTrue("Did not see active servers!",spIter.hasNext());
@@ -224,18 +190,16 @@ public class ServerListTest{
 
     @Test
     public void addServerAddsNewServers() throws Exception{
+        DeadlineFailureDetector failureDetector=new DeadlineFailureDetector(1){
+            @Override public boolean isAlive(){ return false; }
+        };
         ServerPool dead = new ServerPool(mock(DataSource.class),
-                "deadServer",1,new DeadlineFailureDetector(1),mock(PoolSizingStrategy.class),Integer.MAX_VALUE);
+                "deadServer",1,failureDetector,mock(PoolSizingStrategy.class),Integer.MAX_VALUE);
         ServerPool active = new ServerPool(mock(DataSource.class),
                 "activeServer",1,new DeadlineFailureDetector(Long.MAX_VALUE),
                 mock(PoolSizingStrategy.class),Integer.MAX_VALUE);
 
-        ServerList sl = new ServerList(new ConnectionSelectionStrategy(){
-            @Override
-            public int nextServer(int previous,int numServers){
-                return 1;
-            }
-        },new ServerPool[]{dead,active});
+        ServerList sl = new ServerList((previous,numServers)->1,new ServerPool[]{dead,active});
 
         Iterator<ServerPool> spIter=sl.activeServers();
         Assert.assertTrue("Did not see active servers!",spIter.hasNext());
@@ -259,5 +223,12 @@ public class ServerListTest{
         Collections.sort(sps);
         Assert.assertEquals("Missing active server!",active,sps.get(0));
         Assert.assertEquals("Missing active2 server!",active2,sps.get(1));
+    }
+
+    @Test
+    public void repeatedAddServerAddsNewServer() throws Exception{
+        for(int i=0;i<100;i++){
+            addServerAddsNewServers();
+        }
     }
 }
