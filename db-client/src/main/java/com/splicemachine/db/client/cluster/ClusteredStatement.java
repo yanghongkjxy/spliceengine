@@ -747,6 +747,7 @@ class ClusteredStatement implements Statement{
         if(currStatement!=null) return;
 
         currentConn = connManager.acquireConnection();
+        currentConn.acquire();
         currStatement = newStatement(currentConn.element());
         setProperties(currStatement);
     }

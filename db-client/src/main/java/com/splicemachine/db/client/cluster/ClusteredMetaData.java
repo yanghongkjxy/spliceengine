@@ -224,7 +224,7 @@ class ClusteredMetaData implements DatabaseMetaData{
         while(numRetries>0){
             reopenIfNecessary();
             try{
-                return delegate.getDatabaseProductName();
+                return delegate.getDatabaseProductVersion();
             }catch(SQLException se){
                 disconnect();
                 if(error==null) error = se;

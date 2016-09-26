@@ -90,8 +90,8 @@ public class Trigger_Exec_Stored_Proc_IT  extends SpliceUnitTest {
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         Collection<Object[]> params = Lists.newArrayListWithCapacity(2);
-        params.add(new Object[]{"jdbc:splice://localhost:1527/splicedb;create=true;user=splice;password=admin"});
-        params.add(new Object[]{"jdbc:splice://localhost:1527/splicedb;create=true;user=splice;password=admin;useSpark=true"});
+        params.add(new Object[]{"jdbc:spliceClustered://localhost:1527/splicedb;create=true;user=splice;password=admin"});
+        params.add(new Object[]{"jdbc:spliceClustered://localhost:1527/splicedb;create=true;user=splice;password=admin;useSpark=true"});
         return params;
     }
 
@@ -104,7 +104,7 @@ public class Trigger_Exec_Stored_Proc_IT  extends SpliceUnitTest {
     @BeforeClass
     public static void setUpClass() throws Exception {
 
-        String storedProcsJarFilePath = System.getProperty("user.dir")+"/target/sql-it/sql-it.jar";
+        String storedProcsJarFilePath = SpliceUnitTest.getHBaseDirectory()+"/target/sql-it/sql-it.jar";
         // Install the jar file of stored procedures.
         File jar = new File(storedProcsJarFilePath);
         Assert.assertTrue("Can't run test without " + storedProcsJarFilePath, jar.exists());

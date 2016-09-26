@@ -132,9 +132,25 @@ public class ClusteredDataSource implements DataSource{
         this.heartbeatWindow = heartbeatWindow;
     }
 
-    public void start(){
+    public void start() throws SQLException{
+        preStartValidation();
         Discovery command=new Discovery();
         schedule(command);
+    }
+
+    private void preStartValidation() throws SQLException{
+        /*
+         * The purpose here is to perform some basic validations (like
+         * authentication) which would potentially prevent this connection
+         * from being constructed in the first place.
+         *
+         * Really all this does is force at least one connection to occur, which
+         * will cause any pre-start validation to occur automatically.
+         */
+        try(Connection connection=getConnection()){
+            connection.isValid(1);
+        }
+
     }
 
 
@@ -223,6 +239,7 @@ public class ClusteredDataSource implements DataSource{
                 else se.setNextException(e);
             }
         }
+        maintainer.shutdownNow();
         if(se!=null)
             throw se;
     }

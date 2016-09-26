@@ -44,7 +44,7 @@ public class TriggerProcs {
         Connection conn = null;
         Statement statement = null;
         try {
-            conn = DriverManager.getConnection("jdbc:splice://localhost:1527/splicedb;user=splice;password=admin");
+            conn = DriverManager.getConnection("jdbc:spliceClustered://localhost:1527/splicedb;user=splice;password=admin");
             String username = conn.getMetaData().getUserName();
             statement = conn.createStatement();
             statement.execute(String.format("insert into %s.%s (username,insert_time) values ('%s', CURRENT_TIMESTAMP)",
@@ -71,7 +71,7 @@ public class TriggerProcs {
         Connection conn = null;
         Statement statement = null;
         try {
-            conn = DriverManager.getConnection("jdbc:splice://localhost:1527/splicedb;user=splice;password=admin");
+            conn = DriverManager.getConnection("jdbc:spliceClustered://localhost:1527/splicedb;user=splice;password=admin");
             String username = conn.getMetaData().getUserName();
             statement = conn.createStatement();
             statement.execute(
@@ -96,7 +96,7 @@ public class TriggerProcs {
         Connection conn = null;
         Statement statement = null;
         try {
-            conn = DriverManager.getConnection("jdbc:splice://localhost:1527/splicedb;user=splice;password=admin");
+            conn = DriverManager.getConnection("jdbc:spliceClustered://localhost:1527/splicedb;user=splice;password=admin");
             String username = conn.getMetaData().getUserName();
             statement = conn.createStatement();
             statement.execute(String.format("insert into %s.%s (username,insert_time) values ('%s', CURRENT_TIMESTAMP)",
@@ -119,7 +119,7 @@ public class TriggerProcs {
         Connection conn = null;
         Statement statement = null;
         try {
-            conn = DriverManager.getConnection("jdbc:splice://localhost:1527/splicedb;user=splice;password=admin");
+            conn = DriverManager.getConnection("jdbc:spliceClustered://localhost:1527/splicedb;user=splice;password=admin");
             statement = conn.createStatement();
             statement.execute(sqlText);
             rs[0] = statement.getResultSet();

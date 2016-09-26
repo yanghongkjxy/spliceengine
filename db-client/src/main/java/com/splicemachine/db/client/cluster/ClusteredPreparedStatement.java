@@ -172,13 +172,23 @@ class ClusteredPreparedStatement extends ClusteredStatement implements PreparedS
                 ps.addBatch();
             }
             try{
-                return ps.executeBatch();
+                int[] retCodes=ps.executeBatch();
+                /*
+                 * Since we were able to execute without error, go ahead and
+                 * clear the batch parameters here.
+                 */
+                batchParams.clear();
+                return retCodes;
             }catch(SQLException se){
                 if(error==null) error = se;
                 else error.setNextException(se);
                 if(ClientErrors.isNetworkError(se) && params.canRetry() && connManager.isAutoCommit()){
                     disconnect();
-                }else throw error;
+                }else {
+                    //if we get an error that we can't deal with, clear the batch
+                    batchParams.clear();
+                    throw error;
+                }
             }
             numTries--;
         }

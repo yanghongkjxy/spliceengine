@@ -426,8 +426,10 @@ public class StatementParameters{
         for(int i=0;i<parameterValues.length;i++){
             if(!parameterSet[i]) continue;
             Object o = parameterValues[i];
-            if(o==null)
+            if(o==null){
                 ps.setNull(i+1,types[i]);
+                continue;
+            }
 
             switch(types[i]){
                 case Types.DATE:
@@ -473,12 +475,16 @@ public class StatementParameters{
                     }else
                         ps.setObject(i+1,o);
                     break;
+                case Types.ROWID:
+                    ps.setRowId(i+1,(RowId)o);
+                    break;
+                default:
+                    if(o instanceof LengthValue)
+                        setStream(ps,i+1,(LengthValue)o);
+                    else
+                        ps.setObject(i+1,o,types[i]);
             }
 
-            if(o instanceof LengthValue)
-                setStream(ps,i+1,(LengthValue)o);
-            else
-                ps.setObject(i+1,o,types[i]);
         }
     }
 

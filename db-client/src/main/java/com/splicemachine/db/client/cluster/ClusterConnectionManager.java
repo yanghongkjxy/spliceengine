@@ -46,7 +46,10 @@ class ClusterConnectionManager{
 
     private boolean readOnly = false;
     private TxnIsolation isolationLevel = TxnIsolation.READ_COMMITTED;
-    private int holdability =ResultSet.CLOSE_CURSORS_AT_COMMIT;
+    /*
+     * To preserve Derby behavior, we use HOLD_CURSORS_OVER_COMMIT as our default value.
+     */
+    private int holdability =ResultSet.HOLD_CURSORS_OVER_COMMIT;
     private String schema;
 
     public void setAutoCommit(boolean autoCommit) throws SQLException{
