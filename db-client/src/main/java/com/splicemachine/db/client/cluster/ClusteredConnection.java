@@ -168,25 +168,35 @@ class ClusteredConnection implements Connection{
     @Override
     public Savepoint setSavepoint() throws SQLException{
         checkClosed();
-        throw new UnsupportedOperationException("IMPLEMENT");
+        RefCountedConnection rcc = connectionManager.acquireConnection();
+        rcc.acquire();
+        Savepoint baseSp = rcc.element().setSavepoint();
+        return new ClusteredSavepoint(rcc,baseSp);
     }
 
     @Override
     public Savepoint setSavepoint(String name) throws SQLException{
         checkClosed();
-        throw new UnsupportedOperationException("IMPLEMENT");
+        RefCountedConnection rcc = connectionManager.acquireConnection();
+        rcc.acquire();
+        Savepoint baseSp = rcc.element().setSavepoint();
+        return new ClusteredSavepoint(rcc,baseSp);
     }
 
     @Override
     public void rollback(Savepoint savepoint) throws SQLException{
         checkClosed();
-        throw new UnsupportedOperationException("IMPLEMENT");
+        assert savepoint instanceof ClusteredSavepoint: "Incorrect savepoint type!";
+        ClusteredSavepoint cs = (ClusteredSavepoint)savepoint;
+        cs.rollback();
     }
 
     @Override
     public void releaseSavepoint(Savepoint savepoint) throws SQLException{
         checkClosed();
-        throw new UnsupportedOperationException("IMPLEMENT");
+        assert savepoint instanceof ClusteredSavepoint: "Incorrect savepoint type!";
+        ClusteredSavepoint cs = (ClusteredSavepoint)savepoint;
+        cs.commit();
     }
 
     @Override
