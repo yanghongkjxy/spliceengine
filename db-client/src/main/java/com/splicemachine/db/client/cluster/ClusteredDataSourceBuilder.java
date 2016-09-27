@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ClusteredDataSourceBuilder{
     private String[] initialServers;
     private long discoveryWindow;
-    private int numHeartbeatThreads;
+    private int numHeartbeatThreads = 1;
     private long heartbeatPeriod;
     private ConnectionSelectionStrategy css;
     private ServerPoolFactory spf;
@@ -84,6 +84,10 @@ public class ClusteredDataSourceBuilder{
             serverPools[i] =spf.newServerPool(initialServers[i]);
         }
         ServerList sl = new ServerList(css,serverPools);
+
+        if(serverDiscovery==null){
+            serverDiscovery = new ConnectionServerDiscovery(initialServers,sl,spf);
+        }
 
         ScheduledExecutorService ses =Executors.newScheduledThreadPool(numHeartbeatThreads,new ThreadFactory(){
             private final AtomicInteger counter = new AtomicInteger(0);

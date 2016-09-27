@@ -264,8 +264,9 @@ public class ClusteredDataSource implements DataSource{
             for(String server:newServers){
                 ServerPool serverPool=poolFactory.newServerPool(server);
                 servers[i] =serverPool;
-                if(heartbeatWindow>0)
+                if(heartbeatWindow>0){
                     maintainer.schedule(new Heartbeat(serverPool),heartbeatWindow,TimeUnit.MILLISECONDS);
+                }
                 i++;
             }
             serverList.setServerList(servers);

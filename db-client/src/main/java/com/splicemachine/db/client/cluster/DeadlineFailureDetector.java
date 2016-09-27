@@ -35,7 +35,7 @@ class DeadlineFailureDetector implements FailureDetector{
     @Override
     public void success(){
         lastGoodTimestamp =currentTime();
-        knownDead=true;
+        knownDead=false;
     }
 
 
@@ -61,4 +61,6 @@ class DeadlineFailureDetector implements FailureDetector{
     protected long currentTime(){
         return System.currentTimeMillis();
     }
+
+
 }

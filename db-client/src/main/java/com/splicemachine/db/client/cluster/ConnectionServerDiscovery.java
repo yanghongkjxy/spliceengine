@@ -33,7 +33,7 @@ import java.util.logging.Logger;
  */
 class ConnectionServerDiscovery implements ServerDiscovery{
     private static final Logger LOGGER=Logger.getLogger(ClusteredDataSource.class.getName());
-    static final String DEFAULT_ACTIVE_SERVER_QUERY="call SYSCS_UTIL.GET_ACTIVE_SERVERS()";
+    static final String DEFAULT_ACTIVE_SERVER_QUERY="call SYSCS_UTIL.SYSCS_GET_ACTIVE_SERVERS()";
     private final String[] initialServers;
     private final ServerList serverList;
     private final ServerPoolFactory poolFactory;

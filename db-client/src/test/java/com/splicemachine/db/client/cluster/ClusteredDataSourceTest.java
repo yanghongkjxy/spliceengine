@@ -43,12 +43,9 @@ import static org.mockito.Mockito.when;
 public class ClusteredDataSourceTest{
 
     private static final ScheduledExecutorService ses = mock(ScheduledExecutorService.class);
-    private static final Answer<ScheduledFuture<?>> answer=new Answer<ScheduledFuture<?>>(){
-        @Override
-        public ScheduledFuture<?> answer(InvocationOnMock invocation) throws Throwable{
-            ((Runnable)invocation.getArguments()[0]).run();
-            return null;
-        }
+    private static final Answer<ScheduledFuture<?>> answer=invocation->{
+        ((Runnable)invocation.getArguments()[0]).run();
+        return null;
     };
     static{
         when(ses.scheduleAtFixedRate(any(Runnable.class),anyLong(),anyLong(),any(TimeUnit.class))).then(answer);
@@ -63,11 +60,7 @@ public class ClusteredDataSourceTest{
 
         ConnectionSelectionStrategy css = ConnectionStrategy.ROUND_ROBIN;
 
-        FailureDetectorFactory failureDetectorFactory=new FailureDetectorFactory(){
-            @Override public FailureDetector newFailureDetector(){
-                return new DeadlineFailureDetector(Long.MAX_VALUE);
-            }
-        };
+        FailureDetectorFactory failureDetectorFactory=()->new DeadlineFailureDetector(Long.MAX_VALUE);
         ServerPoolFactory spf = new ConfiguredServerPoolFactory("test","tu","tp",failureDetectorFactory,pss){
             @Override
             protected DataSource newDataSource(String serverId,
@@ -86,14 +79,10 @@ public class ClusteredDataSourceTest{
         };
 
         ServerList sl = new ServerList(css,new ServerPool[]{});
-        ServerDiscovery discovery = new ServerDiscovery(){
-            @Override
-            public List<String> detectServers() throws SQLException{
-                return Arrays.asList("testServer:1527");
-            }
-        };
+        ServerDiscovery discovery =()->Collections.singletonList("testServer:1527");
         ClusteredDataSource cds = new ClusteredDataSource(sl,spf,discovery, ses,false,0L,0);
-        cds.start();
+        cds.detectServers();
+//        cds.start();
         Connection c = cds.getConnection();
         Assert.assertNotNull("Did not get a non-null connection!",c);
     }
@@ -104,13 +93,11 @@ public class ClusteredDataSourceTest{
 
         ConnectionSelectionStrategy css = ConnectionStrategy.ROUND_ROBIN;
 
-        FailureDetectorFactory failureDetectorFactory=new FailureDetectorFactory(){
-            @Override public FailureDetector newFailureDetector(){
-                //don't have the failure detector advance
-                return new DeadlineFailureDetector(10){
-                    @Override protected long currentTime(){ return 1L; }
-                };
-            }
+        FailureDetectorFactory failureDetectorFactory=()->{
+            //don't have the failure detector advance
+            return new DeadlineFailureDetector(10){
+                @Override protected long currentTime(){ return 1L; }
+            };
         };
         ServerPoolFactory spf = new ConfiguredServerPoolFactory("test","tu","tp",failureDetectorFactory,pss){
             @Override
@@ -128,15 +115,10 @@ public class ClusteredDataSourceTest{
                 return ds;
             }
         };
-        ServerDiscovery sd = new ServerDiscovery(){
-            @Override
-            public List<String> detectServers() throws SQLException{
-                return Collections.emptyList();
-            }
-        };
+        ServerDiscovery sd =Collections::emptyList;
         ClusteredDataSource cds = new ClusteredDataSource(new ServerList(css,new ServerPool[]{}),spf,sd, ses,false,0L,0);
-        cds.start();
         try{
+            cds.start();
             cds.getConnection();
             Assert.fail("Did not throw exception!");
         }catch(SQLException se){
@@ -150,13 +132,11 @@ public class ClusteredDataSourceTest{
 
         ConnectionSelectionStrategy css = ConnectionStrategy.ROUND_ROBIN;
 
-        FailureDetectorFactory failureDetectorFactory=new FailureDetectorFactory(){
-            @Override public FailureDetector newFailureDetector(){
-                //don't have the failure detector advance
-                return new DeadlineFailureDetector(10){
-                    @Override protected long currentTime(){ return 1L; }
-                };
-            }
+        FailureDetectorFactory failureDetectorFactory=()->{
+            //don't have the failure detector advance
+            return new DeadlineFailureDetector(10){
+                @Override protected long currentTime(){ return 1L; }
+            };
         };
         //in this case, we want to use derby's logic so that we know we actually try to connect
         ServerPoolFactory spf = new ConfiguredServerPoolFactory("test","tu","tp",failureDetectorFactory,pss);
@@ -178,9 +158,7 @@ public class ClusteredDataSourceTest{
     public void blacklistsServerWithConnectionRefused() throws Exception{
         PoolSizingStrategy pss = InfinitePoolSize.INSTANCE;
 
-        ConnectionSelectionStrategy css = new ConnectionSelectionStrategy(){
-            @Override public int nextServer(int previous,int numServers){ return 0; }
-        };
+        ConnectionSelectionStrategy css =(previous,numServers)->0;
 
         FailureDetectorFactory failureDetectorFactory=new FailureDetectorFactory(){
             @Override public FailureDetector newFailureDetector(){
@@ -223,9 +201,7 @@ public class ClusteredDataSourceTest{
             }
         };
         ServerList sl = new ServerList(css,new ServerPool[]{});
-        ServerDiscovery sd = new ServerDiscovery(){
-            @Override public List<String> detectServers() throws SQLException{ return Arrays.asList("failServer","successServer"); }
-        };
+        ServerDiscovery sd =()->Arrays.asList("failServer","successServer");
         ClusteredDataSource cds = new ClusteredDataSource(sl,spf,sd,ses,false,100L,0);
         cds.detectServers();
         Connection c=cds.getConnection();
@@ -244,11 +220,9 @@ public class ClusteredDataSourceTest{
 
         ConnectionSelectionStrategy css = ConnectionStrategy.ROUND_ROBIN;
 
-        FailureDetectorFactory failureDetectorFactory=new FailureDetectorFactory(){
-            @Override public FailureDetector newFailureDetector(){
-                //don't have the failure detector advance
-                return new DeadlineFailureDetector(Long.MAX_VALUE);
-            }
+        FailureDetectorFactory failureDetectorFactory=()->{
+            //don't have the failure detector advance
+            return new DeadlineFailureDetector(Long.MAX_VALUE);
         };
         ServerPoolFactory spf = new ConfiguredServerPoolFactory("test","tu","tp",failureDetectorFactory,pss){
             @Override
@@ -303,11 +277,7 @@ public class ClusteredDataSourceTest{
 
         ConnectionSelectionStrategy css = ConnectionStrategy.ROUND_ROBIN;
 
-        FailureDetectorFactory failureDetectorFactory=new FailureDetectorFactory(){
-            @Override public FailureDetector newFailureDetector(){
-                return new DeadlineFailureDetector(Long.MAX_VALUE);
-            }
-        };
+        FailureDetectorFactory failureDetectorFactory=()->new DeadlineFailureDetector(Long.MAX_VALUE);
         //in this case, we want to use derby's logic so that we know we actually try to connect
         ServerPoolFactory spf = new ConfiguredServerPoolFactory("test","tu","tp",failureDetectorFactory,pss){
             @Override
