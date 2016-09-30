@@ -17,6 +17,7 @@
 package com.splicemachine.db.client.cluster;
 
 import com.splicemachine.db.iapi.reference.SQLState;
+import com.sun.security.ntlm.Server;
 
 import javax.sql.DataSource;
 import java.sql.*;
@@ -98,20 +99,25 @@ class ServerPool implements Comparable<ServerPool>{
         }
     }
 
-    @Override
-    public String toString(){
-        return serverName;
-    }
+//    @Override
+//    public String toString(){
+//        return serverName;
+//    }
 
     @Override
     public int compareTo(ServerPool o){
         return serverName.compareTo(o.serverName);
     }
 
+    public boolean isClosed(){
+        return closed.get();
+    }
+
     /* ****************************************************************************************************************/
     /*package-local methods*/
     Connection tryAcquireConnection(boolean validate) throws SQLException{
-        while(true){
+        boolean shouldContinue = true;
+        do{
             Connection conn=pooledConnection.poll();
             if(conn!=null){
                 if(conn.isClosed()) {
@@ -124,15 +130,12 @@ class ServerPool implements Comparable<ServerPool>{
                     conn.close(); //close this connection and try again
                 }
             }else {
-                boolean shouldContinue;
-                do{
-                    int currPoolSize = trackedSize.get();
-                    if(currPoolSize>=maxSize) return null; //we have too many open already, so we cannot acquire a new one
-                    shouldContinue = !trackedSize.compareAndSet(currPoolSize,currPoolSize+1);
-                }while(shouldContinue);
-                return createNewConnection("tryAcquire");
+                int currPoolSize = trackedSize.get();
+                if(currPoolSize>=maxSize) return null; //we have too many open already, so we cannot acquire a new one
+                shouldContinue = !trackedSize.compareAndSet(currPoolSize,currPoolSize+1);
             }
-        }
+        }while(shouldContinue);
+        return createNewConnection("tryAcquire");
     }
 
     Connection newConnection() throws SQLException{
@@ -226,7 +229,7 @@ class ServerPool implements Comparable<ServerPool>{
         @Override
         public void close() throws SQLException{
             int currTrackedSize = trackedSize.get();
-            if(currTrackedSize>maxSize || delegate.isClosed()){
+            if(isClosed() ||delegate.isClosed() || currTrackedSize>maxSize){
                 /*
                  * We've exceeded this pool size, so discard the underlying connection
                  * cleanly and then allow GC to occur.

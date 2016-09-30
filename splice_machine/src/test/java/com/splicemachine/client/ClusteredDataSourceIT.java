@@ -60,10 +60,10 @@ public class ClusteredDataSourceIT{
 
     @Test
     public void testCanGetConnectionThroughDriver() throws Exception{
-        String url = "jdbc:spliceClustered://localhost:1527/splicedb;user=splice;password=admin";
-        Class.forName(ClusteredDriver.class.getCanonicalName());
+        String url = "jdbc:splice://localhost:1527/splicedb;user=splice;password=admin";
+//        Class.forName(ClusteredDriver.class.getCanonicalName());
 
-        try(Connection conn =DriverManager.getDriver(url).connect(url,null)){
+        try(Connection conn =DriverManager.getConnection(url)){
             try(Statement s = conn.createStatement()){
                 try(ResultSet rs = s.executeQuery("values (1)")){
                     Assert.assertTrue("No rows returned!",rs.next());
@@ -74,4 +74,11 @@ public class ClusteredDataSourceIT{
         }
     }
 
+    @Test
+    public void repeatedDriver() throws Exception{
+        for(int i=0;i<100;i++){
+            System.out.println(i);
+            testCanGetConnectionThroughDriver();
+        }
+    }
 }

@@ -286,7 +286,8 @@ class ServerList{
                             destServers.add(oldSp);
                             oldPos++;
                             newPos++;
-                            newSp.close();
+                            if(newSp!=oldSp)
+                                newSp.close();
                             sp = oldSp;
                         }else{
                             /*

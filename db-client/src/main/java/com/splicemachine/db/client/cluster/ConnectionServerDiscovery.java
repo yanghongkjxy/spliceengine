@@ -48,18 +48,19 @@ class ConnectionServerDiscovery implements ServerDiscovery{
 
     @Override
     public List<String> detectServers() throws SQLException{
-        Connection conn = getConnection();
+        try(Connection conn = getConnection()){
 
-        if(conn==null){
-            LOGGER.log(Level.SEVERE,"Unable to perform service discovery: Unable to acquire connection");
-            return null;
+            if(conn==null){
+                LOGGER.log(Level.SEVERE,"Unable to perform service discovery: Unable to acquire connection");
+                return null;
+            }
+
+            return fetchActiveServers(conn);
         }
-
-        return fetchActiveServers(conn);
     }
 
     @SuppressWarnings("WeakerAccess") //designed for overridding
-    protected List<String> fetchActiveServers(Connection conn){
+    protected List<String> fetchActiveServers(Connection conn) throws SQLException{
         try(Statement cs=conn.createStatement()){
             try(ResultSet rs=cs.executeQuery(DEFAULT_ACTIVE_SERVER_QUERY)){
                 List<String> newPool=new ArrayList<>();
@@ -71,10 +72,7 @@ class ConnectionServerDiscovery implements ServerDiscovery{
 
                 return newPool;
             }
-        }catch(SQLException se){
-            logError("serviceDiscovery",se);
         }
-        return Collections.emptyList();
     }
 
     /* **********************************************************************************/
@@ -132,19 +130,21 @@ class ConnectionServerDiscovery implements ServerDiscovery{
             if(!visitedInitialServers[i]){
                 ServerPool newPool = poolFactory.newServerPool(initialServers[i]);
                 try{
-                    conn=newPool.newConnection();
+                    conn=newPool.tryAcquireConnection(false);
+                    if(conn==null)
+                        conn = newPool.newConnection();
                     if(conn!=null) {
                         serverList.addServer(newPool); //this server is actually active, so we can re-use this
                         return conn;
+                    }else{
+                        try{
+                            newPool.close();
+                        }catch(SQLException e){
+                            logError("serverPool.close("+newPool.serverName+")",e);
+                        }
                     }
                 }catch(SQLException se){
                     logError("getConnection("+newPool.serverName+")",se);
-                }finally{
-                    try{
-                        newPool.close();
-                    }catch(SQLException e){
-                        logError("serverPool.close("+newPool.serverName+")",e);
-                    }
                 }
             }
         }

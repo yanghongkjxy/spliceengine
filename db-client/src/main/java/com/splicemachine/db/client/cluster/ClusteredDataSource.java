@@ -25,6 +25,7 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -150,7 +151,6 @@ public class ClusteredDataSource implements DataSource{
         try(Connection connection=getConnection()){
             connection.isValid(1);
         }
-
     }
 
 
@@ -229,6 +229,16 @@ public class ClusteredDataSource implements DataSource{
 
     public void close() throws SQLException{
         if(!closed.compareAndSet(false,true)) return;
+        //wait for any running service discovery or heartbeats to terminate
+        maintainer.shutdownNow();
+        boolean interrupted = false;
+        try{
+            maintainer.awaitTermination(10,TimeUnit.SECONDS);
+        }catch(InterruptedException ignored){
+            interrupted = true;
+            Thread.interrupted();
+        }
+
         ServerPool[] clear=serverList.clear();
         SQLException se = null;
         for(ServerPool sp:clear){
@@ -239,7 +249,9 @@ public class ClusteredDataSource implements DataSource{
                 else se.setNextException(e);
             }
         }
-        maintainer.shutdownNow();
+
+        if(interrupted)
+            Thread.currentThread().interrupt();
         if(se!=null)
             throw se;
     }
@@ -247,6 +259,10 @@ public class ClusteredDataSource implements DataSource{
     @SuppressWarnings("WeakerAccess")
     public void detectServers() throws SQLException{
         performDiscovery(new Discovery());
+    }
+
+    public boolean isClosed(){
+        return closed.get();
     }
 
 
@@ -258,7 +274,27 @@ public class ClusteredDataSource implements DataSource{
 
         @Override
         public Void call() throws Exception{
-            List<String> newServers = serverDiscovery.detectServers();
+            if(ClusteredDataSource.this.isClosed()) return null; //there is no reason to continue operating
+            if(Thread.currentThread().isInterrupted()) return null; //return early if cancelled
+            List<String> newServers;
+            try{
+                newServers=serverDiscovery.detectServers();
+            }catch(SQLException se){
+                logError(LOGGER,"serverDiscovery",se,Level.WARNING);
+                return null;
+            }
+
+            Set<String> knownLiveServers = serverList.liveServers();
+            boolean matches = knownLiveServers.size()==newServers.size();
+            if(matches){
+                for(String newServer : knownLiveServers){
+                    matches=knownLiveServers.contains(newServer);
+                    if(!matches) break;
+                }
+            }
+
+            if(matches) return null; //no need to change the server pool
+
             ServerPool[] servers = new ServerPool[newServers.size()];
             int i=0;
             for(String server:newServers){
@@ -273,6 +309,7 @@ public class ClusteredDataSource implements DataSource{
             return null;
         }
     }
+
 
     private Connection tryAcquire() throws SQLException{
         Iterator<ServerPool> activeServers = serverList.activeServers();
@@ -334,6 +371,7 @@ public class ClusteredDataSource implements DataSource{
 
         @Override
         public void run(){
+            if(server.isClosed()) return;
             server.heartbeat();
             if(server.isDead()){
                 try{
