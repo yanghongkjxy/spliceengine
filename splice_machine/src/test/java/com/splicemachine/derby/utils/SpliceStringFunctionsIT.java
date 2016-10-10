@@ -37,10 +37,11 @@ import static com.splicemachine.triggers.Trigger_Exec_Stored_Proc_IT.methodWatch
  * @author Walt Koetke
  */
 public class SpliceStringFunctionsIT {
-	
+
+    private static final TestConnectionPool connPool = new TestConnectionPool();
     private static final String SCHEMA_NAME = SpliceStringFunctionsIT.class.getSimpleName().toUpperCase();
 
-    private static RuledConnection conn = new RuledConnection(null,true);
+    private static RuledConnection conn = new RuledConnection(connPool,true);
 
     private static TableRule b = new TableRule(conn,"B","(a int, b varchar(30), c varchar(30), d int)");
     private static TableRule c = new TableRule(conn,"C","(a varchar(30),b varchar(30))");

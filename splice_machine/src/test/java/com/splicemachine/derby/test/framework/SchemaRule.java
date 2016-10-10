@@ -43,13 +43,21 @@ public class SchemaRule implements TestRule{
         return new Statement(){
             @Override
             public void evaluate() throws Throwable{
+                String oldSchema;
                 try{
+                    oldSchema = connection.getSchema();
+                }catch(SQLException se){
+                    oldSchema="SPLICE";
+                }
+                try{
+                    connection.setSchema("SPLICE");
                     createSchema();
                 }catch(SQLException se){
                     //X0Y68 is the "SCHEMA already exists" error, so just ignore those
                     if(!"X0Y68".equals(se.getSQLState()))
                         throw new SetupFailureException(se);
                 }
+
                 try{
                     connection.setSchema(schemaName);
                 }catch(SQLException se){
@@ -61,6 +69,12 @@ public class SchemaRule implements TestRule{
                     base.evaluate();
                 }catch(Throwable t){
                     errors.add(t);
+                }
+
+                try{
+                    connection.setSchema(oldSchema);
+                }catch(SQLException se){
+                    errors.add(se);
                 }
 
                 MultipleFailureException.assertEmpty(errors);

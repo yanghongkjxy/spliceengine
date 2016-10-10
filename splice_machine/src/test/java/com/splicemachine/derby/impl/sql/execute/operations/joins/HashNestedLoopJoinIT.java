@@ -17,6 +17,7 @@ package com.splicemachine.derby.impl.sql.execute.operations.joins;
 
 import com.splicemachine.derby.test.framework.RuledConnection;
 import com.splicemachine.derby.test.framework.SchemaRule;
+import com.splicemachine.derby.test.framework.TestConnectionPool;
 import com.splicemachine.test_tools.IntegerRows;
 import com.splicemachine.test_tools.TableCreator;
 import org.junit.Rule;
@@ -35,6 +36,7 @@ import static org.junit.Assert.assertEquals;
 //@Category(SerialTest.class) //made sequential because of joinWithStatistics() test
 public class HashNestedLoopJoinIT {
 
+    private static final TestConnectionPool connPool = new TestConnectionPool();
     private static final String CLASS_NAME = HashNestedLoopJoinIT.class.getSimpleName().toUpperCase();
 
 //    @ClassRule
@@ -43,7 +45,7 @@ public class HashNestedLoopJoinIT {
 //    @Rule
 //    public SpliceWatcher watcher = new SpliceWatcher(CLASS_NAME);
 
-    public RuledConnection conn = new RuledConnection(null,true);
+    private final RuledConnection conn = new RuledConnection(connPool,false);
 
     @Rule public TestRule rules =RuleChain.outerRule(conn)
             .around(new SchemaRule(conn,CLASS_NAME));

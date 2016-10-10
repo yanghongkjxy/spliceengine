@@ -592,6 +592,9 @@
                                 </exclude>
                             </excludes>
                             <runOrder>alphabetical</runOrder>
+                            <systemProperties>
+                                <property><name>architecture.name</name><value>hbase</value></property>
+                            </systemProperties>
                         </configuration>
                     </execution>
                     <execution>
@@ -619,6 +622,9 @@
                                 <exclude>**/*Test.java</exclude>
                             </excludes>
                             <runOrder>alphabetical</runOrder>
+                            <systemProperties>
+                                <property><name>architecture.name</name><value>hbase</value></property>
+                            </systemProperties>
                         </configuration>
                     </execution>
                 </executions>

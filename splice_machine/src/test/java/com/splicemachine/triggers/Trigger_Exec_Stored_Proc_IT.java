@@ -42,7 +42,7 @@ import org.spark_project.guava.collect.Lists;
 //@Ignore
 @Category(value = {SerialTest.class})
 @RunWith(Parameterized.class)
-public class Trigger_Exec_Stored_Proc_IT  extends SpliceUnitTest {
+public class Trigger_Exec_Stored_Proc_IT {
 
     private static final String SCHEMA = Trigger_Exec_Stored_Proc_IT.class.getSimpleName();
 
@@ -104,7 +104,7 @@ public class Trigger_Exec_Stored_Proc_IT  extends SpliceUnitTest {
 
     @BeforeClass
     public static void setUpClass() throws Exception {
-        String storedProcsJarFilePath = SpliceUnitTest.getHBaseDirectory()+"/target/sql-it/sql-it.jar";
+        String storedProcsJarFilePath = SpliceUnitTest.getArchitectureSqlDirectory()+"/target/sql-it/sql-it.jar";
         // Install the jar file of stored procedures.
         File jar = new File(storedProcsJarFilePath);
         Assert.assertTrue("Can't run test without " + storedProcsJarFilePath, jar.exists());
