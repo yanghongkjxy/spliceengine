@@ -117,7 +117,11 @@ class ClusterConnectionManager{
 
     }
 
-    public String getSchema(){
+    public String getSchema() throws SQLException{
+        if(schema==null){
+            reopenConnectionIfNecessary();
+            schema = currentConn.element().getSchema();
+        }
         return schema;
     }
 

@@ -267,6 +267,7 @@ public class ClusteredDataSource implements DataSource{
 
 
     private class Discovery implements Runnable,Callable<Void>{
+        private volatile boolean called = false;
         @Override
         public void run(){
             performDiscovery(this);
@@ -293,7 +294,8 @@ public class ClusteredDataSource implements DataSource{
                 }
             }
 
-            if(matches) return null; //no need to change the server pool
+            if(called && matches) return null; //no need to change the server pool
+            called = true;
 
             ServerPool[] servers = new ServerPool[newServers.size()];
             int i=0;
