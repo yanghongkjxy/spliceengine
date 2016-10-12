@@ -19,6 +19,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.util.DefaultClassResolver;
 import com.esotericsoftware.kryo.util.MapReferenceResolver;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.spark.serializer.KryoSerializer;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -31,46 +32,16 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * @author Scott Fines
  * Created on: 8/15/13
  */
-public class KryoPool {
-    private final Queue<Kryo> instances;
-
-    private volatile KryoRegistry kryoRegistry;
-    private int poolSize;
-
+public class KryoPool extends AbstractKryoPool {
     public KryoPool(int poolSize) {
-        this.poolSize = poolSize;
-        this.instances =new ConcurrentLinkedQueue<>();
+        super(poolSize);
     }
 
-    public void setKryoRegistry(KryoRegistry kryoRegistry){
-        this.kryoRegistry = kryoRegistry;
-    }
-
-    public Kryo get(){
-        //try getting an instance that already exists
-        Kryo next = instances.poll();
-        if(next==null){
-            next = new Kryo(new DefaultClassResolver(),new MapReferenceResolver());            
-            if(kryoRegistry!=null)
-                kryoRegistry.register(next);
-        }
-
+    @Override
+    public Kryo newInstance() {
+        Kryo next = new Kryo(new DefaultClassResolver(),new MapReferenceResolver());
+        if(kryoRegistry!=null)
+            kryoRegistry.register(next);
         return next;
-    }
-
-    @SuppressFBWarnings(value = "RV_RETURN_VALUE_IGNORED_BAD_PRACTICE",justification = "Intentional")
-    public void returnInstance(Kryo kryo){
-        /*
-         * If the pool is full, then we will allow kryo to run out of scope,
-         * which will allow the GC to collect it. Thus, we can suppress
-         * the findbugs warning
-         */
-        if(instances.size()< this.poolSize){
-            instances.offer(kryo);
-        }
-
-    }
-    public interface KryoRegistry{
-        void register(Kryo instance);
     }
 }

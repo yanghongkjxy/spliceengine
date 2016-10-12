@@ -20,7 +20,7 @@
     <parent>
         <artifactId>spliceengine-parent</artifactId>
         <groupId>com.splicemachine</groupId>
-        <version>3.0.0.8-SNAPSHOT</version>
+        <version>3.0.0.9-SNAPSHOT</version>
     </parent>
     <properties>
         <!--Skip server startup-->
@@ -516,12 +516,12 @@
                     <dependency>
                         <groupId>org.splicetest.txn</groupId>
                         <artifactId>txn-it-procs</artifactId>
-                        <version>3.0.0.8-SNAPSHOT</version>
+                        <version>3.0.0.9-SNAPSHOT</version>
                     </dependency>
                     <dependency>
                         <groupId>org.splicetest.sqlj</groupId>
                         <artifactId>sqlj-it-procs</artifactId>
-                        <version>3.0.0.8-SNAPSHOT</version>
+                        <version>3.0.0.9-SNAPSHOT</version>
                     </dependency>
                 </dependencies>
                 <executions>
@@ -546,7 +546,7 @@
                                 <artifactItem>
                                     <groupId>org.splicetest.txn</groupId>
                                     <artifactId>txn-it-procs</artifactId>
-                                    <version>3.0.0.8-SNAPSHOT</version>
+                                    <version>3.0.0.9-SNAPSHOT</version>
                                     <type>jar</type>
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${project.build.directory}/txn-it</outputDirectory>
@@ -555,7 +555,7 @@
                                 <artifactItem>
                                     <groupId>org.splicetest.sqlj</groupId>
                                     <artifactId>sqlj-it-procs</artifactId>
-                                    <version>3.0.0.8-SNAPSHOT</version>
+                                    <version>3.0.0.9-SNAPSHOT</version>
                                     <type>jar</type>
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${project.build.directory}/sql-it</outputDirectory>
@@ -1024,8 +1024,7 @@
                                     -Dsplice.spark.scheduler.allocation.file=${project.basedir}/src/main/resources/fairscheduler.xml
                                 </argument>
                                 <argument>-Dsplice.spark.scheduler.mode=FAIR</argument>
-                               <argument>-Dsplice.spark.serializer=org.apache.spark.serializer.KryoSerializer
-                                </argument>
+                                <argument>-Dsplice.spark.serializer=com.splicemachine.serializer.SpliceKryoSerializer</argument>
                                 <argument>-Dsplice.spark.shuffle.compress=false</argument>
                                 <argument>-Dsplice.spark.executor.extraJavaOptions=
                                     -Dhbase.rootdir=${project.build.directory}/hbase
