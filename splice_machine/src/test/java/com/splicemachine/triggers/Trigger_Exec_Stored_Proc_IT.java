@@ -89,7 +89,7 @@ public class Trigger_Exec_Stored_Proc_IT {
     public static Collection<Object[]> data() {
         Collection<Object[]> params = Lists.newArrayListWithCapacity(2);
         params.add(new Object[]{"jdbc:splice://localhost:1527/splicedb;user=splice;password=admin"});
-        params.add(new Object[]{"jdbc:splice://localhost:1527/splicedb;user=splice;password=admin;useSpark=true"});
+//        params.add(new Object[]{"jdbc:splice://localhost:1527/splicedb;user=splice;password=admin;useSpark=true"});
         return params;
     }
 
