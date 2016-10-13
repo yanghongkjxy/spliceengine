@@ -24,6 +24,10 @@ import java.sql.SQLException;
 public class TestConnectionPool{
     private ConnectionHolder currentConnection;
 
+    public TestConnection getConnection() throws SQLException{
+        return getConnection(SpliceNetConnection.DEFAULT_USER,SpliceNetConnection.DEFAULT_USER_PASSWORD);
+    }
+
     public TestConnection getConnection(String user, String pwd) throws SQLException{
         if(currentConnection!=null){
             if(currentConnection.isValid() && currentConnection.matches(user))

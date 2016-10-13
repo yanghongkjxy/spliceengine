@@ -15,7 +15,9 @@
 
 package com.splicemachine.management;
 
+import com.splicemachine.access.api.PartitionAdmin;
 import com.splicemachine.access.api.SConfiguration;
+import com.splicemachine.si.impl.driver.SIDriver;
 import org.spark_project.guava.collect.Sets;
 import com.splicemachine.EngineDriver;
 import com.splicemachine.access.api.DatabaseVersion;
@@ -38,8 +40,7 @@ public class DirectDatabaseAdministrator implements DatabaseAdministrator{
     public Map<String, Collection<Integer>> getJDBCHostPortInfo() throws SQLException{
         SConfiguration configuration=EngineDriver.driver().getConfiguration();
         int port =configuration.getNetworkBindPort();
-        String host = configuration.getNetworkBindAddress();
-        return Collections.singletonMap(host,port);
+        return Collections.singletonMap("localhost",Collections.singleton(port));
     }
 
     @Override
