@@ -114,9 +114,7 @@ public class ClusteredDataSource implements DataSource{
 
     private final AtomicReference<FutureTask<Void>> discoveryTask = new AtomicReference<>(null);
 
-    public static ClusteredDataSourceBuilder newBuilder(){
-        return new ClusteredDataSourceBuilder();
-    }
+    public static ClusteredDataSourceBuilder newBuilder(){ return new ClusteredDataSourceBuilder(); }
 
     ClusteredDataSource(ServerList serverList,
                         ServerPoolFactory poolFactory,
@@ -134,12 +132,11 @@ public class ClusteredDataSource implements DataSource{
     }
 
     public void start() throws SQLException{
-        preStartValidation();
-        Discovery command=new Discovery();
-        schedule(command);
+        validate();
+        performDiscovery(new Discovery());
     }
 
-    private void preStartValidation() throws SQLException{
+    public void validate() throws SQLException{
         /*
          * The purpose here is to perform some basic validations (like
          * authentication) which would potentially prevent this connection
@@ -149,6 +146,8 @@ public class ClusteredDataSource implements DataSource{
          * will cause any pre-start validation to occur automatically.
          */
         try(Connection connection=getConnection()){
+            if(LOGGER.isLoggable(Level.FINEST))
+                LOGGER.finest("validating data source with connection "+ connection);
             connection.isValid(1);
         }
     }
@@ -229,6 +228,8 @@ public class ClusteredDataSource implements DataSource{
 
     public void close() throws SQLException{
         if(!closed.compareAndSet(false,true)) return;
+        if(LOGGER.isLoggable(Level.FINE))
+            LOGGER.fine("Closing ClusteredDataSource");
         //wait for any running service discovery or heartbeats to terminate
         maintainer.shutdownNow();
         boolean interrupted = false;
@@ -265,6 +266,15 @@ public class ClusteredDataSource implements DataSource{
         return closed.get();
     }
 
+    public int connectionCount(){
+        int count = 0;
+        Iterator<ServerPool> activeServers=serverList.activeServers();
+        while(activeServers.hasNext()){
+            count+=activeServers.next().connectionCount();
+        }
+        return count;
+    }
+
 
     private class Discovery implements Runnable,Callable<Void>{
         private volatile boolean called = false;
@@ -294,8 +304,24 @@ public class ClusteredDataSource implements DataSource{
                 }
             }
 
-            if(called && matches) return null; //no need to change the server pool
-            called = true;
+            if(matches){
+                //no need to reset the server pool
+                if(!called){
+                    called=true;
+                    /*
+                     * This is the first time we've been through here, so we need to make sure that we
+                     * schedule heartbeats for everybody
+                     */
+                    if(heartbeatWindow>0){
+                        Iterator<ServerPool> activeServers=serverList.activeServers();
+                        while(activeServers.hasNext()){
+                            maintainer.schedule(new Heartbeat(activeServers.next()),heartbeatWindow,TimeUnit.MILLISECONDS);
+                        }
+                    }
+                }
+
+                return null;
+            }
 
             ServerPool[] servers = new ServerPool[newServers.size()];
             int i=0;
@@ -308,6 +334,7 @@ public class ClusteredDataSource implements DataSource{
                 i++;
             }
             serverList.setServerList(servers);
+            maintainer.schedule((Callable<Void>)this,discoveryWindow,TimeUnit.MILLISECONDS);
             return null;
         }
     }
@@ -359,9 +386,7 @@ public class ClusteredDataSource implements DataSource{
     }
 
     private void schedule(Runnable command){
-        maintainer.scheduleAtFixedRate(command,
-                0L,discoveryWindow,
-                TimeUnit.MILLISECONDS);
+        maintainer.schedule(command, discoveryWindow, TimeUnit.MILLISECONDS);
     }
 
     private class Heartbeat implements Runnable{
@@ -373,7 +398,7 @@ public class ClusteredDataSource implements DataSource{
 
         @Override
         public void run(){
-            if(server.isClosed()) return;
+            if(isClosed()||server.isClosed()) return;
             server.heartbeat();
             if(server.isDead()){
                 try{
@@ -382,7 +407,6 @@ public class ClusteredDataSource implements DataSource{
             }else{
                 maintainer.schedule(this,heartbeatWindow,TimeUnit.MILLISECONDS);
             }
-
         }
     }
 }

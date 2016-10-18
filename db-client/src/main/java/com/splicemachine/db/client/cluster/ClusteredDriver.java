@@ -104,7 +104,6 @@ public class ClusteredDriver implements Driver{
                     .discoveryWindow(serverCheckPeriod)
                     .build();
 
-            cds.detectServers(); //run a detection to fill out all the servers
             cds.start();
             return new ClusteredConnection(url,cds,true,augmentedProperties);
         }catch(SqlException se){

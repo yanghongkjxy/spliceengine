@@ -17,15 +17,14 @@
 package com.splicemachine.db.client.cluster;
 
 import com.splicemachine.db.iapi.reference.SQLState;
-import com.sun.security.ntlm.Server;
 
 import javax.sql.DataSource;
 import java.sql.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Logger;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A Pool of Connections to a specific server.
@@ -46,7 +45,7 @@ class ServerPool implements Comparable<ServerPool>{
      * We use java.util.logging here to avoid requiring a logging jar dependency on our applications (and therefore
      * causing all kinds of potential dependency problems).
      */
-    private static final Logger LOGGER = Logger.getLogger(ClusteredDataSource.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ServerPool.class.getName());
 
     final String serverName;
     private final FailureDetector failureDetector;
@@ -55,7 +54,15 @@ class ServerPool implements Comparable<ServerPool>{
     private final DataSource connectionBuilder;
     private final int validationTimeout;
     private final PoolSizingStrategy poolSizingStrategy;
-    private ConcurrentLinkedQueue<Connection> pooledConnection = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<Connection> pooledConnection = new ConcurrentLinkedQueue<Connection>(){
+        @Override
+        public Connection poll(){
+            Connection conn=super.poll();
+            if(LOGGER.isLoggable(Level.FINEST))
+                LOGGER.finest("Polling connection "+ conn+" from pool");
+            return conn;
+        }
+    };
     private AtomicBoolean closed = new AtomicBoolean(false);
 
     ServerPool(DataSource connectionBuilder,
@@ -74,6 +81,8 @@ class ServerPool implements Comparable<ServerPool>{
 
     public void close() throws SQLException{
         if(!closed.compareAndSet(false,true)) return; //already been closed
+        if(LOGGER.isLoggable(Level.FINE))
+            LOGGER.fine("Closing pool for server "+ serverName);
 
         //close all pooled connections
         SQLException e = null;
@@ -81,7 +90,10 @@ class ServerPool implements Comparable<ServerPool>{
         int removed = 0;
         while((toClose = pooledConnection.poll())!=null){
             try{
+                if(LOGGER.isLoggable(Level.FINEST))
+                    LOGGER.finest("closing("+toClose+")");
                 toClose.close();
+                trackedSize.decrementAndGet();
                 removed++;
             }catch(SQLException se){
                 if(e==null) e =se;
@@ -105,12 +117,17 @@ class ServerPool implements Comparable<ServerPool>{
 //    }
 
     @Override
+    @SuppressWarnings("NullableProblems")
     public int compareTo(ServerPool o){
         return serverName.compareTo(o.serverName);
     }
 
     public boolean isClosed(){
         return closed.get();
+    }
+
+    int connectionCount(){
+        return trackedSize.get();
     }
 
     /* ****************************************************************************************************************/
@@ -120,32 +137,52 @@ class ServerPool implements Comparable<ServerPool>{
         do{
             Connection conn=pooledConnection.poll();
             if(conn!=null){
+                if(LOGGER.isLoggable(Level.FINEST)){
+                    LOGGER.finest("conn "+ conn+" may be available from pool");
+                }
                 if(conn.isClosed()) {
                     trackedSize.decrementAndGet();
                     continue;
                 }
                 if(!validate || validationTimeout<=0 || conn.isValid(validationTimeout)){
+                    if(LOGGER.isLoggable(Level.FINEST))
+                        LOGGER.finest("Acquiring "+conn+" from pool");
                     return wrapConnection(conn);
                 } else{
+                    if(LOGGER.isLoggable(Level.FINEST))
+                        LOGGER.finest("Connection "+conn+" is not valid, closing");
+                    trackedSize.decrementAndGet();
                     conn.close(); //close this connection and try again
                 }
             }else {
                 int currPoolSize = trackedSize.get();
-                if(currPoolSize>=maxSize) return null; //we have too many open already, so we cannot acquire a new one
+                if(currPoolSize>=maxSize){
+                    if(LOGGER.isLoggable(Level.FINER))
+                        LOGGER.finer("Pool <"+serverName+"> is full");
+                    return null; //we have too many open already, so we cannot acquire a new one
+                }
                 shouldContinue = !trackedSize.compareAndSet(currPoolSize,currPoolSize+1);
             }
         }while(shouldContinue);
+
+        if(LOGGER.isLoggable(Level.FINEST)){
+            LOGGER.finest("Opening new hard connection to "+serverName+"("+trackedSize.get()+","+pooledConnection.size()+")");
+        }
         return createNewConnection("tryAcquire");
     }
 
     Connection newConnection() throws SQLException{
+        if(LOGGER.isLoggable(Level.FINEST))
+            LOGGER.finest("Creating new connection to server "+ serverName);
         trackedSize.incrementAndGet();
         return createNewConnection("newConnection");
     }
 
 
     boolean heartbeat(){
+        if(isClosed()) return false; //don't continue validating, we are closed
         try(Connection conn=acquireConnection(false)){ //don't validate, since we are going to do that ourselves
+
             /*
              * since Connection.isValid() ensures that we actually talk to the server, we can
              * use it to determine if we can still talk to that server. Essentially, we say
@@ -154,8 +191,12 @@ class ServerPool implements Comparable<ServerPool>{
              */
             if(conn.isValid(1)){
                 failureDetector.success();
+                if(LOGGER.isLoggable(Level.FINER))
+                    LOGGER.finer("heartbeat for server "+ serverName+" successful");
                 return true;
             }else{
+                if(LOGGER.isLoggable(Level.FINER))
+                    LOGGER.finer("heartbeat for server "+ serverName+" failed");
                 failureDetector.failed();
                 return false;
             }
@@ -229,7 +270,11 @@ class ServerPool implements Comparable<ServerPool>{
         @Override
         public void close() throws SQLException{
             int currTrackedSize = trackedSize.get();
-            if(isClosed() ||delegate.isClosed() || currTrackedSize>maxSize){
+            if(LOGGER.isLoggable(Level.FINEST))
+                LOGGER.finest("close("+this+")");
+            if(ServerPool.this.isClosed() || isClosed() ||delegate.isClosed() || currTrackedSize>maxSize){
+                if(LOGGER.isLoggable(Level.FINEST))
+                    LOGGER.finest("closing connection to server "+serverName);
                 /*
                  * We've exceeded this pool size, so discard the underlying connection
                  * cleanly and then allow GC to occur.
@@ -237,12 +282,16 @@ class ServerPool implements Comparable<ServerPool>{
                 super.close();
                 trackedSize.decrementAndGet(); //we are no longer tracking this connection
             }else{
+                if(LOGGER.isLoggable(Level.FINEST))
+                    LOGGER.finest("releasing "+delegate+" to pool for server "+serverName);
                 /*
                  * We are under the max pool size, so return this to the pool to ensure proper
                  * re-use
                  */
-                pooledConnection.add(delegate);
+                pooledConnection.offer(delegate);
                 poolSizingStrategy.releasePermit();
+                if(LOGGER.isLoggable(Level.FINEST))
+                    LOGGER.finest("pool size: "+ pooledConnection.size()+",tracked size: "+ trackedSize.get());
             }
         }
 

@@ -27,7 +27,7 @@ import java.sql.SQLException;
  * @author Scott Fines
  *         Date: 9/1/16
  */
-class ClientErrors{
+public class ClientErrors{
     private ClientErrors(){} //ha-hah! you can't make me!
 
     static boolean willDisconnect(SQLException se){
@@ -42,7 +42,7 @@ class ClientErrors{
      * @param se the error
      * @return true if the error is something that can be considered retryable
      */
-    static boolean isNetworkError(SQLException se){
+    public static boolean isNetworkError(SQLException se){
         String sqlState=se.getSQLState();
         if(sqlState==null) return false; //we don't really know
         switch(sqlState){

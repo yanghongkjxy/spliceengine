@@ -32,7 +32,7 @@ import java.util.logging.Logger;
  *         Date: 9/14/16
  */
 class ConnectionServerDiscovery implements ServerDiscovery{
-    private static final Logger LOGGER=Logger.getLogger(ClusteredDataSource.class.getName());
+    private static final Logger LOGGER=Logger.getLogger(ConnectionServerDiscovery.class.getName());
     static final String DEFAULT_ACTIVE_SERVER_QUERY="call SYSCS_UTIL.SYSCS_GET_ACTIVE_SERVERS()";
     private final String[] initialServers;
     private final ServerList serverList;
@@ -55,6 +55,8 @@ class ConnectionServerDiscovery implements ServerDiscovery{
                 return null;
             }
 
+            if(LOGGER.isLoggable(Level.FINEST))
+                LOGGER.finest("Performing Service Discovery with connection "+conn);
             return fetchActiveServers(conn);
         }
     }
@@ -86,7 +88,11 @@ class ConnectionServerDiscovery implements ServerDiscovery{
             ServerPool next=serverIter.next();
             try{
                 conn=next.tryAcquireConnection(true);
-                if(conn!=null) return conn;
+                if(conn!=null){
+                    if(LOGGER.isLoggable(Level.FINEST))
+                        LOGGER.finest("Obtained pooled connection "+ conn+" from active server "+ next);
+                    return conn;
+                }
             }catch(SQLException se){
                 logError("getConnection("+next.serverName+")",se);
             }
@@ -105,7 +111,11 @@ class ConnectionServerDiscovery implements ServerDiscovery{
             ServerPool next=serverIter.next();
             try{
                 conn=next.newConnection();
-                if(conn!=null) return conn;
+                if(conn!=null){
+                    if(LOGGER.isLoggable(Level.FINEST))
+                        LOGGER.finest("Obtained new connection "+ conn+" from active server "+ next);
+                    return conn;
+                }
             }catch(SQLException se){
                 logError("getConnection("+next.serverName+")",se);
             }
@@ -134,10 +144,16 @@ class ConnectionServerDiscovery implements ServerDiscovery{
                     if(conn==null)
                         conn = newPool.newConnection();
                     if(conn!=null) {
+                        if(LOGGER.isLoggable(Level.FINEST)){
+                            LOGGER.finest("initial server "+ newPool+" is alive, adding");
+                        }
                         serverList.addServer(newPool); //this server is actually active, so we can re-use this
                         return conn;
                     }else{
                         try{
+                            if(LOGGER.isLoggable(Level.FINEST)){
+                                LOGGER.finest("initial server "+ newPool+" is not alive, closing pool");
+                            }
                             newPool.close();
                         }catch(SQLException e){
                             logError("serverPool.close("+newPool.serverName+")",e);

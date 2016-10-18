@@ -129,7 +129,7 @@ public class SpliceAdmin extends BaseAdminProcedures{
             Map<String,Collection<Integer>> jdbcInfo = EngineDriver.driver().dbAdministrator().getJDBCHostPortInfo();
             Collection<PartitionServer> load=getLoad();
             Map<String,Pair<PartitionServer,Integer>> rows = new HashMap<>(jdbcInfo.size());
-            for(PartitionServer ps :getLoad()){
+            for(PartitionServer ps :load){
                 String host = ps.getHostname();
                 Collection<Integer> post = jdbcInfo.get(host);
                 if(post==null) continue; //skip hbase servers which do not have JDBC running

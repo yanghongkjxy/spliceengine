@@ -270,7 +270,7 @@ class ServerList{
                 SQLException closeExceptions=null;
                 while(newPos<minLen && oldPos<minLen){
                     ServerPool newSp=servers[newPos];
-                    ServerPool oldSp=servers[oldPos];
+                    ServerPool oldSp=oldServers[oldPos];
                     int c=newSp.compareTo(oldSp);
                     try{
                         ServerPool sp = null;

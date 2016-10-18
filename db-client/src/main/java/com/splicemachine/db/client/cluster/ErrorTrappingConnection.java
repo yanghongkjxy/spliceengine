@@ -33,6 +33,7 @@ abstract class ErrorTrappingConnection implements Connection{
     protected final Connection delegate;
 
     ErrorTrappingConnection(Connection delegate){
+        assert delegate!=null;
         this.delegate=delegate;
     }
 

@@ -15,9 +15,7 @@
 
 package com.splicemachine.triggers;
 
-import com.splicemachine.derby.test.framework.SpliceSchemaWatcher;
-import com.splicemachine.derby.test.framework.SpliceWatcher;
-import com.splicemachine.derby.test.framework.TestConnection;
+import com.splicemachine.derby.test.framework.*;
 import com.splicemachine.test.SerialTest;
 import com.splicemachine.test_dao.TriggerBuilder;
 import com.splicemachine.util.StatementUtils;
@@ -29,7 +27,6 @@ import org.spark_project.guava.collect.Lists;
 
 import java.sql.*;
 import java.util.Collection;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.System.currentTimeMillis;
@@ -42,31 +39,22 @@ import static org.junit.Assert.*;
 @RunWith(Parameterized.class)
 public class Trigger_Row_IT {
 
-    private static final String SCHEMA = Trigger_Row_IT.class.getSimpleName();
-
-    @ClassRule
-    public static SpliceSchemaWatcher spliceSchemaWatcher = new SpliceSchemaWatcher(SCHEMA);
-
-    @ClassRule
-    public static SpliceWatcher classWatcher = new SpliceWatcher(SCHEMA);
-
-    @Rule
-    public SpliceWatcher methodWatcher = new SpliceWatcher(SCHEMA);
+    private static final String SCHEMA = Trigger_Row_IT.class.getSimpleName().toUpperCase();
 
     private TriggerBuilder tb = new TriggerBuilder();
 
     private TestConnection conn;
 
-
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         Collection<Object[]> params = Lists.newArrayListWithCapacity(2);
-        params.add(new Object[]{"jdbc:splice://localhost:1527/splicedb;create=true;user=splice;password=admin"});
+//        params.add(new Object[]{"jdbc:splice://localhost:1527/splicedb;create=true;user=splice;password=admin"});
         params.add(new Object[]{"jdbc:splice://localhost:1527/splicedb;create=true;user=splice;password=admin;useSpark=true"});
         return params;
     }
 
     private String connectionString;
+    private static TestConnectionPool connPool = new TestConnectionPool();
 
     public Trigger_Row_IT(String connecitonString) {
         this.connectionString = connecitonString;
@@ -75,18 +63,28 @@ public class Trigger_Row_IT {
     /* Create tables once */
     @BeforeClass
     public static void createSharedTables() throws Exception {
-        Connection c = classWatcher.createConnection();
-        try(Statement s = c.createStatement()){
-            s.executeUpdate("create table T (a int, b int, c int)");
-            s.executeUpdate("create table RECORD (text varchar(99))");
-            s.executeUpdate("insert into T values(1,1,1),(2,2,2),(3,3,3),(4,4,4),(5,5,5),(6,6,6)");
+        try(Connection c = connPool.getConnection()){
+            new SchemaRule(c,SCHEMA).setupSchema();
+            try(Statement s=c.createStatement()){
+                s.execute("drop table if exists T");
+                s.execute("drop table if exists RECORD");
+                s.executeUpdate("create table T (a int, b int, c int)");
+                s.executeUpdate("create table RECORD (text varchar(99))");
+                s.executeUpdate("insert into T values(1,1,1),(2,2,2),(3,3,3),(4,4,4),(5,5,5),(6,6,6)");
+            }
         }
+        connPool.close();
+    }
+
+    @AfterClass
+    public static void tearDownClass() throws Exception{
+        connPool.close();
     }
 
     /* Each test starts with same table state */
     @Before
     public void initTable() throws Exception {
-        conn = new TestConnection(DriverManager.getConnection(connectionString, new Properties()));
+        conn = connPool.getConnection(connectionString);
         conn.setAutoCommit(false);
         conn.setSchema(SCHEMA.toUpperCase());
     }
@@ -347,12 +345,13 @@ public class Trigger_Row_IT {
             assertQueryFails(s,"insert into T2 values(1)","The statement was aborted because it would have caused a duplicate key value in a unique or primary key constraint or unique index identified by 'T_INDEX1' defined on 'T2'.");
 
             // Trigger should NOT have fired.
-            Connection connection=methodWatcher.createConnection();
-            try(CallableStatement cs=connection.prepareCall("call syscs_util.SYSCS_GET_GLOBAL_DATABASE_PROPERTY('triggerRowItPropA')")){
-                try(ResultSet rs=cs.executeQuery()){
-                    Assert.assertTrue("No rows returned!",rs.next());
-                    assertNull(rs.getString(2));
-                    Assert.assertTrue("Did not return null!",rs.wasNull());
+            try(Connection connection=SpliceNetConnection.getConnection()){
+                try(CallableStatement cs=connection.prepareCall("call syscs_util.SYSCS_GET_GLOBAL_DATABASE_PROPERTY('triggerRowItPropA')")){
+                    try(ResultSet rs=cs.executeQuery()){
+                        Assert.assertTrue("No rows returned!",rs.next());
+                        assertNull(rs.getString(2));
+                        Assert.assertTrue("Did not return null!",rs.wasNull());
+                    }
                 }
             }
         }
@@ -371,12 +370,13 @@ public class Trigger_Row_IT {
             assertQueryFails(s,"update T3 set a=1 where a=3","The statement was aborted because it would have caused a duplicate key value in a unique or primary key constraint or unique index identified by 'T_INDEX2' defined on 'T3'.");
 
             // Trigger should NOT have fired.
-            Connection connection=methodWatcher.createConnection();
-            try(CallableStatement call=connection.prepareCall("call syscs_util.SYSCS_GET_GLOBAL_DATABASE_PROPERTY('triggerRowItPropB')")){
-                try(ResultSet rs=call.executeQuery()){
-                    Assert.assertTrue("No rows returned!",rs.next());
-                    assertNull(rs.getString(2));
-                    Assert.assertTrue("Did not return null!",rs.wasNull());
+            try(Connection connection=SpliceNetConnection.getConnection()){
+                try(CallableStatement call=connection.prepareCall("call syscs_util.SYSCS_GET_GLOBAL_DATABASE_PROPERTY('triggerRowItPropB')")){
+                    try(ResultSet rs=call.executeQuery()){
+                        Assert.assertTrue("No rows returned!",rs.next());
+                        assertNull(rs.getString(2));
+                        Assert.assertTrue("Did not return null!",rs.wasNull());
+                    }
                 }
             }
         }
@@ -391,34 +391,30 @@ public class Trigger_Row_IT {
     @Test
     public void multipleRowAndStatementTriggersOnOneTable() throws Exception {
         // given - six row triggers on same table.
-        createTrigger(tb.named("u_1").after().update().on("T").row().then("INSERT INTO RECORD VALUES('u1')"));
-        createTrigger(tb.named("u_2").after().update().on("T").row().then("INSERT INTO RECORD VALUES('u2')"));
+//        createTrigger(tb.named("u_1").after().update().on("T").row().then("INSERT INTO RECORD VALUES('u1')"));
         createTrigger(tb.named("i_1").after().insert().on("T").row().then("INSERT INTO RECORD VALUES('i1')"));
-        createTrigger(tb.named("i_2").after().insert().on("T").row().then("INSERT INTO RECORD VALUES('i2')"));
-        createTrigger(tb.named("d_1").after().delete().on("T").row().then("INSERT INTO RECORD VALUES('d1')"));
-        createTrigger(tb.named("d_2").after().delete().on("T").row().then("INSERT INTO RECORD VALUES('d2')"));
+//        createTrigger(tb.named("d_1").after().delete().on("T").row().then("INSERT INTO RECORD VALUES('d1')"));
 
         // given - three statement triggers
-        createTrigger(tb.named("u_stat").after().update().on("T").statement().then("INSERT INTO RECORD VALUES('statement-1')"));
-        createTrigger(tb.named("i_stat").after().insert().on("T").statement().then("INSERT INTO RECORD VALUES('statement-2')"));
-        createTrigger(tb.named("d_stat").after().delete().on("T").statement().then("INSERT INTO RECORD VALUES('statement-3')"));
+//        createTrigger(tb.named("u_stat").after().update().on("T").statement().then("INSERT INTO RECORD VALUES('statement-1')"));
+//        createTrigger(tb.named("i_stat").after().insert().on("T").statement().then("INSERT INTO RECORD VALUES('statement-2')"));
+//        createTrigger(tb.named("d_stat").after().delete().on("T").statement().then("INSERT INTO RECORD VALUES('statement-3')"));
 
         // when - update
         try(Statement s = conn.createStatement()){
-            s.executeUpdate("update T set c = 0 where c=1 or c=2 or c=3");
-            assertRecordCount(s,"u1",3);
-            assertRecordCount(s,"u2",3);
-            assertRecordCount(s,"statement-1",1);
+//            s.executeUpdate("update T set c = 0 where c=1 or c=2 or c=3");
+//            assertRecordCount(s,"u1",3);
+//            assertRecordCount(s,"statement-1",1);
             // when - insert
-            s.executeUpdate("insert into T values(7,7,7),(8,8,8),(9,9,9),(10,10,10)");
-            assertRecordCount(s,"i1",4);
-            assertRecordCount(s,"i2",4);
-            assertRecordCount(s,"statement-2",1);
+//            s.executeUpdate("insert into T values(7,7,7),(8,8,8),(9,9,9),(10,10,10)");
+//            assertRecordCount(s,"i1",4);
+            s.executeUpdate("insert into T values (8,8,8),(9,9,9)");
+            assertRecordCount(s,"i1",2);
+//            assertRecordCount(s,"statement-2",1);
             // when - delete
-            s.executeUpdate("delete from T where c=4 or c=5 or c=6 or c=7 or c=8");
-            assertRecordCount(s,"d1",5);
-            assertRecordCount(s,"d2",5);
-            assertRecordCount(s,"statement-3",1);
+//            s.executeUpdate("delete from T where c=4 or c=5 or c=6 or c=7 or c=8");
+//            assertRecordCount(s,"d1",5);
+//            assertRecordCount(s,"statement-3",1);
         }
     }
 
@@ -483,7 +479,7 @@ public class Trigger_Row_IT {
             s.executeUpdate(query);
             fail("expected to fail with message = " + expectedError);
         } catch (Exception e) {
-            assertTrue(e.getMessage().contains(expectedError));
+            assertEquals(expectedError,e.getMessage());
         }
     }
 

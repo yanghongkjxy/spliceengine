@@ -49,15 +49,21 @@ public class JmxDatabaseAdminstrator implements DatabaseAdministrator{
             for(PartitionServer ps:partitionServers){
                 serverHostMap.put(ps.getHostAndPort(),ps);
             }
-            final List<Pair<String,JMXConnector>> connections = getConnections(partitionServers);
-            Map<String, Collection<NetworkServerMBean>> networkServer=JMXUtils.getNetworkServer(connections);
-            for(Map.Entry<String,Collection<NetworkServerMBean>> entry:networkServer.entrySet()){
-                Collection<Integer> ports = new ArrayList<>(entry.getValue().size());
-                for(NetworkServerMBean nsmb: entry.getValue()){
-                    ports.add(nsmb.getDrdaPortNumber());
-                }
+            List<Pair<String,JMXConnector>> connections = null;
+            try{
+                connections = getConnections(partitionServers);
+                Map<String, Collection<NetworkServerMBean>> networkServer=JMXUtils.getNetworkServer(connections);
+                for(Map.Entry<String, Collection<NetworkServerMBean>> entry : networkServer.entrySet()){
+                    Collection<Integer> ports=new ArrayList<>(entry.getValue().size());
+                    for(NetworkServerMBean nsmb : entry.getValue()){
+                        ports.add(nsmb.getDrdaPortNumber());
+                    }
 
-                retMap.put(serverHostMap.get(entry.getKey()).getHostname(),ports);
+                    retMap.put(serverHostMap.get(entry.getKey()).getHostname(),ports);
+                }
+            }finally{
+                if(connections!=null)
+                    close(connections);
             }
 
         }catch(IOException | MalformedObjectNameException e){

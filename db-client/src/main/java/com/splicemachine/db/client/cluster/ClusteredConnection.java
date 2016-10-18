@@ -20,6 +20,8 @@ import com.splicemachine.db.iapi.reference.SQLState;
 
 import java.sql.*;
 import java.util.Map;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
@@ -28,6 +30,7 @@ import java.util.concurrent.Executor;
  *         Date: 8/18/16
  */
 class ClusteredConnection implements Connection{
+    private static final Logger LOGGER=Logger.getLogger(ClusteredConnection.class.getName());
     private final ClusterConnectionManager connectionManager;
     private final boolean closeDataSourceOnClose;
     private boolean closed = false;
@@ -40,6 +43,10 @@ class ClusteredConnection implements Connection{
         this.url = connectUrl;
         this.connectionManager = new ClusterConnectionManager(dataSource,connectionproperties);
         this.closeDataSourceOnClose = closeDataSourceOnClose;
+        if(LOGGER.isLoggable(Level.FINEST)){
+            LOGGER.finest("New Clustered Connection created using url "+connectUrl+", dataSource="+dataSource);
+            LOGGER.finest("Pooled connections: "+dataSource.connectionCount());
+        }
     }
 
     @Override
@@ -138,6 +145,8 @@ class ClusteredConnection implements Connection{
     @Override
     public void close() throws SQLException{
         if(closed) return;
+        if(LOGGER.isLoggable(Level.FINEST))
+            LOGGER.finest("Closing clustered connection");
         connectionManager.close(closeDataSourceOnClose);
         closed=true;
     }
