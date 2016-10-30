@@ -223,8 +223,11 @@ public class SparkUtils {
 
         // Generate the schema based on the ResultColumnDescriptors
         List<StructField> fields = new ArrayList<>();
+        StructField field;
         for (ResultColumnDescriptor column : columns) {
-            fields.add(column.getStructField());
+            field = column.getStructField();
+            if (field == null) throw new IllegalArgumentException(column.getName() + " of the result does not have a proper ResultColumnDescriptor !") ;
+            else fields.add(field);
         }
         StructType schema = DataTypes.createStructType(fields);
         return SpliceSpark.getSession().createDataFrame(rdd.map(new LocatedRowToRowFunction()), schema);
@@ -257,6 +260,7 @@ public class SparkUtils {
                 .map(column -> col(String.valueOf(column.getColumnId()-1)))
                 .collect(Collectors.collectingAndThen(Collectors.toList(), JavaConversions::asScalaBuffer));
     }
+
 }
 
 
