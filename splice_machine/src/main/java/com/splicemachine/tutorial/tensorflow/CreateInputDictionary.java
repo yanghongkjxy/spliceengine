@@ -247,7 +247,7 @@ public class CreateInputDictionary {
             }
         } else {
             Statement stmt = conn.createStatement();
-            stmt.executeUpdate(exportCmd);
+            stmt.executeQuery(exportCmd);
         }
         
         //We need to do this in the case were we are exporting a large number of records
