@@ -69,7 +69,7 @@ public class CreateInputDictionary {
      */
     public static void createInputDictionary(String dictionaryName, String trainTable, String testTable, String path, ResultSet[] returnResultset) throws SQLException, StandardException{
         
-        Connection conn = DriverManager.getConnection("jdbc:default:connection");       
+        Connection conn = DriverManager.getConnection("jdbc:splice://localhost:1527/splicedb;user=splice;password=admin");         
         
         //Get Columns
         PreparedStatement pstmt = conn.prepareStatement("select COLUMN_NAME from INPUT_DICTIONARY where DICTIONARY_NAME = ? and TYPE = ? order by SEQUENCE");
@@ -200,8 +200,9 @@ public class CreateInputDictionary {
         row.setColumn(1, new SQLVarchar(jsonData));
         rows.add(row);
         
-        IteratorNoPutResultSet resultsToWrap = wrapResults((EmbedConnection) conn, rows);
-        returnResultset[0] = new EmbedResultSet40((EmbedConnection) conn, resultsToWrap, false, null, true);
+        Connection conn1 = DriverManager.getConnection("jdbc:default:connection");     
+        IteratorNoPutResultSet resultsToWrap = wrapResults((EmbedConnection) conn1, rows);
+        returnResultset[0] = new EmbedResultSet40((EmbedConnection) conn1, resultsToWrap, false, null, true);
     }
     
     /**
