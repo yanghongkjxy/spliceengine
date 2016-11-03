@@ -313,6 +313,7 @@ public class CreateInputDictionary {
             Process p = pb.start();
             
             BufferedReader bfr = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            String returnVal = "";
             String line = "";
             int exitCode = p.waitFor();
             LOG.error("Running Python starts: ");
@@ -320,14 +321,20 @@ public class CreateInputDictionary {
             LOG.error("First Line: " + bfr.readLine());
             while ((line = bfr.readLine()) != null){
                 LOG.error("Python Output: " + line);
+                returnVal = line;
             }
             
             if(exitCode == 0) {    
-                String returnVal = line;
                 LOG.error("return val: " + returnVal);
+                int beginIndex = returnVal.indexOf("[");
+                int endIndex = returnVal.indexOf("]");
+                if(beginIndex > -1 && endIndex > -1) {
+                    returnVal = returnVal.substring(beginIndex, endIndex);
+                    stmt.executeUpdate("UPDATE " + sourceTable + "set LABEL = " + returnVal +" where ID = " + sourceId);
+                    returnResultset[0] = stmt.executeQuery("values(" + returnVal + ")");
+                }
                 
-                stmt.executeUpdate("UPDATE " + sourceTable + "set LABEL = " + returnVal +" where ID = " + sourceId);
-                returnResultset[0] = stmt.executeQuery("values(" + returnVal + ")");
+                
             } 
             
         } catch (Exception e) {
