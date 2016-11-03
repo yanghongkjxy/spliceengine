@@ -18,6 +18,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import sys
+if sys.version_info[0] < 3:
+    from StringIO import StringIO
+else:
+    from io import StringIO
+
 import json
 import tempfile
 from six.moves import urllib
@@ -49,6 +55,8 @@ flags.DEFINE_string(
     "inputs",
     '{"columns": ["age","workclass","fnlwgt","education","education_num","marital_status","occupation","relationship","race","gender","capital_gain","capital_loss","hours_per_week","native_country","income_bracket"],"categorical_columns": ["workclass","education","marital_status","occupation","relationship","race","gender","native_country"],"continuous_columns": ["age","education_num","capital_gain","capital_loss","hours_per_week"],"label_column": "label","bucketized_columns": {"age_buckets": {      "age": [    18,    25,    30,    35,    40,    45,    50,    55,    60,    65  ]}},"crossed_columns": [[  "education",  "occupation"],[  "age_buckets",  "education",  "occupation"],[  "native_country",  "occupation"]],"train_data_path": "/Users/erindriggers/anaconda/envs/tensorflow/projects/wide_n_deep/data/train/part-r-00000.csv","test_data_path": "/Users/erindriggers/anaconda/envs/tensorflow/projects/wide_n_deep/data/test/part-r-00000.csv"}',
     "Input data dictionary")
+flags.DEFINE_string("input_record", "","Comma delimited input record")
+flags.DEFINE_string("predict", "false","Indicates if we are predicting or building the model")
 
 
 
@@ -229,6 +237,7 @@ CROSSED_TF_COLS[1]
 WIDE_TF_COLUMNS = list(SPARSE_TF_COLUMNS.values()) + list(BUCKETIZED_TF_COLUMNS.values()) + list(CROSSED_TF_COLS)
 print(WIDE_TF_COLUMNS)
 
+
 # In[21]:
 
 def build_estimator(model_dir):
@@ -300,11 +309,35 @@ def train_and_eval():
   for key in sorted(results):
     print("%s: %s" % (key, results[key]))
 
+def predict_outcome():
+  model_dir = tempfile.mkdtemp() if not FLAGS.model_dir else FLAGS.model_dir
+  print('model_dir = %s' % model_dir);
+  m = build_estimator(model_dir)
+
+  indata=StringIO(FLAGS.input_record)
+
+  prediction_set = pd.read_csv(
+      indata,
+      names=COLUMNS,
+      skipinitialspace=True,
+      skiprows=0,
+      engine="python")
+
+  prediction_set[LABEL_COLUMN] = (
+      prediction_set["income_bracket"].apply(lambda x: ">50K" in x)).astype(int)
+
+
+  y=m.predict(input_fn=lambda: input_fn(prediction_set))
+  print('Predictions: {}'.format(str(y)))
+  return y
 
 # In[ ]:
 
 def main(_):
-  train_and_eval()
+  if FLAGS.predict == "true":
+    predict_outcome()
+  else:
+    train_and_eval()
 
 if __name__ == "__main__":
   tf.app.run()

@@ -256,6 +256,8 @@ public class CreateInputDictionary {
     public static void predictModel(String fullModelPath, String type, String modelName, String sourceTable, int sourceId, ResultSet[] returnResultset) {
         try{
 
+            LOG.error("In predictModel: ");
+            
             Connection conn = DriverManager.getConnection("jdbc:splice://localhost:1527/splicedb;user=splice;password=admin");
             
             File pythonFile = new File(fullModelPath);
@@ -264,14 +266,19 @@ public class CreateInputDictionary {
             String modelOutputDir = parentDir + "/output";
             String dataDir = parentDir + "/data";
             
+            LOG.error("In predictModel about to build json object: ");
             JsonObject inputDict = new JsonObject();
             StringBuilder exportColumns = buildDictionaryObject(conn, modelName, inputDict);
+            
+            LOG.error("Export columns: " + exportColumns);
             
             //Retrieve the record from the database
             StringBuilder recordAsCSV = null;
             Statement stmt = conn.createStatement();
+            LOG.error("About to select columns: " + sourceTable);
             ResultSet rs = stmt.executeQuery("SELECT " + exportColumns.toString() + " FROM " + sourceTable + " where ID = " + sourceId);
             if(rs.next()) {
+                LOG.error("Record found: " + sourceTable);
                 recordAsCSV = new StringBuilder();
                 int numCols = rs.getMetaData().getColumnCount();
                 for(int i=0; i<numCols; i++) {
@@ -280,38 +287,56 @@ public class CreateInputDictionary {
                 }
                 //rs.getOb
             } else {
+                LOG.error("No Records found: ");
                 returnResultset[0] = stmt.executeQuery("values(-1)");
                 return;
             }
-            
+            LOG.error("About to build json: ");
             //Build JSON
             Gson gson = new GsonBuilder().setPrettyPrinting().serializeNulls().setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE).create();
             String jsonData = gson.toJson(inputDict);
             
+            LOG.error("model_type:" + type);
+            LOG.error("model_dir:" + modelOutputDir);
+            LOG.error("input_record:" + recordAsCSV);
+            LOG.error("inputs:" + jsonData);
+            
             ProcessBuilder pb = new ProcessBuilder("python",fullModelPath,
+                    "--predict=true",
                     "--model_type=" + type,
                     "--model_dir=" + modelOutputDir,
-                    "--input_record=" + recordAsCSV,
+                    "--input_record=" + recordAsCSV,                    
                     "--inputs=" + jsonData);
             
+            LOG.error("About to start process builder: ");
             
             Process p = pb.start();
             
             BufferedReader bfr = new BufferedReader(new InputStreamReader(p.getInputStream()));
             String line = "";
+            int exitCode = p.waitFor();
             LOG.error("Running Python starts: ");
-            LOG.error("Exit Code : "+p.waitFor());
+            LOG.error("Exit Code : "+exitCode);
             LOG.error("First Line: " + bfr.readLine());
             while ((line = bfr.readLine()) != null){
                 LOG.error("Python Output: " + line);
             }
-
-            String returnVal = line;
-            stmt.executeUpdate("UPDATE " + sourceTable + "set LABEL = " + returnVal +" where ID = " + sourceId);
-            returnResultset[0] = stmt.executeQuery("values(" + returnVal + ")");
+            
+            if(exitCode == 0) {    
+                String returnVal = line;
+                LOG.error("return val: " + returnVal);
+                
+                stmt.executeUpdate("UPDATE " + sourceTable + "set LABEL = " + returnVal +" where ID = " + sourceId);
+                returnResultset[0] = stmt.executeQuery("values(" + returnVal + ")");
+            } 
             
         } catch (Exception e) {
+            e.printStackTrace();
             LOG.error("Exception calling pythong script.", e);
         }
+    }
+    
+    public static void main(String[] args) {
+        predictModel("/Users/erindriggers/anaconda/envs/tensorflow/projects/wide_n_deep/restore_wide_n_deep_model.py","wide_n_deep","CENSUS","CENSUS.LIVE_DATA",1, null);
     }
 }
