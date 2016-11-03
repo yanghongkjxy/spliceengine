@@ -294,10 +294,10 @@ def train_and_eval():
       engine="python")
     
 # Temp hack - label should come in the input 
-  df_train[LABEL_COLUMN] = (
-      df_train["income_bracket"].apply(lambda x: ">50K" in x)).astype(int)
-  df_test[LABEL_COLUMN] = (
-      df_test["income_bracket"].apply(lambda x: ">50K" in x)).astype(int)
+#  df_train[LABEL_COLUMN] = (
+#      df_train["income_bracket"].apply(lambda x: ">50K" in x)).astype(int)
+#  df_test[LABEL_COLUMN] = (
+#      df_test["income_bracket"].apply(lambda x: ">50K" in x)).astype(int)
 
 
   model_dir = tempfile.mkdtemp() if not FLAGS.model_dir else FLAGS.model_dir
