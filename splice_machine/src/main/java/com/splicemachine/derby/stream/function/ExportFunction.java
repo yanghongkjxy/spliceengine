@@ -39,16 +39,28 @@ public class ExportFunction extends SpliceFunction2<ExportOperation, OutputStrea
 
         @Override
         public Integer call(OutputStream outputStream, Iterator<LocatedRow> locatedRowIterator) throws Exception {
-            ExportOperation op = operationContext.getOperation();
-            ExportExecRowWriter rowWriter = initializeRowWriter(outputStream, op.getExportParams());
-            int count = 0;
-            while (locatedRowIterator.hasNext()) {
-                count++;
-                LocatedRow lr = locatedRowIterator.next();
-                rowWriter.writeRow(lr.getRow(), op.getSourceResultColumnDescriptors());
+            try {
+                ExportOperation op = operationContext.getOperation();
+                ExportExecRowWriter rowWriter = initializeRowWriter(outputStream, op.getExportParams());
+                int count = 0;
+                try {
+                    while (locatedRowIterator.hasNext()) {
+                        count++;
+                        LocatedRow lr = locatedRowIterator.next();
+                        rowWriter.writeRow(lr.getRow(), op.getSourceResultColumnDescriptors());
+                    }
+                } finally {
+                    rowWriter.close();
+                }
+                return count;
+            } catch (Throwable e) {
+                Thread.interrupted();
+                if (e instanceof InterruptedException) {
+                    throw new IOException(e);
+                } else {
+                    throw e;
+                }
             }
-            rowWriter.close();
-            return count;
         }
 
     public static ExportExecRowWriter initializeRowWriter(OutputStream outputStream, ExportParams exportParams) throws IOException {

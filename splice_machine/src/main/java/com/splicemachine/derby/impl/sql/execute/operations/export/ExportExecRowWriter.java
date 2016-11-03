@@ -27,6 +27,10 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import static org.sparkproject.guava.base.Preconditions.checkNotNull;
 
@@ -37,10 +41,30 @@ public class ExportExecRowWriter implements Closeable {
 
     private CsvListWriter csvWriter;
     private NumberFormat decimalFormat = NumberFormat.getInstance();
+    private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+    private volatile long lastTick;
+    private volatile boolean interrupted = false;
+    private ScheduledFuture<?> watchdog;
 
     public ExportExecRowWriter(CsvListWriter csvWriter) {
         checkNotNull(csvWriter);
         this.csvWriter = csvWriter;
+        final Thread thread = Thread.currentThread();
+        lastTick = System.currentTimeMillis();
+        watchdog = executorService.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                long current = System.currentTimeMillis();
+                if (current - lastTick > 10*60*1000) { // 10 minutes
+                    if (!interrupted) {
+                        thread.interrupt();
+                        interrupted = true;
+                    } else {
+                        System.exit(-1);
+                    }
+                }
+            }
+        }, 10, 10, TimeUnit.MINUTES);
     }
 
     /**
@@ -74,7 +98,11 @@ public class ExportExecRowWriter implements Closeable {
                 stringRowArray[i] = value.getString();
             }
         }
+        lastTick = System.currentTimeMillis();
         csvWriter.write(stringRowArray);
+        if (Thread.currentThread().isInterrupted()) {
+            throw new IOException(new InterruptedException());
+        }
     }
 
     private boolean isDecimal(ResultColumnDescriptor columnDescriptor) {
@@ -87,7 +115,16 @@ public class ExportExecRowWriter implements Closeable {
      */
     @Override
     public void close() throws IOException {
-        csvWriter.close();
+        try {
+            lastTick = System.currentTimeMillis();
+            csvWriter.close();
+            if (Thread.interrupted()) {
+                throw new IOException(new InterruptedException());
+            }
+        } finally {
+            watchdog.cancel(true);
+            executorService.shutdown();
+        }
     }
 
 }

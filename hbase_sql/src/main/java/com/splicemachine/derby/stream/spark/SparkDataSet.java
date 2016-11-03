@@ -333,16 +333,33 @@ public class SparkDataSet<V> implements DataSet<V> {
             return new RecordWriter<Void, LocatedRow>() {
                 @Override
                 public void write(Void _, LocatedRow locatedRow) throws IOException, InterruptedException {
+
                     try {
                         rowWriter.writeRow(locatedRow.getRow(), op.getSourceResultColumnDescriptors());
                     } catch (StandardException e) {
                         throw new IOException(e);
+                    } catch (Exception e) {
+                        Thread.interrupted();
+                        if (e instanceof InterruptedException) {
+                            throw new IOException(e);
+                        } else {
+                            throw e;
+                        }
                     }
                 }
 
                 @Override
                 public void close(TaskAttemptContext taskAttemptContext) throws IOException, InterruptedException {
-                    rowWriter.close();
+                    try {
+                        rowWriter.close();
+                    } catch (Exception e) {
+                        Thread.interrupted();
+                        if (e instanceof InterruptedException) {
+                            throw new IOException(e);
+                        } else {
+                            throw e;
+                        }
+                    }
                 }
             };
         }
