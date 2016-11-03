@@ -3,6 +3,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import sys
+if sys.version_info[0] < 3: 
+    from StringIO import StringIO
+else:
+    from io import StringIO
+
 import tempfile
 from six.moves import urllib
 
@@ -15,17 +21,20 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string("model_dir", "", "Base directory for output models.")
 flags.DEFINE_string("model_type", "wide_n_deep",
                     "Valid model types: {'wide', 'deep', 'wide_n_deep'}.")
+flags.DEFINE_string("input_record", "",
+                    "Comma delimited input record")
+flags.DEFINE_string(
+    "inputs",
+    "",
+    "Input data dictionary")
 
-COLUMNS = ["age", "workclass", "fnlwgt", "education", "education_num",
-           "marital_status", "occupation", "relationship", "race", "gender",
-           "capital_gain", "capital_loss", "hours_per_week", "native_country",
-           "income_bracket"]
-LABEL_COLUMN = "label"
-CATEGORICAL_COLUMNS = ["workclass", "education", "marital_status", "occupation",
-                       "relationship", "race", "gender", "native_country"]
-CONTINUOUS_COLUMNS = ["age", "education_num", "capital_gain", "capital_loss",
-                      "hours_per_week"]
-
+INPUT_DICT=json.loads(FLAGS.inputs)
+COLUMNS = INPUT_DICT['columns'];
+LABEL_COLUMN = INPUT_DICT['label_column'];
+CATEGORICAL_COLUMNS = INPUT_DICT['categorical_columns'];
+CONTINUOUS_COLUMNS = INPUT_DICT['continuous_columns'];
+CROSSED_COLUMNS = INPUT_DICT['crossed_columns'];
+BUCKETIZED_COLUMNS = INPUT_DICT['bucketized_columns'];
 
 def build_estimator(model_dir):
   """Build an estimator."""
@@ -128,15 +137,16 @@ def input_fn(df):
   # Returns the feature columns and the label.
   return feature_cols, label
 
-
-
 def main(_):
   model_dir = tempfile.mkdtemp() if not FLAGS.model_dir else FLAGS.model_dir
   print('model_dir = %s' % model_dir);
   m = build_estimator(model_dir)
 
+  input_record
+  indata=StringIO(input_record)
+
   prediction_set = pd.read_csv(
-      tf.gfile.Open("myfile.csv"),
+      indata,
       names=COLUMNS,
       skipinitialspace=True,
       skiprows=0,
@@ -148,7 +158,7 @@ def main(_):
 
   y=m.predict(input_fn=lambda: input_fn(prediction_set))
   print('Predictions: {}'.format(str(y)))
-
+  return y
 
 if __name__ == "__main__":
   tf.app.run()
