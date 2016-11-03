@@ -258,7 +258,7 @@ public class CreateInputDictionary {
 
             LOG.error("In predictModel: ");
             
-            Connection conn = DriverManager.getConnection("jdbc:splice://localhost:1527/splicedb;user=splice;password=admin");
+            Connection conn = DriverManager.getConnection("jdbc:default:connection");
             
             File pythonFile = new File(fullModelPath);
             String parentDir = pythonFile.getParent();
@@ -329,9 +329,12 @@ public class CreateInputDictionary {
                 int beginIndex = returnVal.indexOf("[");
                 int endIndex = returnVal.indexOf("]");
                 if(beginIndex > -1 && endIndex > -1) {
-                    returnVal = returnVal.substring(beginIndex, endIndex);
-                    stmt.executeUpdate("UPDATE " + sourceTable + "set LABEL = " + returnVal +" where ID = " + sourceId);
-                    returnResultset[0] = stmt.executeQuery("values(" + returnVal + ")");
+                    returnVal = returnVal.substring(beginIndex+1, endIndex);
+                    LOG.error("beginIndex: " + beginIndex);
+                    LOG.error("endIndex: " + endIndex);
+                    LOG.error("return val: " + returnVal);
+                    stmt.executeUpdate("UPDATE " + sourceTable + " set LABEL = '" + returnVal +"' where ID = " + sourceId);
+                    returnResultset[0] = stmt.executeQuery("select * from "+ sourceTable + " where ID = " + sourceId);
                 }
                 
                 
