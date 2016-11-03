@@ -59,6 +59,7 @@ public class ExportExecRowWriter implements Closeable {
                     if (!interrupted) {
                         thread.interrupt();
                         interrupted = true;
+                        lastTick = System.currentTimeMillis();
                     } else {
                         System.exit(-1);
                     }
