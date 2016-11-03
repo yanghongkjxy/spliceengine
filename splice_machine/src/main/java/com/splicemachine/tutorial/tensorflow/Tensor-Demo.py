@@ -191,12 +191,6 @@ DEEP_TF_COLUMNS =  list(EMBEDDED_TF_COLUMNS.values()) + list(REAL_TF_COLUMNS.val
 print(DEEP_TF_COLUMNS)
 
 
-# In[17]:
-
-WIDE_TF_COLUMNS = list(SPARSE_TF_COLUMNS.values()) + list(BUCKETIZED_TF_COLUMNS.values())
-print(WIDE_TF_COLUMNS)
-
-
 # In[18]:
 
 def prepare_crossed(cols):
@@ -230,6 +224,10 @@ CROSSED_TF_COLS = prepare_crossed(CROSSED_COLUMNS)
 print(CROSSED_TF_COLS)
 CROSSED_TF_COLS[1]
 
+# In[17]:
+
+WIDE_TF_COLUMNS = list(SPARSE_TF_COLUMNS.values()) + list(BUCKETIZED_TF_COLUMNS.values()) + list(CROSSED_TF_COLS)
+print(WIDE_TF_COLUMNS)
 
 # In[21]:
 
