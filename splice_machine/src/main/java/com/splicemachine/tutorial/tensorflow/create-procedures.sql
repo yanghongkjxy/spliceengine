@@ -11,3 +11,9 @@ CREATE PROCEDURE SPLICE.RUN_PYTHON(scriptPathAndName VARCHAR(300))
    READS SQL DATA
    LANGUAGE JAVA
    EXTERNAL NAME 'com.splicemachine.tutorial.tensorflow.CreateInputDictionary.callPythonScript';
+   
+CREATE PROCEDURE SPLICE.CREATE_MODEL(scriptPathAndName VARCHAR(300), type VARCHAR(50), modelName VARCHAR(50), trainingDataTable VARCHAR(50), testDataTable VARCHAR(50))
+   PARAMETER STYLE JAVA
+   READS SQL DATA
+   LANGUAGE JAVA
+   EXTERNAL NAME 'com.splicemachine.tutorial.tensorflow.CreateInputDictionary.generateModel';

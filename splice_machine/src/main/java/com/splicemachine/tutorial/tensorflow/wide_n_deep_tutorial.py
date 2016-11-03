@@ -17,6 +17,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import json
 import tempfile
 from six.moves import urllib
 
@@ -31,46 +32,28 @@ flags.DEFINE_string("model_type", "wide_n_deep",
                     "Valid model types: {'wide', 'deep', 'wide_n_deep'}.")
 flags.DEFINE_integer("train_steps", 200, "Number of training steps.")
 flags.DEFINE_string(
-    "train_data",
+    "inputs",
     "",
-    "Path to the training data.")
-flags.DEFINE_string(
-    "test_data",
-    "",
-    "Path to the test data.")
+    "Input data dictionary")
 
-COLUMNS = ["age", "workclass", "fnlwgt", "education", "education_num",
-           "marital_status", "occupation", "relationship", "race", "gender",
-           "capital_gain", "capital_loss", "hours_per_week", "native_country",
-           "income_bracket"]
-LABEL_COLUMN = "label"
-CATEGORICAL_COLUMNS = ["workclass", "education", "marital_status", "occupation",
-                       "relationship", "race", "gender", "native_country"]
-CONTINUOUS_COLUMNS = ["age", "education_num", "capital_gain", "capital_loss",
-                      "hours_per_week"]
+INPUT_DICT=json.loads(FLAGS.inputs)
+COLUMNS = INPUT_DICT['columns'];
+LABEL_COLUMN = INPUT_DICT['label_column'];
+CATEGORICAL_COLUMNS = INPUT_DICT['categorical_columns'];
+CONTINUOUS_COLUMNS = INPUT_DICT['continuous_columns'];
+CROSSED_COLUMNS = INPUT_DICT['crossed_columns'];
+BUCKETIZED_COLUMNS = INPUT_DICT['bucketized_columns'];
 
+print("INPUT_DICT=%s" % INPUT_DICT)
+print("COLUMNS=%s" % COLUMNS)
+print("LABEL_COLUMN=%s" % LABEL_COLUMN)
+print("CATEGORICAL_COLUMNS=%s" % CATEGORICAL_COLUMNS)
+print("CONTINUOUS_COLUMNS=%s" % CONTINUOUS_COLUMNS)
+print("CROSSED_COLUMNS=%s" % CROSSED_COLUMNS)
+print("BUCKETIZED_COLUMNS=%s" % BUCKETIZED_COLUMNS)
 
-def maybe_download():
-  """Maybe downloads training data and returns train and test file names."""
-  if FLAGS.train_data:
-    train_file_name = FLAGS.train_data
-  else:
-    train_file = tempfile.NamedTemporaryFile(delete=False)
-    urllib.request.urlretrieve("https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data", train_file.name)  # pylint: disable=line-too-long
-    train_file_name = train_file.name
-    train_file.close()
-    print("Training data is downloaded to %s" % train_file_name)
-
-  if FLAGS.test_data:
-    test_file_name = FLAGS.test_data
-  else:
-    test_file = tempfile.NamedTemporaryFile(delete=False)
-    urllib.request.urlretrieve("https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.test", test_file.name)  # pylint: disable=line-too-long
-    test_file_name = test_file.name
-    test_file.close()
-    print("Test data is downloaded to %s" % test_file_name)
-
-  return train_file_name, test_file_name
+train_file_name=INPUT_DICT['train_data_path']
+test_file_name=INPUT_DICT['test_data_path']
 
 
 def build_estimator(model_dir):
@@ -167,7 +150,9 @@ def input_fn(df):
 
 def train_and_eval():
   """Train and evaluate the model."""
-  train_file_name, test_file_name = maybe_download()
+  
+  tf.logging.set_verbosity(tf.logging.INFO)
+
   df_train = pd.read_csv(
       tf.gfile.Open(train_file_name),
       names=COLUMNS,
@@ -194,7 +179,14 @@ def train_and_eval():
   for key in sorted(results):
     print("%s: %s" % (key, results[key]))
 
+def print_parms():
+  print("model_type=%s" %FLAGS.model_dir)
+  print("model_type=%s" %FLAGS.model_type)
+  print("train_steps=%s" %FLAGS.train_steps)
+  print("inputs=%s" %FLAGS.inputs)
+
 def main(_):
+  print_parms()
   train_and_eval()
 
 
