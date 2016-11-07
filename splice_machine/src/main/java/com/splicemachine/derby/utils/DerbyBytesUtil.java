@@ -20,6 +20,7 @@ import com.splicemachine.db.iapi.services.io.StoredFormatIds;
 import com.splicemachine.db.iapi.store.access.ScanController;
 import com.splicemachine.db.iapi.types.DataValueDescriptor;
 import com.splicemachine.derby.utils.marshall.dvd.DescriptorSerializer;
+import com.splicemachine.derby.utils.marshall.dvd.IncrementingSerializer;
 import com.splicemachine.derby.utils.marshall.dvd.VersionedSerializers;
 import com.splicemachine.encoding.MultiFieldDecoder;
 import com.splicemachine.encoding.MultiFieldEncoder;
@@ -63,11 +64,28 @@ public class DerbyBytesUtil {
         }
     }
 
+    public static byte[] generateIndexKey(DataValueDescriptor[] descriptors,
+                                          boolean[] sortOrder,
+                                          String tableVersion,
+                                          boolean rowIdKey) throws IOException, StandardException {
+       return generateIndexKey(descriptors, sortOrder, tableVersion, rowIdKey,false);
+    }
 
-    public static byte[] generateIndexKey(DataValueDescriptor[] descriptors, boolean[] sortOrder, String tableVersion, boolean rowIdKey) throws IOException, StandardException {
+    private static byte[] generateIndexKey(DataValueDescriptor[] descriptors,
+                                          boolean[] sortOrder,
+                                          String tableVersion,
+                                          boolean rowIdKey,boolean isStop) throws IOException, StandardException {
         MultiFieldEncoder encoder = MultiFieldEncoder.create(descriptors.length);
         DescriptorSerializer[] serializers = VersionedSerializers.forVersion(tableVersion, false).getSerializers(descriptors);
         DescriptorSerializer rowLocSerializer = VersionedSerializers.forVersion(tableVersion, false).getSerializer(StoredFormatIds.ACCESS_HEAP_ROW_LOCATION_V1_ID);
+        if(isStop){
+            for(int i=0;i<descriptors.length;i++){
+                DataValueDescriptor dvd = descriptors[i];
+                if(dvd.getTypeFormatId()==StoredFormatIds.SQL_CHAR_ID){
+                    serializers[i] = new IncrementingSerializer(serializers[i]);
+                }
+            }
+        }
         try {
             if (rowIdKey) {
                 return descriptors[0].getBytes();
@@ -81,10 +99,8 @@ public class DerbyBytesUtil {
                 boolean desc = sortOrder != null && !sortOrder[i];
                 if (dvd.getTypeFormatId() == StoredFormatIds.ACCESS_HEAP_ROW_LOCATION_V1_ID) {
                     rowLocSerializer.encode(encoder, dvd, desc);
-                    // encoder = encoder.encodeNext(dvd.getBytes(),desc);
                 } else
                     serializers[i].encode(encoder, dvd, desc);
-                    // encodeInto(encoder,dvd,desc);
             }
             return encoder.build();
         } finally {
@@ -92,6 +108,45 @@ public class DerbyBytesUtil {
                 serializer.close();
             }
         }
+    }
+
+    public static byte[] generateOrderedStopKey(DataValueDescriptor[] stopKey,
+                                                 int stopOperator,
+                                                 boolean[] sortOrder,
+                                                 String tableVersion,
+                                                 boolean rowIdKey) throws IOException, StandardException {
+        if (stopKey == null) return null;
+        switch (stopOperator) { // public static final int GT = -1;
+            case ScanController.NA:
+            case ScanController.GE:
+                byte[] key = generateIndexKey(stopKey, sortOrder, tableVersion, rowIdKey,true);
+                return Bytes.unsignedCopyAndIncrement(key);
+            case ScanController.GT:
+                byte[] indexKey = generateIndexKey(stopKey, sortOrder, tableVersion, rowIdKey,true);
+                /*
+                 * For a GT operation we want the next row in sorted order, and that's the row plus a
+                 * trailing 0x0 byte
+                 * The problem is sometimes we have composed keys such as:
+                 * 0xFF 0xFF 0xFF 0x00 0xEE 0xEE
+                 * 0xFF 0xFF 0xFF 0x00 0xEE 0xFF
+                 *
+                 * When we search for 0xFF 0xFF 0xFF we want both rows returned.
+                 *
+                 * In this case, the first row greater than anything of the form
+                 * 0xFF 0xFF 0xFF 0x00 0x?? 0x??
+                 *
+                 * Is 0xFF 0xFF 0xFF 0x01
+                 *
+                 * Here we append a 0x01 byte to the end of the key
+                 */
+                byte[] b = new byte[indexKey.length+1];
+                System.arraycopy(indexKey,0,b,0,indexKey.length);
+                b[b.length-1] = 0x01;
+                return b;
+            default:
+                throw new RuntimeException("Error with Key Generation");
+        }
+
     }
 
     public static byte[] generateScanKeyForIndex(DataValueDescriptor[] startKeyValue,

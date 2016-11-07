@@ -46,6 +46,8 @@ public class PrimaryKeyScanIT extends SpliceUnitTest{
     protected static SpliceTableWatcher spliceTableWatcher2=new SpliceTableWatcher("B",CLASS_NAME,
             "(pk_1 varchar(50),pk_2 varchar(50), val int, PRIMARY KEY(pk_2,pk_1))");
 
+    private static SpliceTableWatcher charPk = new SpliceTableWatcher("C",CLASS_NAME,"(pk_1 char(10))");
+
     protected static String INSERT_VALUES=String.format("insert into %s.%s (pk_1, pk_2,val) values (?,?,?)",CLASS_NAME,TABLE_NAME);
     protected static String INSERT_VALUES2=String.format("insert into %s.%s (pk_1, pk_2,val) values (?,?,?)",CLASS_NAME,"B");
 
@@ -54,35 +56,45 @@ public class PrimaryKeyScanIT extends SpliceUnitTest{
             .around(spliceSchemaWatcher)
             .around(spliceTableWatcher)
             .around(spliceTableWatcher2)
+            .around(charPk)
             .around(new SpliceDataWatcher(){
                 @Override
                 protected void starting(Description description){
                     try{
-                        PreparedStatement ps=spliceClassWatcher.prepareStatement(INSERT_VALUES);
-                        for(int i=0;i<pk1Size;i++){
-                            String pk1="pk_1_"+i;
-                            for(int j=0;j<pk2Size;j++){
-                                String pk2="pk_2_"+j;
-                                int val=i;
-                                ps.setString(1,pk1);
-                                ps.setString(2,pk2);
-                                ps.setInt(3,val);
-                                ps.executeUpdate();
-                                correctData.put(Pair.newPair(pk1,pk2),val);
+                        try(PreparedStatement ps=spliceClassWatcher.prepareStatement(INSERT_VALUES)){
+                            for(int i=0;i<pk1Size;i++){
+                                String pk1="pk_1_"+i;
+                                for(int j=0;j<pk2Size;j++){
+                                    String pk2="pk_2_"+j;
+                                    int val=i;
+                                    ps.setString(1,pk1);
+                                    ps.setString(2,pk2);
+                                    ps.setInt(3,val);
+                                    ps.executeUpdate();
+                                    correctData.put(Pair.newPair(pk1,pk2),val);
+                                }
                             }
                         }
 
-                        ps=spliceClassWatcher.prepareStatement(INSERT_VALUES2);
-                        for(int i=0;i<pk1Size;i++){
-                            String pk1="pk_1_"+i;
-                            for(int j=0;j<pk2Size;j++){
-                                String pk2="pk_2_"+j;
-                                int val=i;
-                                ps.setString(1,pk1);
-                                ps.setString(2,pk2);
-                                ps.setInt(3,val);
-                                ps.executeUpdate();
+                        try(PreparedStatement ps=spliceClassWatcher.prepareStatement(INSERT_VALUES2)){
+                            for(int i=0;i<pk1Size;i++){
+                                String pk1="pk_1_"+i;
+                                for(int j=0;j<pk2Size;j++){
+                                    String pk2="pk_2_"+j;
+                                    int val=i;
+                                    ps.setString(1,pk1);
+                                    ps.setString(2,pk2);
+                                    ps.setInt(3,val);
+                                    ps.executeUpdate();
+                                }
                             }
+                        }
+
+                        try(PreparedStatement ps=spliceClassWatcher.prepareStatement("insert into "+charPk+" (pk_1) values (?)")){
+                            ps.setString(1,"12345");
+                            ps.execute();
+                            ps.setString(1,"123456");
+                            ps.execute();
                         }
 
                     }catch(Exception e){
@@ -116,6 +128,45 @@ public class PrimaryKeyScanIT extends SpliceUnitTest{
     	}
     }
 	*/
+
+    @Test
+    public void correctlyFindsCharPkInInClause() throws Exception{
+        /*
+         * regression test for SPLICE-1111.
+         *
+         * The correct answer should be padded to be 10 characters(the SQL Char contract)
+         */
+        try(ResultSet rs = methodWatcher.executeQuery("select * from "+charPk+" where pk_1 in ('12345')")){
+            Assert.assertTrue("Did not find any rows!",rs.next());
+            String pkVal = rs.getString(1);
+            Assert.assertEquals("Incorrect pk value!","12345     ",pkVal);
+            Assert.assertFalse("Too many rows returned!",rs.next());
+        }
+
+        try(ResultSet rs = methodWatcher.executeQuery("select * from "+charPk+" where pk_1 in ('12345','123456')")){
+            String[] correctValues = new String[]{"12345     ","123456    "};
+            boolean[] foundValues = new boolean[]{false,false};
+            int c = 0;
+            while(rs.next()){
+                String val = rs.getString(1);
+                Assert.assertFalse("Returned a null value!",rs.wasNull());
+                Assert.assertNotEquals("Returned a null value!",val);
+                for(int i=0;i<correctValues.length;i++){
+                    if(correctValues[i].equals(val)){
+                        Assert.assertFalse("Returned the same value multiple times(violates PK constraint)",foundValues[i]);
+                        foundValues[i] = true;
+                        break;
+                    }
+                }
+                c++;
+            }
+            Assert.assertEquals("Incorrect returned size!",correctValues.length,c);
+
+            for(int i=0;i<foundValues.length;i++){
+                Assert.assertTrue("Did not have entry for value "+correctValues[i],foundValues[i]);
+            }
+        }
+    }
 
     @Test
     public void testCountAllData() throws Exception{

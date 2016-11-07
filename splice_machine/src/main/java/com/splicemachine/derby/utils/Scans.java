@@ -252,10 +252,10 @@ public class Scans extends SpliceUtils {
                     scan.startKey(SIConstants.EMPTY_BYTE_ARRAY);
             }
             if (generateStopKey) {
-                byte[] stopRow = DerbyBytesUtil.generateScanKeyForIndex(stop, stopSearchOperator, sortOrder, tableVersion, rowIdKey);
-                if (stopKeyPrefix != null) {
-                    stopRow = Bytes.unsignedCopyAndIncrement(stopRow);
-                }
+                byte[] stopRow = DerbyBytesUtil.generateOrderedStopKey(stop, stopSearchOperator, sortOrder, tableVersion, rowIdKey);
+//                if (stopKeyPrefix != null) {
+//                    stopRow = Bytes.unsignedCopyAndIncrement(stopRow);
+//                }
                 scan.stopKey(stopRow);
                 if (stopRow == null)
                     scan.stopKey(SIConstants.EMPTY_BYTE_ARRAY);
