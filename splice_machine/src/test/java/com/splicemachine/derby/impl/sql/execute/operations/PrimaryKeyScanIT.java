@@ -46,7 +46,7 @@ public class PrimaryKeyScanIT extends SpliceUnitTest{
     protected static SpliceTableWatcher spliceTableWatcher2=new SpliceTableWatcher("B",CLASS_NAME,
             "(pk_1 varchar(50),pk_2 varchar(50), val int, PRIMARY KEY(pk_2,pk_1))");
 
-    private static SpliceTableWatcher charPk = new SpliceTableWatcher("C",CLASS_NAME,"(pk_1 char(10))");
+    private static SpliceTableWatcher charPk = new SpliceTableWatcher("C",CLASS_NAME,"(pk_1 char(10) primary key )");
 
     protected static String INSERT_VALUES=String.format("insert into %s.%s (pk_1, pk_2,val) values (?,?,?)",CLASS_NAME,TABLE_NAME);
     protected static String INSERT_VALUES2=String.format("insert into %s.%s (pk_1, pk_2,val) values (?,?,?)",CLASS_NAME,"B");

@@ -78,14 +78,14 @@ public class DerbyBytesUtil {
         MultiFieldEncoder encoder = MultiFieldEncoder.create(descriptors.length);
         DescriptorSerializer[] serializers = VersionedSerializers.forVersion(tableVersion, false).getSerializers(descriptors);
         DescriptorSerializer rowLocSerializer = VersionedSerializers.forVersion(tableVersion, false).getSerializer(StoredFormatIds.ACCESS_HEAP_ROW_LOCATION_V1_ID);
-        if(isStop){
-            for(int i=0;i<descriptors.length;i++){
-                DataValueDescriptor dvd = descriptors[i];
-                if(dvd.getTypeFormatId()==StoredFormatIds.SQL_CHAR_ID){
-                    serializers[i] = new IncrementingSerializer(serializers[i]);
-                }
-            }
-        }
+//        if(isStop){
+//            for(int i=0;i<descriptors.length;i++){
+//                DataValueDescriptor dvd = descriptors[i];
+//                if(dvd.getTypeFormatId()==StoredFormatIds.SQL_CHAR_ID){
+//                    serializers[i] = new IncrementingSerializer(serializers[i]);
+//                }
+//            }
+//        }
         try {
             if (rowIdKey) {
                 return descriptors[0].getBytes();
