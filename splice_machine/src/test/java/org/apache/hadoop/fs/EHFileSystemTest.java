@@ -15,7 +15,7 @@ public class EHFileSystemTest {
 
         FileSystem fileSystem = FileSystem.get(new URI("file:///"),new Configuration());
 
-        FileStatus fileStatus = fileSystem.getFileStatus(new Path("file:///Users/jleach/Ugh.jps"));
+        FileStatus fileStatus = fileSystem.getFileStatus(new Path("file:///efs/tmp.foo"));
         System.out.println(fileStatus.getOwner());
     }
 }
