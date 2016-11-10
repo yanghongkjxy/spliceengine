@@ -10,12 +10,13 @@ import java.net.URI;
  * Created by jleach on 11/9/16.
  */
 public class EHFileSystemTest {
-    private static String DIRECTORY = "efs:/efs";
-    private static String FILE = "efs:/efs/foo.txt";
+    private static String DIRECTORY = "/efs";
+    private static String FILE = "/efs/foo.txt";
 
     @Test
     public void getStatus() throws Exception {
-        FileSystem fileSystem = FileSystem.get(new URI("efs:///"),new Configuration());
+        FileSystem fileSystem = FileSystem.get(new URI("file:///"),new Configuration());
+
         FsStatus fileStatus = fileSystem.getStatus(new Path(DIRECTORY));
         Assert.assertTrue("capacity less than remaining",fileStatus.getCapacity()>fileStatus.getRemaining());
         Assert.assertTrue("no negative numbers",fileStatus.getCapacity()>0 &&
