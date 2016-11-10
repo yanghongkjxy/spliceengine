@@ -25,9 +25,15 @@ public class EHFileSystemTest {
 
     @Test
     public void getContentSummary() throws Exception {
-        FileSystem fileSystem = FileSystem.get(new URI("efs:///"),new Configuration());
-        ContentSummary contentSummary = fileSystem.getContentSummary(new Path(DIRECTORY));
-        contentSummary.getFileCount();
+        try {
+            FileSystem fileSystem = FileSystem.get(new URI("efs:///"), new Configuration());
+            System.out.println(fileSystem);
+            ContentSummary contentSummary = fileSystem.getContentSummary(new Path(DIRECTORY));
+            contentSummary.getFileCount();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @Test
