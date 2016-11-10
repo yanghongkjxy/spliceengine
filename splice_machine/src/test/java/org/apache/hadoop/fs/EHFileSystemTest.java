@@ -10,8 +10,8 @@ import java.net.URI;
  * Created by jleach on 11/9/16.
  */
 public class EHFileSystemTest {
-    private static String DIRECTORY = "/efs";
-    private static String FILE = "/efs/foo.txt";
+    private static String DIRECTORY = "efs:/efs";
+    private static String FILE = "efs:/efs/foo.txt";
 
     @Test
     public void getStatus() throws Exception {
