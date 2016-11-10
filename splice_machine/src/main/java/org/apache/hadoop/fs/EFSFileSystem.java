@@ -39,7 +39,7 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class EFSFileSystem extends RawLocalFileSystem {
-    static final URI NAME = URI.create("file:///");
+    static final URI NAME = URI.create("efs:///");
     @Override
     public URI getUri() {
         return NAME;
@@ -47,7 +47,7 @@ public class EFSFileSystem extends RawLocalFileSystem {
 
     @Override
     public String getScheme() {
-        return "file";
+        return "efs";
     }
 
 
