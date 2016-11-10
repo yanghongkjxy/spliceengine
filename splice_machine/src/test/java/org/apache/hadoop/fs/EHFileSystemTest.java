@@ -15,7 +15,7 @@ public class EHFileSystemTest {
 
     @Test
     public void getStatus() throws Exception {
-        FileSystem fileSystem = FileSystem.get(new URI("file:///"),new Configuration());
+        FileSystem fileSystem = FileSystem.get(new URI("efs:///"),new Configuration());
 
         FsStatus fileStatus = fileSystem.getStatus(new Path(DIRECTORY));
         Assert.assertTrue("capacity less than remaining",fileStatus.getCapacity()>fileStatus.getRemaining());

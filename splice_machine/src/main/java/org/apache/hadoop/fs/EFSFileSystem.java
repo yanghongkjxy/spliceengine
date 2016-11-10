@@ -41,7 +41,7 @@ public class EFSFileSystem extends ChecksumFileSystem {
      */
     @Override
     public String getScheme() {
-        return "file";
+        return "efs";
     }
 
     public FileSystem getRaw() {
