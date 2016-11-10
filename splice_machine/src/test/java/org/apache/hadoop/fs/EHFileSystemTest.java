@@ -15,7 +15,10 @@ public class EHFileSystemTest {
 
         FileSystem fileSystem = FileSystem.get(new URI("file:///"),new Configuration());
 
-        FileStatus fileStatus = fileSystem.getFileStatus(new Path("file:/efs/spark/local/spark-f86cfee4-6dd8-4d36-88d9-c187381d0c05/__spark_conf__7178187324488808181.zip"));
-        System.out.println(fileStatus.getOwner());
+        FsStatus fileStatus = fileSystem.getStatus(new Path("file:/efs/yarn/nm"));
+        System.out.println(fileStatus.getCapacity());
+        System.out.println(fileStatus.getRemaining());
+        System.out.println(fileStatus.getUsed());
+
     }
 }
