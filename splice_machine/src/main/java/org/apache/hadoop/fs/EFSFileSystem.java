@@ -51,6 +51,16 @@ public class EFSFileSystem extends RawLocalFileSystem {
     }
 
 
+    @Override
+    public FsStatus getStatus(Path p) throws IOException {
+        File partition = pathToFile(p == null ? new Path("/") : p);
+        //File provides getUsableSpace() and getFreeSpace()
+        //File provides no API to obtain used space, assume used = total - free
+        return new FsStatus(Long.MAX_VALUE,
+                125l,
+                Long.MAX_VALUE-125l);
+    }
+
 
 
 
