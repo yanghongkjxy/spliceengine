@@ -1,17 +1,20 @@
 package org.apache.hadoop.fs;
 
+import com.splicemachine.derby.test.framework.SpliceUnitTest;
 import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
-
 import java.net.URI;
 
 /**
- * Created by jleach on 11/9/16.
+ *
+ * Testing the
+ *
+ *
  */
-public class EHFileSystemTest {
-    private static String DIRECTORY = "/efs";
-    private static String FILE = "/efs/foo.txt";
+public class EFSFileSystemTest {
+    private static String DIRECTORY = SpliceUnitTest.getBaseDirectory()+"/src/main/java/org/apache/hadoop/fs/EFSFileSystem.java";
+    private static String FILE = SpliceUnitTest.getBaseDirectory()+"/src/main/java/org/apache/hadoop/fs/";
 
     @Test
     public void getStatus() throws Exception {
@@ -27,7 +30,6 @@ public class EHFileSystemTest {
     public void getContentSummary() throws Exception {
         try {
             FileSystem fileSystem = FileSystem.get(new URI("efs:///"), new Configuration());
-            System.out.println(fileSystem);
             ContentSummary contentSummary = fileSystem.getContentSummary(new Path(DIRECTORY));
             contentSummary.getFileCount();
         } catch (Exception e) {
@@ -43,6 +45,4 @@ public class EHFileSystemTest {
         fs.getOwner();
         fs.getBlockSize();
     }
-
-
 }
