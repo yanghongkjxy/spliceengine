@@ -10,8 +10,8 @@ import java.net.URI;
  * Created by jleach on 11/9/16.
  */
 public class EHFileSystemTest {
-    private static String DIRECTORY = "/Users/jleach/Documents/workspace/spliceengine";
-    private static String FILE = "/Users/jleach/Documents/workspace/spliceengine/pom.xml";
+    private static String DIRECTORY = "/efs";
+    private static String FILE = "/efs/foo.txt";
 
 
     @Test
