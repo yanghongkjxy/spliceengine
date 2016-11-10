@@ -13,7 +13,6 @@ public class EHFileSystemTest {
     private static String DIRECTORY = "/efs";
     private static String FILE = "/efs/foo.txt";
 
-
     @Test
     public void getStatus() throws Exception {
         FileSystem fileSystem = FileSystem.get(new URI("efs:///"),new Configuration());
