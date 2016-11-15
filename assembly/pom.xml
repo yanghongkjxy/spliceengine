@@ -91,6 +91,8 @@
                                     <exclude>org.apache.hive:*</exclude>
                                     <exclude>org.apache.hive.shims:*</exclude>
                                     <exclude>com.amazonaws:*</exclude>
+                                    <exclude>com.splicemachine:*</exclude>
+                                    <exclude>com.google.protobuf:*</exclude>
                                 </excludes>
                             </artifactSet>
 
