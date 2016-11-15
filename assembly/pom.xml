@@ -168,8 +168,10 @@
                         <configuration>
                             <includeClassifiers>
                                 splice-uber,
-                                db-client
                             </includeClassifiers>
+                            <includeArtifactIds>
+                                db-client
+                            </includeArtifactIds>
 
                             <!--
                             <excludeGroupIds>
