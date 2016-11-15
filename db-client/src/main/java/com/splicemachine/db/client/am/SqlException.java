@@ -89,9 +89,11 @@ public class SqlException extends Exception implements Diagnosable {
     protected String causeString_ = null;
     protected SqlException nextException_;
     protected Throwable throwable_;
-    
+    public static final String PART1 = "com";
+    public static final String PART2 = ".splicemachine.db.loc.clientmessages";
+
     public static final String CLIENT_MESSAGE_RESOURCE_NAME =
-        "com.splicemachine.db.loc.clientmessages";
+        PART1+PART2;
     
     //SQLException factory initialised with default factory
     //It will be over written by the SQLException factory of the 

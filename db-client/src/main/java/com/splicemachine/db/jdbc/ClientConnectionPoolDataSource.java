@@ -52,8 +52,11 @@ public class ClientConnectionPoolDataSource extends ClientDataSource
                                            implements ConnectionPoolDataSource {
     private static final long serialVersionUID = -539234282156481377L;
     /** Message utility used to obtain localized messages. */
+    public static final String PART1 = "com";
+    public static final String PART2 = ".splicemachine.db.loc.clientmessages";
+    
     private static final MessageUtil msgUtil =
-            new MessageUtil("com.splicemachine.db.loc.clientmessages");
+            new MessageUtil(PART1+PART2);
     public static final String className__ = "com.splicemachine.db.jdbc.ClientConnectionPoolDataSource";
 
     /**
