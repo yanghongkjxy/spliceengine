@@ -31,11 +31,13 @@
             <artifactId>hbase_sql-${envClassifier}</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!--
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>${spark-assembly-id}</artifactId>
             <version>${spark.version}</version>
         </dependency>
+        -->
     </dependencies>
     <properties>
         <jenkins.build.number>1</jenkins.build.number>
@@ -64,6 +66,72 @@
                     </execution>
                 </executions>
             </plugin>
+
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.4.3</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>org.apache.hadoop*:*</exclude>
+                                    <exclude>org.apache.hadoop.hbase:*</exclude>
+                                    <exclude>org.apache.hbase:*</exclude>
+                                    <exclude>org.apache.hadoop.hbase.ipc:*</exclude>
+                                    <exclude>org.apache.hbase.ipc:*</exclude>
+                                    <exclude>org.apache.hadoop.hbase.filter:*</exclude>
+                                    <exclude>org.apache.hbase.filter:*</exclude>
+                                    <exclude>org.apache.hive:*</exclude>
+                                    <exclude>org.apache.hive.shims:*</exclude>
+                                    <exclude>com.amazonaws:*</exclude>
+                                </excludes>
+                            </artifactSet>
+
+                            <relocations>
+                                <relocation>
+                                    <pattern>org</pattern>
+                                    <shadedPattern>splice.org</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com</pattern>
+                                    <shadedPattern>splice.com</shadedPattern>
+                                    <excludes>
+                                        <exclude>com.splicemachine.*</exclude>
+                                    </excludes>
+                                </relocation>
+                            </relocations>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>splice-uber</shadedClassifierName>
+                        <filters>
+                            <filter>
+                                <artifact>*:*</artifact>
+                                <excludes>
+                                    <exclude>META-INF/maven/**</exclude>
+                                    <exclude>META-INF/*.RSA</exclude>
+                                    <exclude>META-INF/*.DSA</exclude>
+                                    <exclude>META-INF/*.SF</exclude>
+                                    <exclude>META-INF/licence/**</exclude>
+                                </excludes>
+                            </filter>
+
+                        </filters>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+
+
             <plugin>
                 <!-- This used to be confinded to the spark-prepare profile, but is now done always by default
                      To disable, use skipSparkPrepare on the command line -->
@@ -78,29 +146,102 @@
                             <goal>copy-dependencies</goal>
                         </goals>
                         <configuration>
-                            <includeArtifactIds><!-- third party libs -->
+                            <includeClassifiers>
+                                splice-uber
+                            </includeClassifiers>
+
+                            <!--
+                            <excludeGroupIds>
+                                org.apache.hadoop,
+                                org.apache.hadoop.hbase
+                                org.apache.hive,
+                                org.apache.hive.shims
+                            </excludeGroupIds>
+                            <excludeArtifactIds>
+                                hbase-client,
+                                hbase-common,
+                                hbase-annotations,
+                                hbase-protocol,
+                                hbase-server,
+                                hadoop-common,
+                                hbase-procedure,
+                                hbase-hadoop-compat,
+                                hbase-hadoop2-compat,
+                                hadoop-client,
+                                hive-shims,
+                                hive-service,
+                                hive-serde,
+                                hive-metastore,
+                                hive-jdbc,
+                                hive-hwi,
+                                hive-hbase-handler,
+                                hive-exec,
+                                hive-contrib,
+                                hive-common,
+                                hive-cli,
+                                hive-beeline,
+                                hive-ant
+                            </excludeArtifactIds>
+
+                            </excludeGroupIds>
+                            <includeArtifactIds>
                                 akka-remote_${scala.binary.version},
                                 concurrentlinkedhashmap-lru,
                                 disruptor,
                                 ehcache-core,
                                 gson,
                                 hppc,
-                                kryo,
+                                kryo-shaded,
                                 kryo-serializers,
                                 lucene-core,
                                 memory,
+                                minlog,
+                                xbean-asm5-shaded,
+                                RoaringBitmap,
+                                metrics-jvm,
+                                metrics-json,
+                                metrics-graphite,
+                                metrics-core,
+                                chill-java,
+                                leveldbjni-all,
+                                spire_${scala.binary.version},
+                                spirce-macros_${scala.binary.version},
+                                jsr305,
+                                scala-compiler,
+                                scala-library,
+                                scala-reflect,
+                                scalap,
+                                scala-java8-compat,
+                                scala-parser-combinators,
+                                scala-xml,
+                                scalatest,
+                                objenesis,
                                 opencsv,
                                 protobuf-java,
                                 sketches-core,
                                 sketches-memory,
+                                chill_${scala.binary.version},
                                 spark-catalyst_${scala.binary.version},
                                 spark-unsafe_${scala.binary.version},
                                 spark-core_${scala.binary.version},
                                 spark-sql_${scala.binary.version},
                                 spark-network-common_${scala.binary.version},
+                                spark-network-shuffle_${scala.binary.version},
+                                spark-network-yarn_${scala.binary.version},
                                 spark-hive_${scala.binary.version},
+                                spark-tags_${scala.binary.version},
+                                spark-yarn_${scala.binary.version},
+                                spark-streaming_${scala.binary.version},
+                                spark-sketch_${scala.binary.version},
+                                spark-mllib_${scala.binary.version},
+                                spark-mllib-local_${scala.binary.version},
+                                spark-launcher_${scala.binary.version},
+                                spark-graphx_${scala.binary.version},
+                                json4s-jackson_${scala.binary.version},
+                                json4s-core_${scala.binary.version},
+                                json4s-ast_${scala.binary.version},
+                                JavaEWAH,
                                 super-csv,
-                                <!-- spliceengine core libs -->
                                 db-build,
                                 db-client,
                                 db-drda,
@@ -109,6 +250,7 @@
                                 db-testing,
                                 db-tools-i18n,
                                 db-tools-ij,
+                                commons-lang3,
                                 db-tools-testing,
                                 pipeline_api,
                                 jul-to-slf4j,
@@ -119,7 +261,6 @@
                                 splice_si_api,
                                 splice_timestamp_api,
                                 utilities,
-                                <!-- spliceengine platform libs -->
                                 hbase_pipeline-${envClassifier},
                                 hbase_sql-${envClassifier},
                                 hbase_storage-${envClassifier},
@@ -129,6 +270,7 @@
                                 splice_colperms,
                                 splice_auth
                             </includeArtifactIds>
+                            -->
                         </configuration>
                     </execution>
                 </executions>
@@ -208,7 +350,7 @@
                                             <include name="parcel.json"/>
                                         </replace>
                                         <copy todir="target/SPLICEMACHINE-${project.version}.${envClassifier}.${parcel.patch}/lib">
-                                            <fileset dir="target/dependency" includes="**/*"/>
+                                            <fileset dir="target/" includes="*splice-uber*"/>
                                         </copy>
                                         <copy todir="target/SPLICEMACHINE-${project.version}.${envClassifier}.${parcel.patch}/meta">
                                             <fileset dir="target/classes/meta" includes="**/*"/>
