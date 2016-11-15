@@ -1,12 +1,14 @@
-package org.apache.hadoop.fs;
+package com.splicemachine.fs;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Random;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 
 /****************************************************************
  * Implement the FileSystem API for the checksumed local filesystem.
