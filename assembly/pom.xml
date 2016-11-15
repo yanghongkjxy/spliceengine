@@ -129,6 +129,17 @@
                             </filter>
 
                         </filters>
+                            <transformers>
+                            <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
+                                <resources>
+                                    <resource>SQLException.java</resource>
+                                    <resource>ClientConnectionPoolDataSource.java</resource>
+                                    <resource>SQLException.class</resource>
+                                    <resource>ClientConnectionPoolDataSource.class</resource>
+                                </resources>
+                            </transformer>
+                            </transformers>
+
 <!--                            <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                             </transformers>
