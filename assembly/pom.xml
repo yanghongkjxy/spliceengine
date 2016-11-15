@@ -103,7 +103,6 @@
                                     </excludes>
                                 </relocation>
                                 <relocation>
-                                    <rawString>false</rawString>
                                     <pattern>com</pattern>
                                     <shadedPattern>splice.com</shadedPattern>
                                     <excludes>

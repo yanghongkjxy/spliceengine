@@ -54,7 +54,7 @@ public class ClientConnectionPoolDataSource extends ClientDataSource
     /** Message utility used to obtain localized messages. */
     public static final String PART1 = "com";
     public static final String PART2 = ".splicemachine.db.loc.clientmessages";
-    
+
     private static final MessageUtil msgUtil =
             new MessageUtil(PART1+PART2);
     public static final String className__ = "com.splicemachine.db.jdbc.ClientConnectionPoolDataSource";
