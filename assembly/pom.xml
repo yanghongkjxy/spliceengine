@@ -99,15 +99,14 @@
                                     <pattern>org</pattern>
                                     <shadedPattern>splice.org</shadedPattern>
                                     <excludes>
-                                        <exclude>org.apache.hadoop.*</exclude>
-                                        <exclude>org.codehaus.plexus.util.xml.pull.*</exclude>
+                                        <exclude>org.apache.hadoop.**</exclude>
                                     </excludes>
                                 </relocation>
                                 <relocation>
                                     <pattern>com</pattern>
                                     <shadedPattern>splice.com</shadedPattern>
                                     <excludes>
-                                        <exclude>com.splicemachine.*</exclude>
+                                        <exclude>com.splicemachine.**</exclude>
                                     </excludes>
                                 </relocation>
                             </relocations>
