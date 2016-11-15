@@ -109,6 +109,7 @@
                                         <exclude>com.splicemachine.**</exclude>
                                         <exclude>com.spliceengine.**</exclude>
                                         <exclude>com.google.protobuf.**</exclude>
+                                        <exclude>com.splicemachine.db.shared.common.i18n.MessageUtil</exclude>
                                     </excludes>
                                 </relocation>
                             </relocations>
