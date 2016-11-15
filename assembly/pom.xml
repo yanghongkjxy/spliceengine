@@ -111,7 +111,6 @@
                                         <exclude>com.google.protobuf.**</exclude>
                                         <exclude>com.splicemachine.db.shared.common.i18n.MessageUtil</exclude>
                                     </excludes>
-                                    <raw
                                 </relocation>
                             </relocations>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
