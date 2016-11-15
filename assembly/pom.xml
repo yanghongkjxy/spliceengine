@@ -91,6 +91,7 @@
                                     <exclude>org.apache.hive:*</exclude>
                                     <exclude>org.apache.hive.shims:*</exclude>
                                     <exclude>com.amazonaws:*</exclude>
+                                    <exclude>com.splicemachine:db-client</exclude>
                                 </excludes>
                             </artifactSet>
 
@@ -166,7 +167,8 @@
                         </goals>
                         <configuration>
                             <includeClassifiers>
-                                splice-uber
+                                splice-uber,
+                                db-client
                             </includeClassifiers>
 
                             <!--
