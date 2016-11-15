@@ -107,6 +107,7 @@
                                     <shadedPattern>splice.com</shadedPattern>
                                     <excludes>
                                         <exclude>com.splicemachine.**</exclude>
+                                        <exclude>com.spliceengine.**</exclude>
                                     </excludes>
                                 </relocation>
                             </relocations>
