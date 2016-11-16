@@ -165,10 +165,6 @@
                                     <shadedPattern>splice.javax.servlet</shadedPattern>
                                 </relocation>
 
-                                <relocation>
-                                    <pattern>org.apache.hadoop.yarn.server.webproxy</pattern>
-                                    <shadedPattern>splice.org.apache.hadoop.yarn.server.webproxy</shadedPattern>
-                                </relocation>
                             </relocations>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <shadedClassifierName>splice-yarn-webproxy</shadedClassifierName>
