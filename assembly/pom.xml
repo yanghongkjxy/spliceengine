@@ -99,6 +99,10 @@
                                     <pattern>org.apache.spark</pattern>
                                     <shadedPattern>splice.org.apache.spark</shadedPattern>
                                 </relocation>
+                                <relocation>
+                                    <pattern>org.spark_project</pattern>
+                                    <shadedPattern>splice.org.spark_projectk</shadedPattern>
+                                </relocation>
 
                                 <relocation>
                                     <pattern>com.fasterxml</pattern>
@@ -152,7 +156,10 @@
                                     <pattern>com.fasterxml</pattern>
                                     <shadedPattern>splice.com.fasterxml</shadedPattern>
                                 </relocation>
-
+                                <relocation>
+                                    <pattern>org.spark_project</pattern>
+                                    <shadedPattern>splice.org.spark_projectk</shadedPattern>
+                                </relocation>
                                 <relocation>
                                     <pattern>javax.servlet</pattern>
                                     <shadedPattern>splice.javax.servlet</shadedPattern>
