@@ -110,8 +110,9 @@
                                         <exclude>org.apache.hive.**</exclude>
                                         <exclude>org.apache.zookeeper.**</exclude>
                                     </excludes>
+                                    -->
                                 </relocation>
-                                -->
+                                
                                 <!--
                                 <relocation>
                                     <pattern>com</pattern>
