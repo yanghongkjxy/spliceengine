@@ -92,6 +92,10 @@
                                     <exclude>org.apache.hive.shims:*</exclude>
                                     <exclude>com.amazonaws:*</exclude>
                                     <exclude>com.splicemachine:db-client</exclude>
+                                    <exclude>com.splicemachine:db-tools-i18n</exclude>
+                                    <exclude>com.splicemachine:db-tools-ij</exclude>
+                                    <exclude>com.splicemachine:db-shared</exclude>
+                                    <exclude>com.splicemachine:db-drda</exclude>
                                 </excludes>
                             </artifactSet>
 
@@ -167,7 +171,11 @@
                         </goals>
                         <configuration>
                             <includeArtifactIds>
-                                db-client
+                                db-client,
+                                db-tools-i18n,
+                                db-tools-ij,
+                                db-shared,
+                                db-drda
                             </includeArtifactIds>
 
                             <!--
