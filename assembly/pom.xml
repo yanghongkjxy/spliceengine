@@ -106,6 +106,9 @@
                                     <shadedPattern>splice.org</shadedPattern>
                                     <excludes>
                                         <exclude>org.apache.hadoop.**</exclude>
+                                        <exclude>org.apache.hbase.**</exclude>
+                                        <exclude>org.apache.hive.**</exclude>
+                                        <exclude>org.apache.zookeeper.**</exclude>
                                     </excludes>
                                 </relocation>
                                 <relocation>
