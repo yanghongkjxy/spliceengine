@@ -158,7 +158,7 @@
                                 </relocation>
                                 <relocation>
                                     <pattern>org.spark_project</pattern>
-                                    <shadedPattern>splice.org.spark_projectk</shadedPattern>
+                                    <shadedPattern>splice.org.spark_project</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>javax.servlet</pattern>
