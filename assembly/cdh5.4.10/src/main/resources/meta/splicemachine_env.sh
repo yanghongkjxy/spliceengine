@@ -25,6 +25,17 @@ else
     export HBASE_CLASSPATH="$HBASE_CLASSPATH:$APPENDSTRING"
 fi
 
+# XXX - blow out our classpath and remove any references to "servlet-api"
+for cpvar in CLASSPATH HBASE_CLASSPATH ; do
+    if [ ! -z "${!cpvar}" ] ; then
+        echo "removing references to servlet-api from ${cpvar}"
+        export OLD_${cpvar}="$(eval 'echo ${!cpvar}')"
+        newcp="$(echo ${!cpvar} | tr ':' '\n' | sed '/servlet-api/d' | xargs echo | tr ' ' ':')"
+        eval "export ${cpvar}=${newcp}"
+        unset newcp
+    fi
+done
+
 echo "Copying yarn-site.xml to hbase directory"
 
 if [ -r "/etc/hadoop/conf.cloudera.yarn/yarn-site.xml" ] ; then
