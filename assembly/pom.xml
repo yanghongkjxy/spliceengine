@@ -89,6 +89,7 @@
                                     <exclude>org.apache.hadoop.hbase.filter:*</exclude>
                                     <exclude>org.apache.hbase.filter:*</exclude>
                                     <exclude>org.apache.hive:*</exclude>
+                                    <exclude>org.apache.zookeeper:zookeeper</exclude>
                                     <exclude>org.apache.hive.shims:*</exclude>
                                     <exclude>com.amazonaws:*</exclude>
                                     <exclude>com.splicemachine:db-client</exclude>
@@ -176,6 +177,7 @@
                                 db-tools-ij,
                                 db-shared,
                                 db-drda
+
                             </includeArtifactIds>
 
                             <!--
