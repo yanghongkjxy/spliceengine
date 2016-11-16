@@ -102,15 +102,17 @@
 
                             <relocations>
                                 <relocation>
-                                    <pattern>org</pattern>
-                                    <shadedPattern>splice.org</shadedPattern>
-                                    <excludes>
+                                    <pattern>org.apache.spark</pattern>
+                                    <shadedPattern>splice.org.apache.spark</shadedPattern>
+<!--                                    <excludes>
                                         <exclude>org.apache.hadoop.**</exclude>
                                         <exclude>org.apache.hbase.**</exclude>
                                         <exclude>org.apache.hive.**</exclude>
                                         <exclude>org.apache.zookeeper.**</exclude>
                                     </excludes>
                                 </relocation>
+                                -->
+                                <!--
                                 <relocation>
                                     <pattern>com</pattern>
                                     <shadedPattern>splice.com</shadedPattern>
@@ -122,6 +124,7 @@
                                         <exclude>com.splicemachine.db.shared.common.i18n.MessageUtil</exclude>
                                     </excludes>
                                 </relocation>
+                                -->
                             </relocations>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <shadedClassifierName>splice-uber</shadedClassifierName>
