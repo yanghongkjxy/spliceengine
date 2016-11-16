@@ -128,7 +128,7 @@
                                 </relocation>
 
                                 <relocation>
-                                    <pattern>javax.servletl</pattern>
+                                    <pattern>javax.servlet</pattern>
                                     <shadedPattern>splice.javax.servlet</shadedPattern>
                                     <!--                                    <excludes>
                                                                             <exclude>org.apache.hadoop.**</exclude>
