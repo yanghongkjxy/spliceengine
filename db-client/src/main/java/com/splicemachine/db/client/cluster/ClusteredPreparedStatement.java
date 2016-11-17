@@ -42,7 +42,7 @@ class ClusteredPreparedStatement extends ClusteredStatement implements PreparedS
     List<StatementParameters> batchParams;
 
     ClusteredPreparedStatement(ClusteredConnection sourceConnection,
-                               ClusterConnectionManager connManager,
+                               ClusteredConnManager connManager,
                                String baseSql,
                                int resultSetType,
                                int resultSetConcurrency,

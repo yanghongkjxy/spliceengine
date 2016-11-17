@@ -130,6 +130,16 @@ class ServerPool implements Comparable<ServerPool>{
         return trackedSize.get();
     }
 
+    @Override
+    public String toString(){
+        return "ServerPool{"+
+                "serverName='"+serverName+'\''+
+                ", closed="+closed.get()+
+                ", pooledConnections="+pooledConnection+
+                ", outstandingConnections="+trackedSize.get()+
+                '}';
+    }
+
     /* ****************************************************************************************************************/
     /*package-local methods*/
     Connection tryAcquireConnection(boolean validate) throws SQLException{
@@ -182,6 +192,9 @@ class ServerPool implements Comparable<ServerPool>{
     boolean heartbeat(){
         if(isClosed()) return false; //don't continue validating, we are closed
         try(Connection conn=acquireConnection(false)){ //don't validate, since we are going to do that ourselves
+            boolean oldAutoCommit = conn.getAutoCommit();
+            if(!oldAutoCommit)
+                conn.setAutoCommit(true);
 
             /*
              * since Connection.isValid() ensures that we actually talk to the server, we can
@@ -189,16 +202,20 @@ class ServerPool implements Comparable<ServerPool>{
              * "hey, if at least one connection is able to communicate with that server safely,
              * then we can't be dead yet".
              */
-            if(conn.isValid(1)){
-                failureDetector.success();
-                if(LOGGER.isLoggable(Level.FINER))
-                    LOGGER.finer("heartbeat for server "+ serverName+" successful");
-                return true;
-            }else{
-                if(LOGGER.isLoggable(Level.FINER))
-                    LOGGER.finer("heartbeat for server "+ serverName+" failed");
-                failureDetector.failed();
-                return false;
+            try{
+                if(conn.isValid(1)){
+                    failureDetector.success();
+                    if(LOGGER.isLoggable(Level.FINER))
+                        LOGGER.finer("heartbeat for server "+serverName+" successful");
+                    return true;
+                }else{
+                    if(LOGGER.isLoggable(Level.FINER))
+                        LOGGER.finer("heartbeat for server "+serverName+" failed");
+                    failureDetector.failed();
+                    return false;
+                }
+            }finally{
+                conn.setAutoCommit(oldAutoCommit);
             }
         }catch(SQLException se){
             logError("heartbeat",se,Level.INFO);
@@ -261,10 +278,16 @@ class ServerPool implements Comparable<ServerPool>{
         return new PooledConnection(conn);
     }
 
+    private static final AtomicInteger ID_GEN = new AtomicInteger(0);
     private class PooledConnection extends ErrorTrappingConnection{
-
+        private final int connID = ID_GEN.incrementAndGet();
         public PooledConnection(Connection delegate){
             super(delegate);
+        }
+
+        @Override
+        public String toString(){
+            return "PooledConnection{"+serverName+"["+connID+"]}";
         }
 
         @Override

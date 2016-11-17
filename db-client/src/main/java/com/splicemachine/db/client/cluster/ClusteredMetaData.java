@@ -30,14 +30,14 @@ class ClusteredMetaData implements DatabaseMetaData{
     private static final Logger LOGGER=Logger.getLogger(ClusteredMetaData.class.getName());
 
     private final Connection sourceConn;
-    private final ClusterConnectionManager connectionManager;
+    private final ClusteredConnManager connectionManager;
     private final int maxRetries;
     private final String connectionUrl;
 
     private RefCountedConnection conn;
     private DatabaseMetaData delegate;
 
-    ClusteredMetaData(Connection sourceConn,String url,ClusterConnectionManager connectionManager, int maxRetries){
+    ClusteredMetaData(Connection sourceConn,String url,ClusteredConnManager connectionManager, int maxRetries){
         this.sourceConn = sourceConn;
         this.connectionManager=connectionManager;
         this.maxRetries = maxRetries;
@@ -2966,7 +2966,7 @@ class ClusteredMetaData implements DatabaseMetaData{
         }
         conn = null;
         try{
-            connectionManager.forceAcquireConnection();
+            conn = connectionManager.forceReacquireConnection();
         }catch(SQLException err){
             LOGGER.log(Level.WARNING,"unexpected error acquiring connection",err);
         }

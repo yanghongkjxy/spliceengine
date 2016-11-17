@@ -95,7 +95,7 @@ import static com.splicemachine.db.client.cluster.ClusterUtil.logError;
  * @author Scott Fines
  *         Date: 8/15/16
  */
-public class ClusteredDataSource implements DataSource{
+public class ClusteredDataSource implements DataSource,Debuggable{
     /*
      * We use java.util.logging here to avoid requiring a logging jar dependency on our applications (and therefore
      * causing all kinds of potential dependency problems).
@@ -129,6 +129,16 @@ public class ClusteredDataSource implements DataSource{
         this.discoveryWindow=discoveryWindow;
         this.serverDiscovery = serverDiscovery;
         this.heartbeatWindow = heartbeatWindow;
+    }
+
+    @Override
+    public void logDebugInfo(Level logLevel){
+        if(!LOGGER.isLoggable(logLevel)) return;
+        String debugString = "{"
+                + "list:"+serverList+",\n"
+                + "closed:"+isClosed()+",\n"
+                +"}";
+        LOGGER.log(logLevel,debugString);
     }
 
     public void start() throws SQLException{

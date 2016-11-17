@@ -48,7 +48,7 @@ public class Trigger_Row_IT {
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         Collection<Object[]> params = Lists.newArrayListWithCapacity(2);
-//        params.add(new Object[]{"jdbc:splice://localhost:1527/splicedb;create=true;user=splice;password=admin"});
+        params.add(new Object[]{"jdbc:splice://localhost:1527/splicedb;create=true;user=splice;password=admin"});
         params.add(new Object[]{"jdbc:splice://localhost:1527/splicedb;create=true;user=splice;password=admin;useSpark=true"});
         return params;
     }
@@ -391,30 +391,30 @@ public class Trigger_Row_IT {
     @Test
     public void multipleRowAndStatementTriggersOnOneTable() throws Exception {
         // given - six row triggers on same table.
-//        createTrigger(tb.named("u_1").after().update().on("T").row().then("INSERT INTO RECORD VALUES('u1')"));
+        createTrigger(tb.named("u_1").after().update().on("T").row().then("INSERT INTO RECORD VALUES('u1')"));
         createTrigger(tb.named("i_1").after().insert().on("T").row().then("INSERT INTO RECORD VALUES('i1')"));
-//        createTrigger(tb.named("d_1").after().delete().on("T").row().then("INSERT INTO RECORD VALUES('d1')"));
+        createTrigger(tb.named("d_1").after().delete().on("T").row().then("INSERT INTO RECORD VALUES('d1')"));
 
         // given - three statement triggers
-//        createTrigger(tb.named("u_stat").after().update().on("T").statement().then("INSERT INTO RECORD VALUES('statement-1')"));
-//        createTrigger(tb.named("i_stat").after().insert().on("T").statement().then("INSERT INTO RECORD VALUES('statement-2')"));
-//        createTrigger(tb.named("d_stat").after().delete().on("T").statement().then("INSERT INTO RECORD VALUES('statement-3')"));
+        createTrigger(tb.named("u_stat").after().update().on("T").statement().then("INSERT INTO RECORD VALUES('statement-1')"));
+        createTrigger(tb.named("i_stat").after().insert().on("T").statement().then("INSERT INTO RECORD VALUES('statement-2')"));
+        createTrigger(tb.named("d_stat").after().delete().on("T").statement().then("INSERT INTO RECORD VALUES('statement-3')"));
 
         // when - update
         try(Statement s = conn.createStatement()){
-//            s.executeUpdate("update T set c = 0 where c=1 or c=2 or c=3");
-//            assertRecordCount(s,"u1",3);
-//            assertRecordCount(s,"statement-1",1);
+            s.executeUpdate("update T set c = 0 where c=1 or c=2 or c=3");
+            assertRecordCount(s,"u1",3);
+            assertRecordCount(s,"statement-1",1);
             // when - insert
-//            s.executeUpdate("insert into T values(7,7,7),(8,8,8),(9,9,9),(10,10,10)");
-//            assertRecordCount(s,"i1",4);
+            s.executeUpdate("insert into T values(7,7,7),(8,8,8),(9,9,9),(10,10,10)");
+            assertRecordCount(s,"i1",4);
             s.executeUpdate("insert into T values (8,8,8),(9,9,9)");
             assertRecordCount(s,"i1",2);
-//            assertRecordCount(s,"statement-2",1);
+            assertRecordCount(s,"statement-2",1);
             // when - delete
-//            s.executeUpdate("delete from T where c=4 or c=5 or c=6 or c=7 or c=8");
-//            assertRecordCount(s,"d1",5);
-//            assertRecordCount(s,"statement-3",1);
+            s.executeUpdate("delete from T where c=4 or c=5 or c=6 or c=7 or c=8");
+            assertRecordCount(s,"d1",5);
+            assertRecordCount(s,"statement-3",1);
         }
     }
 
@@ -439,28 +439,29 @@ public class Trigger_Row_IT {
     @Test
     public void testCascadeConstraintViolation() throws Exception {
 
-        conn.execute("create table a(i varchar(40) unique)");
-        conn.execute("insert into a values 'One', 'Two', 'Three'");
-        conn.execute("create table cas1 (str_f varchar(40), int_f int)");
-        conn.execute("insert into cas1(str_f, int_f) values ('One', 1)");
+        try(Statement s = conn.createStatement()){
+            s.execute("create table a(i varchar(40) unique)");
+            s.execute("insert into a values 'One', 'Two', 'Three'");
+            s.execute("create table cas1 (str_f varchar(40), int_f int)");
+            s.execute("insert into cas1(str_f, int_f) values ('One', 1)");
 
-        conn.execute("create table cas2(str_f varchar(40), int_f int)");
-        conn.execute("insert into cas2(str_f, int_f) values ('Two', 2)");
+            s.execute("create table cas2(str_f varchar(40), int_f int)");
+            s.execute("insert into cas2(str_f, int_f) values ('Two', 2)");
 
-        conn.execute("create table cas3 (str_f varchar(40) constraint test_rollback references a(i), int_f int)");
-        conn.execute("insert into cas3(str_f, int_f) values ('Three', 3)");
+            s.execute("create table cas3 (str_f varchar(40) constraint test_rollback references a(i), int_f int)");
+            s.execute("insert into cas3(str_f, int_f) values ('Three', 3)");
 
-        conn.execute("create trigger cascade1_update after update on cas1 referencing NEW as NEW for each row update cas2 set str_f=NEW.str_f, int_f=NEW.int_f where str_f='Two'");
+            s.execute("create trigger cascade1_update after update on cas1 referencing NEW as NEW for each row update cas2 set str_f=NEW.str_f, int_f=NEW.int_f where str_f='Two'");
 
-        conn.execute("create trigger cascade2_update after update on cas2 referencing NEW as NEW for each row update cas3 set str_f=NEW.str_f, int_f=NEW.int_f where str_f='Three'");
+            s.execute("create trigger cascade2_update after update on cas2 referencing NEW as NEW for each row update cas3 set str_f=NEW.str_f, int_f=NEW.int_f where str_f='Three'");
 
-        try {
-            conn.execute("update cas1 set str_f='Incorrect', int_f=-1 where str_f = 'One'");
-            fail("Expected to fail with a SQLIntegrityConstraintViolationException");
-        }
-        catch (Exception e) {
-            String message = e.getLocalizedMessage();
-            Assert.assertTrue(message.compareTo("Operation on table 'CAS3' caused a violation of foreign key constraint 'TEST_ROLLBACK' for key (STR_F).  The statement has been rolled back.") == 0);
+            try{
+                s.execute("update cas1 set str_f='Incorrect', int_f=-1 where str_f = 'One'");
+                fail("Expected to fail with a SQLIntegrityConstraintViolationException");
+            }catch(Exception e){
+                String message=e.getLocalizedMessage();
+                Assert.assertTrue(message.compareTo("Operation on table 'CAS3' caused a violation of foreign key constraint 'TEST_ROLLBACK' for key (STR_F).  The statement has been rolled back.")==0);
+            }
         }
     }
 

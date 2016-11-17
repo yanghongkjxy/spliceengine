@@ -16,25 +16,12 @@
 
 package com.splicemachine.db.client.cluster;
 
+import java.util.logging.Level;
 /**
  * @author Scott Fines
- *         Date: 8/15/16
+ *         Date: 11/16/16
  */
-interface FailureDetector{
+public interface Debuggable{
 
-    void success();
-
-    void failed();
-
-    /**
-     * @return a value in the range [0,1] about the probability that the server is "dead", where
-     * 0 is "definitely not dead", and 1 is "definitely dead". Technically speaking, 1 is not an
-     * attainable number ( we are never 100% certain that a given server is dead). However, we allow
-     * 1 to be returned so that binary failure detectors (like deadline detectors) can operate reasonably.
-     */
-    double failureProbability();
-
-    boolean isAlive();
-
-    void kill();
+    void logDebugInfo(Level logLevel);
 }

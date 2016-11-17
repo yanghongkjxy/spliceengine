@@ -40,7 +40,7 @@ class ClusteredCallableStatement extends ClusteredPreparedStatement implements C
     private List<OutputParameters> batchOutputParams;
 
     ClusteredCallableStatement(ClusteredConnection sourceConnection,
-                               ClusterConnectionManager connManager,
+                               ClusteredConnManager connManager,
                                String baseSql,
                                int resultSetType,
                                int resultSetConcurrency,

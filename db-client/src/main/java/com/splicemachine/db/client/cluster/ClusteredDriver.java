@@ -86,7 +86,7 @@ public class ClusteredDriver implements Driver{
             //TODO -sf- configure java.util.logging
 
             //TODO -sf- re-use shared DataSources
-            PoolSizingStrategy pss = configurePoolSizing(augmentedProperties);
+            PoolSizingStrategy pss = configurePoolSizing(url,augmentedProperties);
             ConnectionSelectionStrategy css = configureSelectionStrategy(augmentedProperties);
             final long heartbeat = getHeartbeat(url,augmentedProperties);
             long serverCheckPeriod = getServerCheckPeriod(url,augmentedProperties);
@@ -278,9 +278,21 @@ public class ClusteredDriver implements Driver{
         return longDatabase.toString();
     }
 
-    private PoolSizingStrategy configurePoolSizing(Properties augmentedProperties){
-        //TODO -sf- make this bounded by default
-        return InfinitePoolSize.INSTANCE;
+    private static final int DEFAULT_MAX_POOL_SIZE = 1; //default to 1 connection per server
+    private static final String POOL_SIZE = "poolSize";
+    private PoolSizingStrategy configurePoolSizing(String url,Properties augmentedProperties) throws SqlException{
+        int poolSize = DEFAULT_MAX_POOL_SIZE;
+        String poolSizeStr = augmentedProperties.getProperty(POOL_SIZE);
+        if(poolSizeStr!=null){
+           try{
+               poolSize = Integer.parseInt(poolSizeStr);
+           }catch(NumberFormatException nfe){
+               throw new SqlException(null,new ClientMessageId(SQLState.MALFORMED_URL),url,nfe);
+           }
+        }
+        if(poolSize<0)
+            return InfinitePoolSize.INSTANCE;
+        return new BoundedBlockingPoolSize(poolSize);
     }
 
     private ConnectionSelectionStrategy configureSelectionStrategy(Properties augmentedProperties){

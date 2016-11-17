@@ -56,6 +56,13 @@ class ServerList{
         return servers;
     }
 
+    @Override
+    public String toString(){
+        return "ServerList{"+
+                "blacklist="+blacklist+
+                ", activeServers="+activeServers+
+                '}';
+    }
 
     /**
      * Get an iterator of the <em>known active</em> servers <em>at the time of the request</em>. This is
@@ -188,6 +195,7 @@ class ServerList{
             Arrays.sort(initialArray);
             this.array=initialArray;
         }
+
 
         public ServerPool[] clear(){
             mutationLock.lock();
@@ -361,6 +369,11 @@ class ServerList{
             }finally{
                 mutationLock.unlock();
             }
+        }
+
+        @Override
+        public String toString(){
+            return Arrays.toString(array);
         }
 
         private class LoopIterator implements Iterator<ServerPool>{

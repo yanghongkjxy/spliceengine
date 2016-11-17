@@ -44,6 +44,11 @@ class DeadlineFailureDetector implements FailureDetector{
     }
 
     @Override
+    public double failureProbability(){
+        return isAlive()? 0: 1;
+    }
+
+    @Override
     public boolean isAlive(){
         return !knownDead && Math.abs(currentTime()-lastGoodTimestamp) < maxTimeWindow;
     }

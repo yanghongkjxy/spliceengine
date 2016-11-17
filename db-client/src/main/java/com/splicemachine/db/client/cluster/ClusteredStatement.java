@@ -22,23 +22,24 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.logging.Level;
 
 /**
  * @author Scott Fines
  *         Date: 8/18/16
  */
 @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-class ClusteredStatement implements Statement{
+class ClusteredStatement implements Statement,Debuggable{
     private static final Logger LOGGER=Logger.getLogger(ClusteredStatement.class.getName());
     private final ClusteredConnection sourceConnection;
-    protected final ClusterConnectionManager connManager;
+    final ClusteredConnManager connManager;
     //immutable statement configuration
     private final int resultSetType;
     private final int resultSetConcurrency;
     private final int resultSetHoldability;
 
     //immutable networking properties (i.e. retries, etc.)
-    protected final int executionRetries;
+    final int executionRetries;
 
     /*
      * Using transient to indicate that these may change. In fact,
@@ -75,7 +76,7 @@ class ClusteredStatement implements Statement{
     private List<String> sqlBatch = null;
 
     ClusteredStatement(ClusteredConnection sourceConnection,
-                       ClusterConnectionManager connManager,
+                       ClusteredConnManager connManager,
                        int resultSetType,
                        int resultSetConcurrency,
                        int resultSetHoldability,
@@ -406,7 +407,6 @@ class ClusteredStatement implements Statement{
                     throw collector;
                 }else if(connManager.isAutoCommit()){
                     disconnect();
-                    reopenIfNecessary();
                 }else throw collector; //if we aren't in auto-commit mode, then we can't retry
             }
             numTries--;
@@ -712,11 +712,20 @@ class ClusteredStatement implements Statement{
         return false;
     }
 
+    public void logDebugInfo(Level level){
+        if(!LOGGER.isLoggable(level)) return;
+        String debugLine = "ClusteredStatement: {\n"
+                +"currentConn: "+currentConn+",\n"
+                +"currentStatement: "+currStatement+"}"
+                ;
+        LOGGER.log(level,debugLine);
+    }
+
     /* ****************************************************************************************************************/
     /*private helper methods*/
     private void forceReaquire(){
         try{
-            connManager.forceAcquireConnection();
+            currentConn = connManager.forceReacquireConnection();
         }catch(SQLException e){
             ClusterUtil.logError(LOGGER,"reaquireConnection",e);
         }
@@ -738,12 +747,12 @@ class ClusteredStatement implements Statement{
         forceReaquire();
     }
 
-    protected void checkClosed() throws SQLException{
+    void checkClosed() throws SQLException{
         if(closed)
             throw new SQLException("Statement closed",SQLState.LANG_STATEMENT_CLOSED_NO_REASON);
     }
 
-    protected final void reopenIfNecessary() throws SQLException{
+    final void reopenIfNecessary() throws SQLException{
         if(currStatement!=null) return;
 
         currentConn = connManager.acquireConnection();
@@ -767,8 +776,11 @@ class ClusteredStatement implements Statement{
         s.setEscapeProcessing(escapeProcessing);
     }
 
-    protected Statement getDelegateStatement(){
-        return this.currStatement;
+    private Statement getDelegateStatement() throws SQLException{
+        Statement currStatement=this.currStatement;
+        currStatement.clearWarnings();
+        currStatement.clearBatch();
+        return currStatement;
     }
 
 }

@@ -20,10 +20,7 @@ import com.splicemachine.db.client.cluster.*;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.sql.*;
 
 /**
  * Integration tests for usage of the ClusteredDataSource.
@@ -48,11 +45,7 @@ public class ClusteredDataSourceIT{
 
         try(Connection conn = cds.getConnection()){
             try(Statement s = conn.createStatement()){
-                try(ResultSet rs = s.executeQuery("values (1)")){
-                    Assert.assertTrue("No rows returned!",rs.next());
-                    Assert.assertEquals("Incorrect value returned!",1,rs.getInt(1));
-                    Assert.assertFalse("Too many rows returned!",rs.next());
-                }
+                queryValues(s);
             }
         }
     }
@@ -65,20 +58,60 @@ public class ClusteredDataSourceIT{
 
         try(Connection conn =DriverManager.getConnection(url)){
             try(Statement s = conn.createStatement()){
-                try(ResultSet rs = s.executeQuery("values (1)")){
-                    Assert.assertTrue("No rows returned!",rs.next());
-                    Assert.assertEquals("Incorrect value returned!",1,rs.getInt(1));
-                    Assert.assertFalse("Too many rows returned!",rs.next());
-                }
+                queryValues(s);
             }
         }
     }
+
 
     @Test
     public void repeatedDriver() throws Exception{
         for(int i=0;i<100;i++){
             System.out.println(i);
             testCanGetConnectionThroughDriver();
+        }
+    }
+
+    @Test
+    public void testCanDoStatementsAutoCommitOff() throws Exception{
+        try(Connection conn = DriverManager.getConnection("jdbc:splice://localhost:1527/splicedb;user=splice;password=admin")){
+            conn.setAutoCommit(false);
+            for(int i=0;i<100;i++){
+                try(Statement s=conn.createStatement()){
+                    queryValues(s);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testCreateAndDropTablesAutoCommittOff() throws Exception{
+        try(Connection conn = DriverManager.getConnection("jdbc:splice://localhost:1527/splicedb;user=splice;password=admin")){
+            conn.setAutoCommit(false);
+            int initialTable = 1;
+            int tables = 0;
+            try(Statement s = conn.createStatement()){
+                while(tables<5){
+                    try{
+                        s.execute("create table t"+initialTable+"(a int)");
+                        tables++;
+                    }catch(SQLException se){
+                        if(!"X0Y32".equals(se.getSQLState())) throw se;
+                        initialTable++;
+                    }
+                }
+            }
+            conn.rollback();
+        }
+    }
+
+    /* ****************************************************************************************************************/
+    /*private helper methodss*/
+    private void queryValues(Statement s) throws SQLException{
+        try(ResultSet rs = s.executeQuery("values (1)")){
+            Assert.assertTrue("No rows returned!",rs.next());
+            Assert.assertEquals("Incorrect value returned!",1,rs.getInt(1));
+            Assert.assertFalse("Too many rows returned!",rs.next());
         }
     }
 }

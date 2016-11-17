@@ -40,6 +40,7 @@ public class ServerPoolTest{
         @Override public void failed(){ }
         @Override public boolean isAlive(){ return true; }
         @Override public void kill(){ }
+        @Override public double failureProbability(){ return 0; }
     };
     private static final PoolSizingStrategy poolSizingStrategy = new PoolSizingStrategy(){
         @Override public void acquirePermit(){ }
@@ -239,6 +240,7 @@ public class ServerPoolTest{
                 sawSuccess = true;
             }
 
+            @Override public double failureProbability(){ return isAlive()? 0: 1; }
             @Override
             public void failed(){
                 Assert.fail("Should not have marked failed!");
@@ -273,6 +275,7 @@ public class ServerPoolTest{
                 Assert.fail("Should not see success!");
             }
 
+            @Override public double failureProbability(){ return isAlive()? 0: 1; }
             @Override
             public void failed(){
                 sawFailure = true;
@@ -310,6 +313,7 @@ public class ServerPoolTest{
                 Assert.fail("Should not see success!");
             }
 
+            @Override public double failureProbability(){ return isAlive()? 0: 1; }
             @Override
             public void failed(){
                 sawFailure = true;
@@ -440,6 +444,7 @@ public class ServerPoolTest{
                 Assert.fail("Should not have called failed())");
             }
 
+            @Override public double failureProbability(){ return 0; }
             @Override public boolean isAlive(){ return true; }
             @Override public void kill(){ }
         };
@@ -493,12 +498,14 @@ public class ServerPoolTest{
         FailureDetector fd=new FailureDetector(){
             @Override public void success(){ }
 
+            @Override public double failureProbability(){ return 0; }
             @Override
             public void failed(){
                 Assert.fail("Should not have called failed())");
             }
 
             @Override public boolean isAlive(){ return true; }
+
             @Override public void kill(){ }
         };
         ServerPool sp = new ServerPool(ds,"testServer",1,fd,poolSizingStrategy,10);
@@ -555,7 +562,7 @@ public class ServerPoolTest{
             public void failed(){
                 Assert.fail("Should not have called failed())");
             }
-
+            @Override public double failureProbability(){ return 0; }
             @Override public boolean isAlive(){ return true; }
             @Override public void kill(){ }
         };
@@ -576,6 +583,8 @@ public class ServerPoolTest{
             private boolean gotFailure = false;
             @Override public void success(){ Assert.fail("Should not record success"); }
             @Override public void kill(){ Assert.fail("Should not be calling kill"); }
+
+            @Override public double failureProbability(){ return isAlive()? 0: 1; }
 
             @Override
             public void failed(){

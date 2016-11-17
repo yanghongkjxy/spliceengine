@@ -29,24 +29,29 @@ import java.util.concurrent.Executor;
  * @author Scott Fines
  *         Date: 8/18/16
  */
-class ClusteredConnection implements Connection{
+class ClusteredConnection implements Connection,Debuggable{
     private static final Logger LOGGER=Logger.getLogger(ClusteredConnection.class.getName());
-    private final ClusterConnectionManager connectionManager;
+    private final ClusteredConnManager connectionManager;
     private final boolean closeDataSourceOnClose;
     private boolean closed = false;
     private final String url;
 
     ClusteredConnection(String connectUrl,
-            ClusteredDataSource dataSource,
+                        ClusteredDataSource dataSource,
                         boolean closeDataSourceOnClose,
                         Properties connectionproperties){
         this.url = connectUrl;
-        this.connectionManager = new ClusterConnectionManager(dataSource,connectionproperties);
+        this.connectionManager = new ClusteredConnManager(dataSource);
         this.closeDataSourceOnClose = closeDataSourceOnClose;
         if(LOGGER.isLoggable(Level.FINEST)){
             LOGGER.finest("New Clustered Connection created using url "+connectUrl+", dataSource="+dataSource);
             LOGGER.finest("Pooled connections: "+dataSource.connectionCount());
         }
+    }
+
+    @Override
+    public void logDebugInfo(Level logLevel){
+        connectionManager.logDebugInfo(logLevel);
     }
 
     @Override
@@ -241,13 +246,13 @@ class ClusteredConnection implements Connection{
     @Override
     public void setTransactionIsolation(int level) throws SQLException{
         checkClosed();
-        connectionManager.setTxnIsolation(TxnIsolation.parse(level));
+        connectionManager.setIsolationLevel(TxnIsolation.parse(level));
     }
 
     @Override
     public int getTransactionIsolation() throws SQLException{
         checkClosed();
-        return connectionManager.getTxnIsolation().level;
+        return connectionManager.getIsolationLevel().level;
     }
 
     @Override
@@ -353,7 +358,7 @@ class ClusteredConnection implements Connection{
     public boolean isValid(int timeout) throws SQLException{
         if(timeout<0)
             throw new SQLException("invalid timeout",SQLState.INVALID_QUERYTIMEOUT_VALUE);
-        return connectionManager.isValid(timeout);
+        return connectionManager.validate(timeout);
     }
 
     @Override
@@ -380,10 +385,6 @@ class ClusteredConnection implements Connection{
     public boolean isWrapperFor(Class<?> iface) throws SQLException{
         //we don't wrap anything
         return false;
-    }
-
-    void statementClosed(ClusteredStatement clusteredStatement){
-        connectionManager.releaseStatement(clusteredStatement);
     }
 
     /* ****************************************************************************************************************/

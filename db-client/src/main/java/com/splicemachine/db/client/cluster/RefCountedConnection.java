@@ -51,4 +51,12 @@ class RefCountedConnection{
     public void invalidate(){
         invalidated=true;
     }
+
+    @Override
+    public String toString(){
+        return "{"+ element+
+                ", referenceCount:"+referenceCount+
+                ", invalidated:"+invalidated+
+                '}';
+    }
 }
