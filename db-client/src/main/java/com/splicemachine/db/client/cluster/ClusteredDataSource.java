@@ -344,7 +344,8 @@ public class ClusteredDataSource implements DataSource,Debuggable{
                 i++;
             }
             serverList.setServerList(servers);
-            maintainer.schedule((Callable<Void>)this,discoveryWindow,TimeUnit.MILLISECONDS);
+            if(discoveryWindow>0)
+                maintainer.schedule((Callable<Void>)this,discoveryWindow,TimeUnit.MILLISECONDS);
             return null;
         }
     }

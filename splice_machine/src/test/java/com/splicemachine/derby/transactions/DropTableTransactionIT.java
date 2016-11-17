@@ -90,7 +90,7 @@ public class DropTableTransactionIT{
     }
 
     @Test
-    @Ignore
+//    @Ignore("SPLICE-1173")
     public void testDropTableIgnoredByOtherTransactions() throws Exception{
         //create the table here to make sure that it exists
 //        String table=schemaWatcher.schemaName+"."+createTable(conn1,1);
@@ -99,8 +99,8 @@ public class DropTableTransactionIT{
         //verify that the table is present for both --these will blow up if the create didn't work propertly
         try(Statement s1 = conn1.createStatement();
             Statement s2 = conn2.createStatement() ){
-            conn1.unwrap(Debuggable.class).logDebugInfo(java.util.logging.Level.INFO);
-            conn2.unwrap(Debuggable.class).logDebugInfo(java.util.logging.Level.INFO);
+//            conn1.unwrap(Debuggable.class).logDebugInfo(java.util.logging.Level.INFO);
+//            conn2.unwrap(Debuggable.class).logDebugInfo(java.util.logging.Level.INFO);
             s1.executeUpdate("drop table if exists "+table);
             s1.executeUpdate("create table "+table+tableStructure);
             //roll forward the transactions in case they were created before the creation

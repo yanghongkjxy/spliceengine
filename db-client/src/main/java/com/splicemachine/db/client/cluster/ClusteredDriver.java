@@ -20,6 +20,7 @@ import com.splicemachine.db.client.am.*;
 import com.splicemachine.db.iapi.reference.SQLState;
 import com.splicemachine.db.jdbc.ClientBaseDataSource;
 import com.splicemachine.db.jdbc.ClientDataSource;
+import com.splicemachine.db.jdbc.ClientDriver40;
 import com.splicemachine.db.shared.common.reference.Attribute;
 import com.splicemachine.db.shared.common.reference.MessageId;
 
@@ -34,9 +35,18 @@ import java.util.logging.Logger;
  */
 public class ClusteredDriver implements Driver{
     private static final String FAILURE_TIMEOUT="failureTimeout";
-    private static final long DEFAULT_FAILURE_TIMEOUT=10000;
+    private static final String CLUSTER_MODE="clustered";
+    private static final boolean DEFAULT_USE_CLUSTERED_CLIENT=false;
+
+    private static final String HEARTBEAT = "heartbeat";
+    private static final String SERVER_CHECK_PERIOD= "discoveryInterval";
+    private static final long DEFAULT_SERVER_CHECK = 1000L;
+    private static final long DEFAULT_HEARTBEAT = 1000L;
+    private static final int DEFAULT_HEARTBEAT_COUNT = 10;
+
+
     private static SQLException driverLoadExceptions=null;
-    private static ClusteredDriver registeredDriver = null;
+    private static ClusteredDriver registeredDriver=null;
 
     static{
         registerDriver(new ClusteredDriver());
@@ -83,33 +93,23 @@ public class ClusteredDriver implements Driver{
             Properties augmentedProperties = tokenizeURLProperties(url,info);
             database = appendDatabaseAttributes(database,augmentedProperties);
 
-            //TODO -sf- configure java.util.logging
+            boolean useClustered = DEFAULT_USE_CLUSTERED_CLIENT;
+            String clusterStr = augmentedProperties.getProperty(CLUSTER_MODE);
+            if(clusterStr!=null){
+                useClustered =Boolean.parseBoolean(clusterStr);
+            }
 
-            //TODO -sf- re-use shared DataSources
-            PoolSizingStrategy pss = configurePoolSizing(url,augmentedProperties);
-            ConnectionSelectionStrategy css = configureSelectionStrategy(augmentedProperties);
-            final long heartbeat = getHeartbeat(url,augmentedProperties);
-            long serverCheckPeriod = getServerCheckPeriod(url,augmentedProperties);
-
-            String user =ClientBaseDataSource.getUser(augmentedProperties);
-            String password = ClientBaseDataSource.getPassword(augmentedProperties);
-            FailureDetectorFactory fdf = new DeadlineFailureDetectorFactory(getFailureWindow(url,heartbeat,augmentedProperties));
-            ServerPoolFactory poolFactory = new ConfiguredServerPoolFactory(database,user,password,fdf,pss);
-
-            ClusteredDataSource cds = ClusteredDataSource.newBuilder()
-                    .servers(serverList)
-                    .connectionSelection(css)
-                    .serverPoolFactory(poolFactory)
-                    .heartbeatPeriod(heartbeat)
-                    .discoveryWindow(serverCheckPeriod)
-                    .build();
-
-            cds.start();
-            return new ClusteredConnection(url,cds,true,augmentedProperties);
+            if(useClustered){
+                return buildClusteredConnection(url,serverList,database,augmentedProperties);
+            }else{
+                url = "jdbc:splice://"+serverList[0]+"/"+database+";";
+                return ClientDriver40.registeredDriver__.connect(url,augmentedProperties);
+            }
         }catch(SqlException se){
             throw se.getSQLException();
         }
     }
+
 
     @Override
     public boolean acceptsURL(String url) throws SQLException{
@@ -271,7 +271,8 @@ public class ClusteredDriver implements Driver{
                     key.equals(Attribute.SSL_ATTR) ||
                     key.equals(HEARTBEAT) ||
                     key.equals(SERVER_CHECK_PERIOD)||
-                    key.equals(FAILURE_TIMEOUT))
+                    key.equals(FAILURE_TIMEOUT)||
+                    key.equals(CLUSTER_MODE))
                 continue;
             longDatabase.append(";").append(key).append("=").append(augmentedProperties.getProperty(key));
         }
@@ -301,7 +302,7 @@ public class ClusteredDriver implements Driver{
     }
 
     private long getFailureWindow(String url,long heartbeatPeriod,Properties augmentedProperties) throws SqlException{
-        long failureTimeMillis = DEFAULT_HEARTBEAT_COUNT*heartbeatPeriod; //must respond within 10 second by default
+        long failureTimeMillis = heartbeatPeriod>0?DEFAULT_HEARTBEAT_COUNT*heartbeatPeriod: -1L;
         String failureTimeout = augmentedProperties.getProperty(FAILURE_TIMEOUT);
         if(failureTimeout!=null){
             try{
@@ -310,14 +311,19 @@ public class ClusteredDriver implements Driver{
                 throw new SqlException(null,new ClientMessageId(SQLState.MALFORMED_URL),url,nfe);
             }
         }
+        if(heartbeatPeriod<=0){
+            /*
+             * If the heartbeat period is <=0, then we disabled heartbeats. This means that we MUST have also disabled failure windows
+             * as well(since we have no way of ensuring that failure windows must be met).
+             */
+            if(failureTimeMillis>0){
+                throw new SqlException(null,new ClientMessageId(SQLState.MALFORMED_URL),url,
+                        new IllegalArgumentException("heartbeat was disabled, but failure time windows were not"));
+            }
+        }
         return failureTimeMillis;
     }
 
-    private static final String HEARTBEAT = "heartbeat";
-    private static final String SERVER_CHECK_PERIOD= "discoveryInterval";
-    private static final long DEFAULT_SERVER_CHECK = 1000L;
-    private static final long DEFAULT_HEARTBEAT = 1000L;
-    private static final int DEFAULT_HEARTBEAT_COUNT = 10;
 
     private long getHeartbeat(String url,Properties augmentedProperties) throws SqlException{
         String heartbeatStr = augmentedProperties.getProperty(HEARTBEAT);
@@ -340,9 +346,44 @@ public class ClusteredDriver implements Driver{
     }
 
     public static void main(String...args) throws Exception{
-        String url = "jdbc:splice://server1:1527,server2,server3:4000/splicedb;user=splice;password=splice";
+        String url="jdbc:splice://localhost:1527/splicedb;user=splice;password=admin;clustered=false";
 
-        new ClusteredDriver().connect(url,null);
+        try(Connection conn = new ClusteredDriver().connect(url,new Properties())){
+            System.out.println(conn.getClass());
+        }
     }
 
+    private Connection buildClusteredConnection(String url,
+                                                String[] serverList,
+                                                String database,
+                                                Properties augmentedProperties) throws SqlException, SQLException{
+        //TODO -sf- configure java.util.logging
+
+        //TODO -sf- re-use shared DataSources
+        PoolSizingStrategy pss=configurePoolSizing(url,augmentedProperties);
+        ConnectionSelectionStrategy css=configureSelectionStrategy(augmentedProperties);
+        long discoveryWindow=getServerCheckPeriod(url,augmentedProperties);
+        long heartbeat=getHeartbeat(url,augmentedProperties);
+        long failureWindow=getFailureWindow(url,heartbeat,augmentedProperties);
+
+        String user=ClientBaseDataSource.getUser(augmentedProperties);
+        String password=ClientBaseDataSource.getPassword(augmentedProperties);
+        FailureDetectorFactory fdf;
+        if(failureWindow<=0){
+           fdf = AlwaysAliveFailureDetector.FACTORY;
+        }else
+            fdf=new DeadlineFailureDetectorFactory(failureWindow);
+        ServerPoolFactory poolFactory=new ConfiguredServerPoolFactory(database,user,password,fdf,pss);
+
+        ClusteredDataSource cds=ClusteredDataSource.newBuilder()
+                .servers(serverList)
+                .connectionSelection(css)
+                .serverPoolFactory(poolFactory)
+                .heartbeatPeriod(heartbeat)
+                .discoveryWindow(discoveryWindow)
+                .build();
+
+        cds.start();
+        return new ClusteredConnection(url,cds,true,augmentedProperties);
+    }
 }

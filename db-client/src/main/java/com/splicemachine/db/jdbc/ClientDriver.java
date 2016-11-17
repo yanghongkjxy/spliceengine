@@ -47,7 +47,7 @@ public class ClientDriver implements java.sql.Driver {
 
     static private SQLException exceptionsOnLoadDriver__ = null;
     // Keep track of the registere driver so that we can deregister it if we're a stored proc.
-    static private ClientDriver registeredDriver__ = null;
+    public static ClientDriver registeredDriver__;
 
     static {
         try {
