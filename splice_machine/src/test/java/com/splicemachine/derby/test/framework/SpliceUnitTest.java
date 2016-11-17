@@ -37,6 +37,7 @@ import static org.junit.Assert.*;
 public class SpliceUnitTest {
 
     private static Pattern overallCostP = Pattern.compile("totalCost=[0-9]+\\.?[0-9]*");
+    private static Pattern outputRowsP = Pattern.compile("outputRows=[0-9]+\\.?[0-9]*");
 
 	public String getSchemaName() {
 		Class<?> enclosingClass = getClass().getEnclosingClass();
@@ -209,6 +210,40 @@ public class SpliceUnitTest {
         }
     }
 
+    protected void rowContainsCount(int[] levels, String query,SpliceWatcher methodWatcher,double[] counts, double[] deltas ) throws Exception {
+        try(ResultSet resultSet = methodWatcher.executeQuery(query)){
+            int i=0;
+            int k=0;
+            while(resultSet.next()){
+                i++;
+                for(int level : levels){
+                    if(level==i){
+                        Assert.assertEquals("failed query at level ("+level+"): \n"+query+"\nExpected: "+counts[k]+"\nWas: "
+                                        +resultSet.getString(1),
+                                counts[k],parseOutputRows(resultSet.getString(1)),deltas[k]);
+                        k++;
+                    }
+                }
+            }
+        }
+    }
+
+    protected String getExplainMessage(int level, String query,SpliceWatcher methodWatcher) throws Exception {
+        try(ResultSet resultSet = methodWatcher.executeQuery(query)){
+            int i=0;
+            int k=0;
+            while(resultSet.next()){
+                i++;
+                if(level==i){
+                    return resultSet.getString(1);
+                }
+            }
+        }
+        Assert.fail("Missing level: " + level);
+        return null;
+    }
+
+
     protected void rowContainsQuery(int level, String query, String contains, SpliceWatcher methodWatcher) throws Exception {
         try(ResultSet resultSet = methodWatcher.executeQuery(query)){
             for(int i=0;i<level;i++){
@@ -220,6 +255,7 @@ public class SpliceUnitTest {
             Assert.assertTrue(failMessage,actualString.contains(contains));
         }
     }
+
 
     protected void queryDoesNotContainString(String query, String notContains,SpliceWatcher methodWatcher) throws Exception {
         ResultSet resultSet = methodWatcher.executeQuery(query);
@@ -242,6 +278,12 @@ public class SpliceUnitTest {
         Matcher m1 = overallCostP.matcher(planMessage);
         Assert.assertTrue("No Overall cost found!", m1.find());
         return Double.parseDouble(m1.group().substring("totalCost=".length()));
+    }
+
+    public static double parseOutputRows(String planMessage) {
+        Matcher m1 = outputRowsP.matcher(planMessage);
+        Assert.assertTrue("No OutputRows found!", m1.find());
+        return Double.parseDouble(m1.group().substring("outputRows=".length()));
     }
 
     public static class Contains {
@@ -341,10 +383,10 @@ public class SpliceUnitTest {
 
     public static String printBadFile(File directory, String importFileName, String errorCode, String errorMsg, boolean assertTrue) throws IOException {
         // look for file in the "baddir" directory with same name as import file ending in ".bad"
-        Path path = Paths.get(importFileName);
-        File badFile = new File(directory, path.getFileName() + ".bad");
-        if (badFile.exists()) {
-            List<String> badLines = Files.readAllLines(badFile.toPath(), Charset.defaultCharset());
+        String badFile = getBadFile(directory, importFileName);
+        boolean exists = existsBadFile(directory, importFileName);
+        if (exists) {
+            List<String> badLines = Files.readAllLines((new File(directory, badFile)).toPath(), Charset.defaultCharset());
             if (errorCode != null && ! errorCode.isEmpty()) {
                 // make sure at least one error entry contains the errorCode
                 boolean found = false;
@@ -360,14 +402,14 @@ public class SpliceUnitTest {
                     }
                 }
                 if (! found && assertTrue) {
-                    fail("Didn't find expected SQLState '"+errorCode+"' in bad file: "+badFile.getCanonicalPath()+" Found: "+codes);
+                    fail("Didn't find expected SQLState '"+errorCode+"' in bad file: "+badFile+" Found: "+codes);
                 }
             }
             return "Error file contents: "+badLines.toString();
         } else if (assertTrue) {
-            fail("Bad file ["+badFile.getCanonicalPath()+"] does not exist.");
+            fail("Bad file ["+badFile+"] does not exist.");
         }
-        return "File does not exist: "+badFile.getCanonicalPath();
+        return "File does not exist: "+badFile;
     }
 
     private static void addCode(String line, Set<String> codes) {
@@ -428,6 +470,25 @@ public class SpliceUnitTest {
         return generator;
     }
 
+    public static boolean existsBadFile(File badDir, String prefix) {
+        String[] files = badDir.list();
+        for (String file : files) {
+            if (file.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static String getBadFile(File badDir, String prefix) {
+        String[] files = badDir.list();
+        for (String file : files) {
+            if (file.startsWith(prefix)) {
+                return file;
+            }
+        }
+        return null;
+    }
     /**
      * System to generate fake data points into a file. This way we can write out quick,
      * well known files without storing a bunch of extras anywhere.

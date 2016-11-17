@@ -33,8 +33,8 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.List;
-
 import com.splicemachine.db.iapi.error.StandardException;
 import com.splicemachine.db.iapi.services.io.FormatableBitSet;
 import com.splicemachine.db.iapi.sql.execute.ExecRow;
@@ -51,7 +51,7 @@ import scala.util.hashing.MurmurHash3;
 	Basic implementation of ExecRow.
 
  */
-public class ValueRow implements ExecRow, Externalizable, Comparable<ExecRow> {
+public class ValueRow implements ExecRow, Externalizable {
 	///////////////////////////////////////////////////////////////////////
 	//
 	//	STATE
@@ -141,8 +141,7 @@ public class ValueRow implements ExecRow, Externalizable, Comparable<ExecRow> {
 		/* Get the right type of row */
 		ExecRow rowClone = cloneMe();
 
-		for (int colCtr = 0; colCtr < numColumns; colCtr++) 
-		{
+		for (int colCtr = 0; colCtr < numColumns; colCtr++) {
 			// Copy those columns whose bit isn't set (and there is a FormatableBitSet)
 			if (clonedCols != null && !(clonedCols.get(colCtr + 1)))
 			{
@@ -276,7 +275,7 @@ public class ValueRow implements ExecRow, Externalizable, Comparable<ExecRow> {
 		if (ncols != row.nColumns())
 			return -1;
 		int compare;
-		for (int i = 1; i == ncols; i++ ) {
+		for (int i = 1; i <= ncols; i++ ) {
 			try {
 				compare = getColumn(i).compare(row.getColumn(i));
 				if (compare != 0)
@@ -400,7 +399,7 @@ public class ValueRow implements ExecRow, Externalizable, Comparable<ExecRow> {
 	public StructType schema() {
 		StructField[] fields = new StructField[ncols];
 		for (int i = 0; i < ncols;i++) {
-			fields[i] = column[i].getStructField(""+i);
+			fields[i] = column[i].getStructField(getNamedColumn(i));
 		}
 		return DataTypes.createStructType(fields);
 	}
@@ -607,8 +606,37 @@ public class ValueRow implements ExecRow, Externalizable, Comparable<ExecRow> {
 	public StructType createStructType() {
 		StructField[] fields = new StructField[length()];
 		for (int i = 0; i < length(); i++) {
-			fields[i] = getColumn(i + 1).getStructField("" + i);
+			fields[i] = getColumn(i + 1).getStructField(getNamedColumn(i));
 		}
 		return DataTypes.createStructType(fields);
 	}
+	@Override
+	public int compare(ExecRow o1, ExecRow o2) {
+		return o1.compareTo(o2);
+	}
+
+	@Override
+	public long getRowSize() throws StandardException {
+		long rowSize = 0l;
+		for (DataValueDescriptor dvd: column) {
+			rowSize += (long) dvd.getLength();
+		}
+		return rowSize;
+	}
+
+	@Override
+	public long getRowSize(BitSet validColumns) throws StandardException {
+		if (validColumns ==null)
+				return getRowSize();
+		long rowSize = 0l;
+		int nextSetBit = 0;
+		while ( (nextSetBit = validColumns.nextSetBit(nextSetBit)) != -1)
+			rowSize += (long) column[nextSetBit].getLength();
+		return rowSize;
+	}
+
+	public static String getNamedColumn(int columnNumber) {
+		return "c"+columnNumber;
+	}
+
 }

@@ -15,6 +15,8 @@
 
 package com.splicemachine.derby.impl.sql.catalog;
 
+import com.splicemachine.db.iapi.stats.ColumnStatisticsImpl;
+import com.splicemachine.db.iapi.stats.ItemStatistics;
 import com.splicemachine.db.impl.sql.catalog.SystemColumnImpl;
 import com.splicemachine.derby.impl.load.HdfsImport;
 import com.splicemachine.derby.impl.storage.TableSplit;
@@ -838,7 +840,7 @@ public class SpliceSystemProcedures extends DefaultSystemProcedureGenerator {
                             .returnType(DataTypeDescriptor.getCatalogType(Types.BIGINT))
                             .isDeterministic(true).ownerClass(StatisticsFunctions.class.getCanonicalName())
                             .arg("SOURCE", SystemColumnImpl
-                                    .getJavaColumn("DATA", "com.splicemachine.stats.ColumnStatistics", false)
+                                    .getJavaColumn("DATA", ColumnStatisticsImpl.class.getCanonicalName(), false)
                                     .getType().getCatalogType())
                             .build(),
                     Procedure.newBuilder().name("STATS_NULL_COUNT")
@@ -848,7 +850,7 @@ public class SpliceSystemProcedures extends DefaultSystemProcedureGenerator {
                             .returnType(DataTypeDescriptor.getCatalogType(Types.BIGINT))
                             .isDeterministic(true).ownerClass(StatisticsFunctions.class.getCanonicalName())
                             .arg("SOURCE", SystemColumnImpl
-                                    .getJavaColumn("DATA", "com.splicemachine.stats.ColumnStatistics", false)
+                                    .getJavaColumn("DATA", ColumnStatisticsImpl.class.getCanonicalName(), false)
                                     .getType().getCatalogType())
                             .build(),
                     Procedure.newBuilder().name("STATS_NULL_FRACTION")
@@ -858,19 +860,40 @@ public class SpliceSystemProcedures extends DefaultSystemProcedureGenerator {
                             .returnType(DataTypeDescriptor.getCatalogType(Types.REAL))
                             .isDeterministic(true).ownerClass(StatisticsFunctions.class.getCanonicalName())
                             .arg("SOURCE", SystemColumnImpl
-                                    .getJavaColumn("DATA", "com.splicemachine.stats.ColumnStatistics", false)
+                                    .getJavaColumn("DATA", ColumnStatisticsImpl.class.getCanonicalName(), false)
                                     .getType().getCatalogType())
                             .build(),
-                    Procedure.newBuilder().name("STATS_TOP_K")
+                    Procedure.newBuilder().name("STATS_QUANTILES")
                             .numOutputParams(0)
                             .numResultSets(0)
                             .sqlControl(RoutineAliasInfo.NO_SQL)
                             .returnType(DataTypeDescriptor.getCatalogType(Types.VARCHAR))
                             .isDeterministic(true).ownerClass(StatisticsFunctions.class.getCanonicalName())
                             .arg("SOURCE", SystemColumnImpl
-                                    .getJavaColumn("DATA", "com.splicemachine.stats.ColumnStatistics", false)
+                                    .getJavaColumn("DATA", ColumnStatisticsImpl.class.getCanonicalName(), false)
                                     .getType().getCatalogType())
                             .build(),
+                    Procedure.newBuilder().name("STATS_FREQUENCIES")
+                            .numOutputParams(0)
+                            .numResultSets(0)
+                            .sqlControl(RoutineAliasInfo.NO_SQL)
+                            .returnType(DataTypeDescriptor.getCatalogType(Types.VARCHAR))
+                            .isDeterministic(true).ownerClass(StatisticsFunctions.class.getCanonicalName())
+                            .arg("SOURCE", SystemColumnImpl
+                                    .getJavaColumn("DATA", ColumnStatisticsImpl.class.getCanonicalName(), false)
+                                    .getType().getCatalogType())
+                            .build(),
+                    Procedure.newBuilder().name("STATS_THETA")
+                            .numOutputParams(0)
+                            .numResultSets(0)
+                            .sqlControl(RoutineAliasInfo.NO_SQL)
+                            .returnType(DataTypeDescriptor.getCatalogType(Types.VARCHAR))
+                            .isDeterministic(true).ownerClass(StatisticsFunctions.class.getCanonicalName())
+                            .arg("SOURCE", SystemColumnImpl
+                                    .getJavaColumn("DATA", ColumnStatisticsImpl.class.getCanonicalName(), false)
+                                    .getType().getCatalogType())
+                            .build(),
+
                     Procedure.newBuilder().name("STATS_MIN")
                             .numOutputParams(0)
                             .numResultSets(0)
@@ -878,7 +901,7 @@ public class SpliceSystemProcedures extends DefaultSystemProcedureGenerator {
                             .returnType(DataTypeDescriptor.getCatalogType(Types.VARCHAR))
                             .isDeterministic(true).ownerClass(StatisticsFunctions.class.getCanonicalName())
                             .arg("SOURCE", SystemColumnImpl
-                                    .getJavaColumn("DATA", "com.splicemachine.stats.ColumnStatistics", false)
+                                    .getJavaColumn("DATA", ColumnStatisticsImpl.class.getCanonicalName(), false)
                                     .getType().getCatalogType())
                             .build(),
                     Procedure.newBuilder().name("STATS_MAX")
@@ -888,7 +911,7 @@ public class SpliceSystemProcedures extends DefaultSystemProcedureGenerator {
                             .returnType(DataTypeDescriptor.getCatalogType(Types.VARCHAR))
                             .isDeterministic(true).ownerClass(StatisticsFunctions.class.getCanonicalName())
                             .arg("SOURCE", SystemColumnImpl
-                                    .getJavaColumn("DATA", "com.splicemachine.stats.ColumnStatistics", false)
+                                    .getJavaColumn("DATA", ColumnStatisticsImpl.class.getCanonicalName(), false)
                                     .getType().getCatalogType())
                             .build(),
                     Procedure.newBuilder().name("STATS_COL_WIDTH")
@@ -898,7 +921,7 @@ public class SpliceSystemProcedures extends DefaultSystemProcedureGenerator {
                             .returnType(DataTypeDescriptor.getCatalogType(Types.INTEGER))
                             .isDeterministic(true).ownerClass(StatisticsFunctions.class.getCanonicalName())
                             .arg("SOURCE", SystemColumnImpl
-                                    .getJavaColumn("DATA", "com.splicemachine.stats.ColumnStatistics", false)
+                                    .getJavaColumn("DATA", ColumnStatisticsImpl.class.getCanonicalName(), false)
                                     .getType().getCatalogType())
                             .build(),
                     Procedure.newBuilder().name("PARTITION_EXISTS")

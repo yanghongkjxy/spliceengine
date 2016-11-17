@@ -489,7 +489,7 @@ public class IndexIT extends SpliceUnitTest{
                 SCHEMA_NAME,CustomerTable.TABLE_NAME,OrderTable.TABLE_NAME,OrderLineTable.TABLE_NAME);
         long start=System.currentTimeMillis();
         System.out.println(query);
-        ResultSet rs=methodWatcher.executeQuery(query);
+        ResultSet rs=conn.prepareStatement(query).executeQuery();
         String duration=TestUtils.getDuration(start,System.currentTimeMillis());
 //        Assert.assertTrue(printResult(query, rs, System.out) > 0);
         int cnt=resultSetSize(rs);

@@ -23,7 +23,7 @@
     <parent>
         <artifactId>spliceengine-parent</artifactId>
         <groupId>com.splicemachine</groupId>
-        <version>3.0.0.9-SNAPSHOT</version>
+        <version>3.0.0.15-SNAPSHOT</version>
     </parent>
     <dependencies>
         <dependency>
@@ -88,8 +88,10 @@
                                 kryo,
                                 kryo-serializers,
                                 lucene-core,
+                                memory,
                                 opencsv,
                                 protobuf-java,
+                                sketches-core,
                                 spark,
                                 ${spark-assembly-id},
                                 super-csv,
@@ -104,13 +106,13 @@
                                 db-tools-ij,
                                 db-tools-testing,
                                 pipeline_api,
+                                jul-to-slf4j,
                                 splice_access_api,
                                 splice_encoding,
                                 splice_machine,
                                 splice_protocol,
                                 splice_si_api,
                                 splice_timestamp_api,
-                                stats,
                                 utilities,
                                 <!-- spliceengine platform libs -->
                                 hbase_pipeline-${envClassifier},
@@ -141,27 +143,27 @@
                 <dependency>
                     <groupId>com.splicemachine</groupId>
                     <artifactId>splice_ee-${envClassifier}</artifactId>
-                    <version>3.0.0.9-SNAPSHOT</version>
+                    <version>3.0.0.15-SNAPSHOT</version>
                 </dependency>
                 <dependency>
                     <groupId>com.splicemachine</groupId>
                     <artifactId>splice_backup-${envClassifier}</artifactId>
-                    <version>3.0.0.9-SNAPSHOT</version>
+                    <version>3.0.0.15-SNAPSHOT</version>
                 </dependency>
                 <dependency>
                     <groupId>com.splicemachine</groupId>
                     <artifactId>splice_auth</artifactId>
-                    <version>3.0.0.9-SNAPSHOT</version>
+                    <version>3.0.0.15-SNAPSHOT</version>
                 </dependency>
                 <dependency>
                     <groupId>com.splicemachine</groupId>
                     <artifactId>splice_colperms</artifactId>
-                    <version>3.0.0.9-SNAPSHOT</version>
+                    <version>3.0.0.15-SNAPSHOT</version>
                 </dependency>
                 <dependency>
                     <groupId>com.splicemachine</groupId>
                     <artifactId>splice_encryption</artifactId>
-                    <version>3.0.0.9-SNAPSHOT</version>
+                    <version>3.0.0.15-SNAPSHOT</version>
                 </dependency>
             </dependencies>
         </profile>

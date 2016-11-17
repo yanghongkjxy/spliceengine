@@ -15,8 +15,10 @@
 
 package com.splicemachine.derby.stream.iapi;
 
+import com.splicemachine.db.iapi.sql.execute.ExecRow;
 import com.splicemachine.derby.iapi.sql.execute.SpliceOperation;
 import com.splicemachine.derby.impl.sql.execute.operations.LocatedRow;
+import com.splicemachine.derby.impl.sql.execute.operations.window.WindowContext;
 import com.splicemachine.derby.stream.function.*;
 import com.splicemachine.derby.stream.output.ExportDataSetWriterBuilder;
 import java.io.Serializable;
@@ -241,5 +243,66 @@ public interface DataSet<V> extends Iterable<V>, Serializable {
     PairDataSet<V, Long> zipWithIndex();
 
     DataSet<V> join(OperationContext operationContext, DataSet<V> rightDataSet,JoinType joinType, boolean isBroadcast);
+
+    /**
+     *  Window Function abstraction. Take a window context that defines the the partition, the sorting , the frame boundary
+     *  and the differents functions
+     * @param windowContext
+     * @param context
+     * @param pushScope
+     * @param scopeDetail
+     * @return
+     */
+
+    DataSet<V> windows(WindowContext windowContext, OperationContext context, boolean pushScope, String scopeDetail);
+
+    /**
+     *
+     * Write Parquet File to the Hadoop Filesystem compliant location.
+     *
+     * @param baseColumnMap
+     * @param partitionBy
+     * @param location
+     * @param context
+     * @return
+     */
+    public DataSet<LocatedRow> writeParquetFile(int[] baseColumnMap, int[] partitionBy, String location,
+                                                    OperationContext context) ;
+
+    /**
+     *
+     * Write ORC file to the Hadoop compliant location.
+     *
+     * @param baseColumnMap
+     * @param partitionBy
+     * @param location
+     * @param context
+     * @return
+     */
+    public DataSet<LocatedRow> writeORCFile(int[] baseColumnMap, int[] partitionBy, String location, OperationContext context) ;
+
+    /**
+     *
+     * Write text file to the Hadoop compliant location.
+     *
+     * @param op
+     * @param location
+     * @param characterDelimiter
+     * @param columnDelimiter
+     * @param baseColumnMap
+     * @param context
+     * @return
+     */
+    public DataSet<LocatedRow> writeTextFile(SpliceOperation op, String location, String characterDelimiter, String columnDelimiter, int[] baseColumnMap,
+                                             OperationContext context);
+
+    /**
+     *
+     * Pin the conglomerate with the table definition (ExecRow) into memory.
+     *
+     * @param template
+     * @param conglomId
+     */
+    public void pin(ExecRow template, long conglomId);
 
 }

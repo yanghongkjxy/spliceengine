@@ -469,7 +469,9 @@ public class WindowResultSetNode extends SingleChildResultSetNode {
                         // Cache the ref
                         pulledUp.put(expKey, new ColumnRefPosition(bottomRC, childRCL.size()));
 
-                    } else if (exp instanceof ColumnReference && ((ColumnReference)exp).getGeneratedToReplaceAggregate()) {
+                    } else if (exp instanceof ColumnReference &&
+                            ((((ColumnReference)exp).getGeneratedToReplaceAggregate())  ||
+                             (expRC != null)) ) {
                         // We didn't find it in an RCL below us, probably because it's an agg function previously
                         // created -- the RCs for those don't have ColumnDescriptors which we need to find an
                         // equivalent RC.
@@ -765,6 +767,7 @@ public class WindowResultSetNode extends SingleChildResultSetNode {
             FormatableArrayHolder keyCols = createColumnOrdering(wdn.getKeyColumns(), "Key");
             windowInfoList.addElement(new WindowFunctionInfo(
                 windowFunctionNode.getAggregateName(),
+                windowFunctionNode.getType(),
                 windowFunctionNode.getAggregatorClassName(),
                 inputVIDs,       // windowFunctionNode input columns
                 fnResultVID,    // the windowFunctionNode result column

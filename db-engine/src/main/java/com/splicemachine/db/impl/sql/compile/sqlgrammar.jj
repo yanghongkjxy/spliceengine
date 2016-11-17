@@ -2565,6 +2565,7 @@ TOKEN [IGNORE_CASE] :
 |	<CHECK: "check">
 |	<CLOSE: "close">
 |	<COALESCE: "coalesce">
+|	<NVL: "nvl">
 |	<COLLATE: "collate">
 |	<COLLATION: "collation">
 |	<COLUMN: "column">
@@ -2834,6 +2835,19 @@ TOKEN [IGNORE_CASE] :
 |	<RETURNS: "returns">
 |	<ROLLUP: "rollup">
 |	<ROW: "row">
+|	<FORMAT: "format">
+|	<DELIMITED: "delimited">
+|	<FIELDS: "fields">
+|	<TERMINATED: "terminated">
+|	<ESCAPED: "escaped">
+|	<LINES: "lines">
+|	<PARTITIONED: "partitioned">
+|	<STORED: "stored">
+|	<LOCATION: "location">
+|	<PIN: "pin">
+|	<TEXTFILE: "textfile">
+|	<PARQUET: "parquet">
+|	<ORC: "orc">
 |	<SAVEPOINT: "savepoint">
 |	<SCALE: "scale">
 |	<SECURITY: "security">
@@ -3428,8 +3442,6 @@ StatementPart(Token[] tokenHolder) throws StandardException :
 		statementNode = execStatement() |
 		statementNode = explainStatement() |
 		statementNode = exportStatement()
-		//statementNode = withStatement()
-        // statementNode = SQLTransactionStatement()
     )
     {
         return statementNode;
@@ -3601,7 +3613,8 @@ createStatements() throws StandardException :
             statementNode = synonymDefinition() |
             statementNode = roleDefinition() |
         	statementNode = createTemporaryTableDeclaration() |
-            statementNode = sequenceDefinition()
+            statementNode = sequenceDefinition() |
+            statementNode = pinStatement()
         )
         {
         }
@@ -3641,7 +3654,8 @@ dropStatements() throws StandardException :
             statementNode = dropViewStatement() |
             statementNode = dropTriggerStatement() |
             statementNode = dropRoleStatement() |
-            statementNode = dropSequenceStatement()
+            statementNode = dropSequenceStatement() |
+            statementNode = dropPinStatement()
         )
 	{
 		return statementNode;
@@ -3766,6 +3780,29 @@ explainStatement() throws StandardException :
                                    getContextManager());
     }
 }
+
+StatementNode
+pinStatement() throws StandardException :
+{
+    StatementNode   statementNode;
+    String schemaName = null;
+    String authName = null;
+    TableName tableName = null;
+    Vector parameterList = new Vector();
+}
+{
+    <PIN>
+    [ <AUTHORIZATION> authName = identifier(Limits.MAX_IDENTIFIER_LENGTH, true) ]
+    <TABLE> tableName = qualifiedName(Limits.MAX_IDENTIFIER_LENGTH)
+    {
+        return (CreatePinNode) nodeFactory.getNode(C_NodeTypes.CREATE_PIN_NODE,
+                                   schemaName,
+                                   tableName,
+                                   getContextManager());
+
+    }
+}
+
 
 StatementNode
 exportStatement() throws StandardException :
@@ -7486,8 +7523,9 @@ miscBuiltins() throws StandardException :
                 getToken(1).kind == SQRT ||
                 getToken(1).kind == MOD ||
                 getToken(1).kind == COALESCE ||
+                getToken(1).kind == NVL ||
                 getToken(1).kind == VALUE ||
-                getToken(1).kind == IDENTITY_VAL_LOCAL ||
+
                 getToken(1).kind == SUBSTRING ||
                 getToken(1).kind == SUBSTR ||
                 getToken(1).kind == REPLACE ||
@@ -7603,6 +7641,11 @@ miscBuiltinsCore( boolean isJDBCEscape) throws StandardException :
 	}
 |
 	<COALESCE>  value = coalesceFunction("COALESCE")
+	{
+		return value;
+	}
+|
+	<NVL>  value = coalesceFunction("COALESCE")
 	{
 		return value;
 	}
@@ -9386,6 +9429,7 @@ insertColumnsAndSource(QueryTreeNode targetTable)
     ValueNode[] offsetClauses = new ValueNode[ OFFSET_CLAUSE_COUNT ];
     ValueNode[] topNOut = new ValueNode[ 1 ];
     boolean     hasJDBClimitClause = false;
+    Vector parameterList = new Vector();
 }
 {
 	[
@@ -9398,6 +9442,7 @@ insertColumnsAndSource(QueryTreeNode targetTable)
 		<LEFT_PAREN> columnList = insertColumnList() <RIGHT_PAREN>
 	]
 	[ targetProperties = propertyList(false) <CHECK_PROPERTIES>]
+	[ <WITH> withClauseList(parameterList) ]
 	queryExpression = queryExpression(null, NO_SET_OP, topNOut)
 	[ orderCols = orderByClause(queryExpression) ]
     hasJDBClimitClause = offsetFetchFirstClause( offsetClauses )
@@ -9429,7 +9474,7 @@ insertColumnsAndSource(QueryTreeNode targetTable)
             offsetClauses[ FETCH_FIRST_CLAUSE ] = topNOut[0];
         }
 
-		return (StatementNode) nodeFactory.getNode(
+		StatementNode insertNode =  (StatementNode) nodeFactory.getNode(
 							C_NodeTypes.INSERT_NODE,
 							targetTable,
 							columnList,
@@ -9440,6 +9485,8 @@ insertColumnsAndSource(QueryTreeNode targetTable)
                             offsetClauses[ FETCH_FIRST_CLAUSE ],
                             Boolean.valueOf( hasJDBClimitClause ),
 							getContextManager());
+		insertNode.setWithVector(parameterList.size()>0?parameterList:null);
+        return insertNode;
 	}
 	/* RESOLVE: Ignoring default values for now
 |
@@ -11051,6 +11098,30 @@ nextValueExpression() throws StandardException :
 }
 
 /*
+ * <A NAME="storedAs">storedAs</A>
+ */
+String
+storedAs() :
+{
+}
+{
+	<PARQUET>
+	{
+		return "P";
+	}
+|
+	<ORC>
+	{
+		return "O";
+	}
+|
+	<TEXTFILE>
+	{
+		return "T";
+	}
+}
+
+/*
  * <A NAME="charOrVarchar">charOrVarchar</A>
  */
 int
@@ -11554,11 +11625,19 @@ tableDefinition() throws StandardException :
 	boolean				withData = true;
 	boolean             hasJDBClimitClause = false;
 	String              queryString = null;
+	boolean             isExternal = false;
+	ResultColumnList	partitionedResultColumns = null;
+	ValueNode              terminationChar = null;
+	ValueNode              escapedByChar = null;
+	ValueNode              linesTerminatedByChar = null;
+	String              storageFormat = null;
+	ValueNode              location = null;
 	OrderByList orderCols = null;
     ValueNode[] offsetClauses = new ValueNode[ OFFSET_CLAUSE_COUNT ];
 	ValueNode[] topNOut = new ValueNode[ 1 ];
 }
 {
+    [ isExternal = isExternal() ]
 	<TABLE> tableName = qualifiedName(Limits.MAX_IDENTIFIER_LENGTH)
 			// Lookahead needed to choose between
 			// tableElementList and tableColumnList
@@ -11567,23 +11646,60 @@ tableDefinition() throws StandardException :
 	                   getToken(3).kind != RIGHT_PAREN})
 			tableElementList = tableElementList()
 			[ properties = propertyList(false)<CHECK_PROPERTIES>]
+			[<COMMA>]
+            [ <PARTITIONED> <BY> <LEFT_PAREN> partitionedResultColumns = tableColumnList() <RIGHT_PAREN> ]
+            [<COMMA>]
+            [ <ROW> <FORMAT> <DELIMITED>
+                [ <FIELDS> <TERMINATED> <BY> { terminationChar=literal(); }  [
+                [<COMMA>]
+                <ESCAPED> <BY> { escapedByChar=literal(); } ] ]
+                [<COMMA>]
+                [ <LINES> <TERMINATED> <BY> { linesTerminatedByChar=literal(); } ]
+            ]
+			[<COMMA>]
+            [<STORED> <AS> storageFormat = storedAs() ]
+			[<COMMA>]
+            [<LOCATION> {location = literal();}]
 			{
+			validateParameters(isExternal, storageFormat, terminationChar, escapedByChar,
+                        linesTerminatedByChar, location);
 				return (StatementNode) nodeFactory.getNode(
 										C_NodeTypes.CREATE_TABLE_NODE,
 										tableName,
 										tableElementList,
 										properties,
 										new Character(lockGranularity),
+										isExternal,
+										partitionedResultColumns,
+										terminationChar,
+										escapedByChar,
+										linesTerminatedByChar,
+										storageFormat,
+										location,
 										getContextManager());
 			}
 		|
 			[ <LEFT_PAREN> resultColumns = tableColumnList() <RIGHT_PAREN> ]
+						[<COMMA>]
+                        [ <PARTITIONED> <BY> <LEFT_PAREN> partitionedResultColumns = tableColumnList() <RIGHT_PAREN> ]
+                        [<COMMA>]
+                        [ <ROW> <FORMAT> <DELIMITED>
+                            [ <FIELDS> <TERMINATED> <BY> { terminationChar=literal(); }  [
+                            [<COMMA>]
+                            <ESCAPED> <BY> { escapedByChar=literal(); } ] ]
+                            [<COMMA>]
+                            [ <LINES> <TERMINATED> <BY> { linesTerminatedByChar=literal(); } ]
+                        ]
+            			[<COMMA>]
+                        [<STORED> <AS> storageFormat = storedAs() ]
+            			[<COMMA>]
+                        [<LOCATION> {location = literal();}]
 			<AS>
 			queryExpression = queryExpression(null, NO_SET_OP, topNOut)
             [ orderCols = orderByClause(null) ]
                hasJDBClimitClause = offsetFetchFirstClause( offsetClauses )
 
-			<WITH> [ <NO> { withData = false; } ] <DATA>
+			[<WITH> [ <NO> { withData = false; } ] <DATA>]
 			{
                 if (withData) {
                     if (! (queryExpression instanceof SelectNode)) {
@@ -11601,12 +11717,20 @@ tableDefinition() throws StandardException :
 					throw StandardException.newException(
 						SQLState.LANG_NO_PARAMS_IN_TABLES);
 				}
-				
+				validateParameters(isExternal, storageFormat, terminationChar, escapedByChar,
+                linesTerminatedByChar, location);
 				StatementNode node = (StatementNode)nodeFactory.getNode(
 										C_NodeTypes.CREATE_TABLE_NODE,
 										tableName,
 										resultColumns,
 										queryExpression,
+										isExternal,
+										partitionedResultColumns,
+										terminationChar,
+										escapedByChar,
+										linesTerminatedByChar,
+										storageFormat,
+										location,
 										getContextManager());
                 if (node instanceof CreateTableNode) {
                     ((CreateTableNode)node).setQueryString(queryString);
@@ -11614,6 +11738,34 @@ tableDefinition() throws StandardException :
                 return node;
 			}
 	)
+}
+
+void
+validateParameters(boolean isExternal, String storageFormat, ValueNode terminationChar, ValueNode escapedByChar,
+            ValueNode linesTerminatedByChar, ValueNode location) throws StandardException :
+{
+}
+{
+    {
+                if (isExternal && storageFormat == null)
+                        throw StandardException.newException(
+                        						SQLState.STORED_AS_REQUIRED_WITH_EXTERNAL_TABLES);
+                if (isExternal && location == null)
+                        throw StandardException.newException(
+                        						SQLState.LOCATION_REQUIRED_WITH_EXTERNAL_TABLES);
+			    // PARQUET ERRRORS
+	            if (storageFormat != null && storageFormat.equals("P")) {
+	                if (terminationChar !=null || escapedByChar !=null || linesTerminatedByChar != null)
+                        throw StandardException.newException(
+                        						SQLState.ROW_FORMAT_NOT_ALLOWED_WITH_PARQUET);
+	             }
+	             // ORC Errors
+	            if (storageFormat != null && storageFormat.equals("O")) {
+	                if (terminationChar !=null || escapedByChar !=null || linesTerminatedByChar != null)
+                        throw StandardException.newException(
+                        						SQLState.ROW_FORMAT_NOT_ALLOWED_WITH_ORC);
+	             }
+	   }
 }
 
 ResultColumnList
@@ -11792,6 +11944,20 @@ unique() throws StandardException :
 }
 {
 	<UNIQUE>
+	{
+		return Boolean.TRUE;
+	}
+}
+
+/*
+ * <A NAME="unique">unique</A>
+ */
+Boolean
+isExternal() throws StandardException :
+{
+}
+{
+	<EXTERNAL>
 	{
 		return Boolean.TRUE;
 	}
@@ -12285,9 +12451,11 @@ void withClause(Vector parameterList) throws StandardException :
     {
     	tableName = qualifiedName(Limits.MAX_IDENTIFIER_LENGTH)
     		beginToken = <AS>
+    		[<LEFT_PAREN>]
     		queryExpression = queryExpression(null, NO_SET_OP, topNOut)
     		[ orderCols = orderByClause(queryExpression) ]
             hasJDBClimitClause = offsetFetchFirstClause( offsetClauses )
+            [<RIGHT_PAREN>]
     	{
     		checkOptionType = ViewDescriptor.NO_CHECK_OPTION;
     		endToken = getToken(0);
@@ -12335,9 +12503,12 @@ viewDefinition(Token beginToken) throws StandardException :
 {
 	<VIEW> tableName = qualifiedName(Limits.MAX_IDENTIFIER_LENGTH) 
 		[ <LEFT_PAREN> resultColumns = viewColumnList() <RIGHT_PAREN> ]
-		<AS> queryExpression = queryExpression(null, NO_SET_OP, topNOut)
+		<AS>
+		    		[<LEFT_PAREN>]
+		queryExpression = queryExpression(null, NO_SET_OP, topNOut)
 		[ orderCols = orderByClause(queryExpression) ]
         hasJDBClimitClause = offsetFetchFirstClause( offsetClauses )
+            		[<RIGHT_PAREN>]
 	{
 		checkOptionType = ViewDescriptor.NO_CHECK_OPTION;
 		endToken = getToken(0);
@@ -14966,6 +15137,34 @@ dropTableStatement() throws StandardException :
 }
 
 /*
+ * <A NAME="dropPinStatement">dropPinStatement</A>
+ */
+StatementNode
+dropPinStatement() throws StandardException :
+{
+	Token ifTok = null;
+	Token existsTok = null;
+	TableName tableName;
+}
+{
+	<PIN> [ ifTok = <IF> existsTok = <EXISTS> ] tableName = qualifiedName(Limits.MAX_IDENTIFIER_LENGTH)
+	{
+        // must have both "if" and "exists"
+        boolean ifExists = ifTok != null && existsTok != null;
+		// DB2 does not support a drop behaviour
+		StatementNode deleteNode = (StatementNode) nodeFactory.getNode(
+											C_NodeTypes.DROP_PIN_NODE,
+											tableName,
+											(ifExists ?
+											  new Integer(StatementType.DROP_IF_EXISTS) :
+											  new Integer(StatementType.DROP_DEFAULT)),
+											getContextManager());
+        return deleteNode;
+	}
+}
+
+
+/*
  * <A NAME="dropIndexStatement">dropIndexStatement</A>
  */
 StatementNode
@@ -16017,7 +16216,8 @@ nonReservedKeyword()  :
 	|	tok = <CALLED>
 	|	tok = <CLASS>
 	|	tok = <CLOB>
-|	tok = <COALESCE>
+    |	tok = <COALESCE>
+    |	tok = <NVL>
 	|	tok = <COBOL>
 	|	tok = <COMMITTED>
 	|	tok = <COMPRESS>
@@ -16069,6 +16269,19 @@ nonReservedKeyword()  :
 	|	tok = <LENGTH>
 	|	tok = <LEVEL>
     |   tok = <LIMIT>
+    |   tok = <FORMAT>
+    |   tok = <DELIMITED>
+    |   tok = <FIELDS>
+    |   tok = <TERMINATED>
+    |   tok = <ESCAPED>
+    |   tok = <LINES>
+    |   tok = <PARTITIONED>
+    |   tok = <STORED>
+    |   tok = <LOCATION>
+    |   tok = <TEXTFILE>
+    |   tok = <PIN>
+    |   tok = <PARQUET>
+    |   tok = <ORC>
     |   tok = <LOCATE>
 	|	tok = <LOCK>
 	|	tok = <LOCKS>

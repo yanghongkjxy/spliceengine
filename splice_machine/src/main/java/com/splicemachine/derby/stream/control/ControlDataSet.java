@@ -15,7 +15,9 @@
 
 package com.splicemachine.derby.stream.control;
 
-
+import com.splicemachine.derby.impl.sql.execute.operations.window.WindowContext;
+import com.splicemachine.db.iapi.sql.execute.ExecRow;
+import com.splicemachine.derby.impl.sql.execute.operations.LocatedRow;
 import org.apache.commons.collections.IteratorUtils;
 import org.spark_project.guava.base.Function;
 import org.spark_project.guava.collect.*;
@@ -355,5 +357,92 @@ public class ControlDataSet<V> implements DataSet<V> {
     @Override
     public DataSet<V> join(OperationContext operationContext, DataSet<V> rightDataSet, JoinType joinType, boolean isBroadcast) {
         throw new UnsupportedOperationException("Not Implemented in Control Side");
+    }
+
+    /**
+     * Window Function. Take a WindowContext that define the partition, the order, and the frame boundary.
+     * Currently only run on top of Spark.
+     * @param windowContext
+     * @param pushScope
+     * @param scopeDetail
+     * @return
+     */
+    @Override
+    public DataSet<V> windows(WindowContext windowContext, OperationContext operationContext, boolean pushScope, String scopeDetail) {
+
+        operationContext.pushScopeForOp(OperationContext.Scope.SORT_KEYER);
+        KeyerFunction f = new KeyerFunction(operationContext, windowContext.getPartitionColumns());
+        PairDataSet pair = keyBy(f);
+        operationContext.popScope();
+
+        operationContext.pushScopeForOp(OperationContext.Scope.GROUP_AGGREGATE_KEYER);
+        pair = pair.groupByKey("Group Values For Each Key");
+        operationContext.popScope();
+
+        operationContext.pushScopeForOp(OperationContext.Scope.EXECUTE);
+        try {
+            return pair.flatmap(new MergeWindowFunction(operationContext, windowContext.getWindowFunctions()), true);
+        } finally {
+            operationContext.popScope();
+        }
+    }
+
+    /**
+     *
+     * Not Supported
+     *
+     * @param baseColumnMap
+     * @param partitionBy
+     * @param location
+     * @param context
+     * @return
+     */
+    @Override
+    public DataSet<LocatedRow> writeParquetFile(int[] baseColumnMap, int[] partitionBy, String location, OperationContext context) {
+        throw new UnsupportedOperationException("Cannot write parquet files");
+    }
+
+    /**
+     *
+     * Not Supported
+     *
+     * @param baseColumnMap
+     * @param partitionBy
+     * @param location
+     * @param context
+     * @return
+     */
+    @Override
+    public DataSet<LocatedRow> writeORCFile(int[] baseColumnMap, int[] partitionBy, String location, OperationContext context) {
+        throw new UnsupportedOperationException("Cannot write orc files");
+    }
+
+    /**
+     *
+     * Not Supported
+     *
+     * @param op
+     * @param location
+     * @param characterDelimiter
+     * @param columnDelimiter
+     * @param baseColumnMap
+     * @param context
+     * @return
+     */
+    @Override
+    public DataSet<LocatedRow> writeTextFile(SpliceOperation op, String location, String characterDelimiter, String columnDelimiter, int[] baseColumnMap, OperationContext context) {
+        throw new UnsupportedOperationException("Cannot write text files");
+    }
+
+    /**
+     *
+     * Not Supported
+     *
+     * @param template
+     * @param conglomId
+     */
+    @Override
+    public void pin(ExecRow template, long conglomId) {
+        throw new UnsupportedOperationException("Pin Not Supported in Control Mode");
     }
 }

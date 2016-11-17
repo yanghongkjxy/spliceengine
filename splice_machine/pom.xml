@@ -20,13 +20,13 @@
     <parent>
         <artifactId>spliceengine-parent</artifactId>
         <groupId>com.splicemachine</groupId>
-        <version>3.0.0.9-SNAPSHOT</version>
+        <version>3.0.0.15-SNAPSHOT</version>
     </parent>
     <dependencies>
         <dependency>
             <groupId>com.splicemachine</groupId>
             <artifactId>pipeline_api</artifactId>
-            <version>3.0.0.9-SNAPSHOT</version>
+            <version>3.0.0.15-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.splicemachine</groupId>
@@ -55,6 +55,18 @@
             <version>1.10</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_2.11</artifactId>
+            <version>${spark.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_2.11</artifactId>
+            <version>${spark.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
             <version>2.5</version>
@@ -66,6 +78,10 @@
                 <exclusion>
                     <groupId>com.google.protobuf</groupId>
                     <artifactId>protobuf-java</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.esotericsoftware</groupId>
+                    <artifactId>kryo</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -105,7 +121,7 @@
         <dependency>
             <groupId>org.splicetest.sqlj</groupId>
             <artifactId>sqlj-it-procs</artifactId>
-            <version>3.0.0.9-SNAPSHOT</version>
+            <version>3.0.0.15-SNAPSHOT</version>
             <type>jar</type>
             <scope>test</scope>
         </dependency>
