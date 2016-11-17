@@ -101,7 +101,7 @@
                                 </relocation>
                                 <relocation>
                                     <pattern>org.spark_project</pattern>
-                                    <shadedPattern>splice.org.spark_projectk</shadedPattern>
+                                    <shadedPattern>splice.org.spark_project</shadedPattern>
                                 </relocation>
 
                                 <relocation>
@@ -109,10 +109,6 @@
                                     <shadedPattern>splice.com.fasterxml</shadedPattern>
                                 </relocation>
 
-                                <relocation>
-                                    <pattern>javax.servlet</pattern>
-                                    <shadedPattern>splice.javax.servlet</shadedPattern>
-                                </relocation>
                             </relocations>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <shadedClassifierName>splice-uber</shadedClassifierName>
@@ -155,10 +151,6 @@
                                 <relocation>
                                     <pattern>org.spark_project</pattern>
                                     <shadedPattern>splice.org.spark_project</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>javax.servlet</pattern>
-                                    <shadedPattern>splice.javax.servlet</shadedPattern>
                                 </relocation>
 
                             </relocations>
