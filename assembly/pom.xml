@@ -108,6 +108,11 @@
                                     <pattern>com.fasterxml</pattern>
                                     <shadedPattern>splice.com.fasterxml</shadedPattern>
                                 </relocation>
+                                <relocation>
+                                    <pattern>org.jboss.netty</pattern>
+                                    <shadedPattern>splice.org.jboss.netty</shadedPattern>
+                                </relocation>
+
 
                             </relocations>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
@@ -147,6 +152,10 @@
                                 <relocation>
                                     <pattern>com.fasterxml</pattern>
                                     <shadedPattern>splice.com.fasterxml</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.jboss.netty</pattern>
+                                    <shadedPattern>splice.org.jboss.netty</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>org.spark_project</pattern>
@@ -403,6 +412,13 @@
                                         <copy todir="target/SPLICEMACHINE-${project.version}.${envClassifier}.${parcel.patch}/lib">
                                             <fileset dir="target/dependency" includes="**/*"/>
                                         </copy>
+                                        <copy todir="target/SPLICEMACHINE-${project.version}.${envClassifier}.${parcel.patch}/lib">
+                                            <fileset dir="target/" includes="*splice-uber*"/>
+                                        </copy>
+                                        <copy todir="target/SPLICEMACHINE-${project.version}.${envClassifier}.${parcel.patch}/lib">
+                                            <fileset dir="target/" includes="*splice-yarn-webproxy*"/>
+                                        </copy>
+
                                         <tar compression="gzip" destfile="target/installer/SPLICEMACHINE-${project.version}.${envClassifier}.${parcel.patch}.tar.gz">
                                             <tarfileset username="root" group="root" filemode="755" dir="target/SPLICEMACHINE-${project.version}.${envClassifier}.${parcel.patch}/bin" prefix="SPLICEMACHINE-${project.version}.${envClassifier}.${parcel.patch}/bin"/>
                                             <tarfileset username="root" group="root" filemode="644" dir="target/SPLICEMACHINE-${project.version}.${envClassifier}.${parcel.patch}/conf" prefix="SPLICEMACHINE-${project.version}.${envClassifier}.${parcel.patch}/conf"/>
