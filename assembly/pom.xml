@@ -108,6 +108,12 @@
                                     <pattern>com.fasterxml</pattern>
                                     <shadedPattern>splice.com.fasterxml</shadedPattern>
                                 </relocation>
+
+                                <relocation>
+                                    <pattern>org.codehaus.jackson</pattern>
+                                    <shadedPattern>splice.org.codehaus.jackson</shadedPattern>
+                                </relocation>
+
                                 <relocation>
                                     <pattern>org.jboss.netty</pattern>
                                     <shadedPattern>splice.org.jboss.netty</shadedPattern>
@@ -156,6 +162,10 @@
                                 <relocation>
                                     <pattern>org.jboss.netty</pattern>
                                     <shadedPattern>splice.org.jboss.netty</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.codehaus.jackson</pattern>
+                                    <shadedPattern>splice.org.codehaus.jackson</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>org.spark_project</pattern>
