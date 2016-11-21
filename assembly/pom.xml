@@ -133,6 +133,7 @@
                                     <exclude>META-INF/*.SF</exclude>
                                     <exclude>META-INF/licence/**</exclude>
                                     <exclude>core-site.xml</exclude>
+                                    <exclude>hbase-site.xml</exclude>
                                     <exclude>splice-site.xml</exclude>
                                     <exclude>yarn-site.xml</exclude>
                                 </excludes>
@@ -187,6 +188,10 @@
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/licence/**</exclude>
+                                        <exclude>core-site.xml</exclude>
+                                        <exclude>hbase-site.xml</exclude>
+                                        <exclude>splice-site.xml</exclude>
+                                        <exclude>yarn-site.xml</exclude>
                                     </excludes>
                                 </filter>
 
