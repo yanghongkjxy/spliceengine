@@ -221,7 +221,8 @@
                                 db-tools-i18n,
                                 db-tools-ij,
                                 db-shared,
-                                db-drda
+                                db-drda,
+                                javax.servlet-api
                             </includeArtifactIds>
 
 

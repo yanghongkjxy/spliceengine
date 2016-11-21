@@ -59,7 +59,7 @@ for platform in ${platforms[@]} ; do
     fi
     echo "Splice Machine uber jar is ${spliceuberjar}"
 
-    # same thing for yarn 
+    # same thing for yarn
     spliceyarnjar=""
     spliceyarnjar="$(find ${splicedir[${platform}]} -xdev -type f -name splice\*yarn\*.jar | head -1)"
     if [[ -z "${spliceyarnjar}" ]] ; then
@@ -68,16 +68,25 @@ for platform in ${platforms[@]} ; do
     fi
     echo "Splice Machine YARN jar is ${spliceyarnjar}"
 
+    # and servlet-api >= 3.1.0
+    spliceservletapijar=""
+    spliceservletapijar="$(find ${splicedir[${platform}]} -xdev -type f -name \*servlet-api\*.jar | head -1)"
+    if [[ -z "${spliceservletapijar}" ]] ; then
+        echo "did not find servlet-api jar under ${splicedir[${platform}]}"
+        continue
+    fi
+    echo "Splice Machine servlet-api jar is ${spliceservletapijar}"
+
     # scan the platform top-level directory for *real* files matching servlet-api-2
     # we'll backup and replace these with symbolink links
     declare -a servletapijars
     servletapijars=""
-    servletapijars="$(find ${topdir[${platform}]} -xdev -type f -name \*servlet-api-2\*.jar)" 
+    servletapijars="$(find ${topdir[${platform}]} -xdev -type f -name \*servlet-api-2\*.jar)"
     for servletapijar in ${servletapijars[@]} ; do
       echo "backing up ${servletapijar} to ${servletapijar}.PRE-${TS}"
       mv ${servletapijar}{,.PRE-${TS}}
-      echo "symlinking ${spliceuberjar} to ${servletapijar}"
-      ln -sf ${spliceuberjar} ${servletapijar}
+      echo "symlinking ${spliceservletapijar} to ${servletapijar}"
+      ln -sf ${spliceservletapijar} ${servletapijar}
     done
 
     # XXX - any CDH platform-specific steps?
