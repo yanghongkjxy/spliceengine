@@ -81,7 +81,7 @@ for platform in ${platforms[@]} ; do
     # we'll backup and replace these with symbolink links
     declare -a servletapijars
     servletapijars=""
-    servletapijars="$(find ${topdir[${platform}]} -xdev -type f -name \*servlet-api-2\*.jar)"
+    servletapijars="$(find ${topdir[${platform}]} -xdev -type f \( -name \*servlet-api-2\*.jar -o -name servlet-api.jar \) )"
     for servletapijar in ${servletapijars[@]} ; do
       echo "backing up ${servletapijar} to ${servletapijar}.PRE-${TS}"
       mv ${servletapijar}{,.PRE-${TS}}
