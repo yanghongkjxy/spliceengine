@@ -86,6 +86,8 @@
                                     <exclude>org.apache.zookeeper:zookeeper</exclude>
                                     <exclude>org.apache.hive.shims:*</exclude>
                                     <exclude>com.amazonaws:*</exclude>
+                                    <exclude>com.mapr*:*</exclude>
+                                    <exclude>mapr.fs*:*</exclude>
                                     <exclude>com.splicemachine:db-client</exclude>
                                     <exclude>com.splicemachine:db-tools-i18n</exclude>
                                     <exclude>com.splicemachine:db-tools-ij</exclude>
