@@ -15,6 +15,7 @@
 package com.splicemachine.derby.utils.marshall;
 
 import com.splicemachine.SpliceKryoRegistry;
+import com.splicemachine.db.iapi.services.io.FormatableBitSet;
 import com.splicemachine.derby.utils.marshall.dvd.DescriptorSerializer;
 import com.splicemachine.encoding.MultiFieldDecoder;
 import com.splicemachine.pipeline.Exceptions;
@@ -34,7 +35,15 @@ import java.io.IOException;
  */
 public class EntryDataDecoder extends BareKeyHash implements KeyHashDecoder{
 		private EntryDecoder entryDecoder;
+		private FormatableBitSet scanColumnList;
 
+        public EntryDataDecoder(int[] keyColumns,
+                                boolean[] keySortOrder,
+                                DescriptorSerializer[] serializers,
+                                FormatableBitSet scanColumnList) {
+            this(keyColumns, keySortOrder, SpliceKryoRegistry.getInstance(),serializers);
+            this.scanColumnList = scanColumnList;
+        }
 		public EntryDataDecoder(int[] keyColumns,
 															 boolean[] keySortOrder,
 															 DescriptorSerializer[] serializers) {
@@ -78,7 +87,7 @@ public class EntryDataDecoder extends BareKeyHash implements KeyHashDecoder{
 								int pos = keyColumns[i];
 								if(pos<0) continue;
 								DataValueDescriptor dvd = fields[pos];
-								if(dvd==null){
+								if(dvd==null || (scanColumnList != null && !scanColumnList.get(i))){
 										entryDecoder.seekForward(decoder, i);
 										continue;
 								}
@@ -89,7 +98,7 @@ public class EntryDataDecoder extends BareKeyHash implements KeyHashDecoder{
 				}else{
 						for(int i=index.nextSetBit(0);i>=0 && i<fields.length;i=index.nextSetBit(i+1)){
 								DataValueDescriptor dvd = fields[i];
-								if(dvd==null){
+								if(dvd==null || (scanColumnList != null && !scanColumnList.get(i))){
 										entryDecoder.seekForward(decoder,i);
 										continue;
 								}
