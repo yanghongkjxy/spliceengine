@@ -87,7 +87,7 @@ public class EntryDataDecoder extends BareKeyHash implements KeyHashDecoder{
 								int pos = keyColumns[i];
 								if(pos<0) continue;
 								DataValueDescriptor dvd = fields[pos];
-								if(dvd==null || (scanColumnList != null && !scanColumnList.get(i))){
+								if(dvd==null || (scanColumnList != null && i < scanColumnList.getLength() && !scanColumnList.get(i))){
 										entryDecoder.seekForward(decoder, i);
 										continue;
 								}
@@ -98,7 +98,7 @@ public class EntryDataDecoder extends BareKeyHash implements KeyHashDecoder{
 				}else{
 						for(int i=index.nextSetBit(0);i>=0 && i<fields.length;i=index.nextSetBit(i+1)){
 								DataValueDescriptor dvd = fields[i];
-								if(dvd==null || (scanColumnList != null && !scanColumnList.get(i))){
+								if(dvd==null || (scanColumnList != null && i < scanColumnList.getLength() && !scanColumnList.get(i))){
 										entryDecoder.seekForward(decoder,i);
 										continue;
 								}
