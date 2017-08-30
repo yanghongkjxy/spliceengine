@@ -8916,6 +8916,11 @@ Shutting down instance {0} on database directory {1} with class loader {2} </tex
                <arg>backupIds</arg>
            </msg>
            <msg>
+               <name>BR020</name>
+               <text>Could not remove backup data in directory {0}. Please check permissions.</text>
+               <arg>backupDir</arg>
+           </msg>
+           <msg>
                <name>EXT01</name>
                <text>row format specification not allowed with 'stored as parquet' </text>
            </msg>
