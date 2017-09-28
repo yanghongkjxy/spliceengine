@@ -18,6 +18,7 @@ import com.carrotsearch.hppc.IntObjectOpenHashMap;
 import com.carrotsearch.hppc.LongOpenHashSet;
 import com.carrotsearch.hppc.cursors.IntObjectCursor;
 import com.carrotsearch.hppc.cursors.LongCursor;
+import com.splicemachine.access.api.SConfiguration;
 import com.splicemachine.kvpair.KVPair;
 import com.splicemachine.primitives.Bytes;
 import com.splicemachine.si.api.data.*;
@@ -33,11 +34,13 @@ import com.splicemachine.si.api.txn.WriteConflict;
 import com.splicemachine.si.constants.SIConstants;
 import com.splicemachine.si.impl.ConflictResults;
 import com.splicemachine.si.impl.SimpleTxnFilter;
+import com.splicemachine.si.impl.driver.SIDriver;
 import com.splicemachine.si.impl.readresolve.NoOpReadResolver;
 import com.splicemachine.storage.*;
 import com.splicemachine.utils.ByteSlice;
 import com.splicemachine.utils.Pair;
 import com.splicemachine.utils.SpliceLogUtils;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.log4j.Logger;
 import org.spark_project.guava.base.Predicate;
 import org.spark_project.guava.collect.Collections2;
@@ -61,6 +64,7 @@ public class SITransactor implements Transactor{
 
     private final TxnOperationFactory txnOperationFactory;
     private final TxnSupplier txnSupplier;
+    private final boolean ignoreMissingTxns;
 
     public SITransactor(TxnSupplier txnSupplier,
                         TxnOperationFactory txnOperationFactory,
@@ -72,6 +76,8 @@ public class SITransactor implements Transactor{
         this.opFactory= opFactory;
         this.operationStatusLib = operationStatusLib;
         this.exceptionLib = exceptionFactory;
+        SConfiguration conf = SIDriver.driver().getConfiguration();
+        ignoreMissingTxns = conf.getIgnoreMissingTxns();
     }
 
     // Operation pre-processing. These are to be called "server-side" when we are about to process an operation.
@@ -520,7 +526,13 @@ public class SITransactor implements Transactor{
                                                  long dataTransactionId) throws IOException{
         if(updateTransaction.getTxnId()!=dataTransactionId){
             final TxnView dataTransaction=txnSupplier.getTransaction(dataTransactionId);
-            if(dataTransaction.getState()==Txn.State.ROLLEDBACK){
+
+            if (dataTransaction == null && ignoreMissingTxns) {
+                if(LOG.isDebugEnabled()) {
+                    SpliceLogUtils.debug(LOG, "Transaction %d cannot be found. Splice assumes no write-write conflict with it.",dataTransactionId);
+                }
+            }
+            if((dataTransaction == null && ignoreMissingTxns) || dataTransaction.getState()==Txn.State.ROLLEDBACK){
                 return conflictResults; //can't conflict with a rolled back transaction
             }
             final ConflictType conflictType=updateTransaction.conflicts(dataTransaction);
