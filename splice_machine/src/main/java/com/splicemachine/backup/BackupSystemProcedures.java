@@ -244,20 +244,28 @@ public class BackupSystemProcedures {
             Timestamp ts = new Timestamp(calendar.getTimeInMillis());
 
             //Get backups that are more than backupWindow days old
-            String sqlText = "select backup_id from sys.sysbackup where begin_timestamp<?";
+            List<Long> backupIdList=new ArrayList<>();
+            String sqlText = "select backup_id, begin_timestamp, incremental_backup from sys.sysbackup order by begin_timestamp desc";
             try(PreparedStatement ps = conn.prepareStatement(sqlText)){
-                ps.setTimestamp(1,ts);
-                List<Long> backupIdList=new ArrayList<>();
                 BackupManager backupManager = EngineDriver.driver().manager().getBackupManager();
                 try(ResultSet rs=ps.executeQuery()){
+                    int fullBackupCount = 0;
                     while(rs.next()){
                         long backupId=rs.getLong(1);
-                        backupIdList.add(backupId);
+                        Timestamp beginTimestamp = rs.getTimestamp(2);
+                        boolean isFullBackup = !rs.getBoolean(3);
+                        if (fullBackupCount > 0 && beginTimestamp.compareTo(ts) < 0) {
+                            backupIdList.add(backupId);
+                        }
+                        if (isFullBackup) {
+                            fullBackupCount++;
+                        }
                     }
                 }
                 backupManager.removeBackup(backupIdList);
             }
-            resultSets[0] = generateResult("Success", "Delete old backups in window "+backupWindow);
+            String message = String.format("Deleted %d old backups for the past %d days", backupIdList.size(), backupWindow);
+            resultSets[0] = generateResult("Success", message);
         } catch (Throwable t) {
             resultSets[0] = generateResult("Error", t.getLocalizedMessage());
             SpliceLogUtils.error(LOG, "Delete old backups error", t);
