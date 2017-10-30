@@ -2201,8 +2201,9 @@ public class FromBaseTable extends FromTable {
         BaseJoinStrategy.pushNullableString(mb,tableDescriptor.getLines());
         BaseJoinStrategy.pushNullableString(mb,tableDescriptor.getStoredAs());
         BaseJoinStrategy.pushNullableString(mb,tableDescriptor.getLocation());
+        generateDefaultRow((ActivationClassBuilder)acb, mb);
         mb.callMethod(VMOpcode.INVOKEINTERFACE,null,"getDistinctScanResultSet",
-                ClassName.NoPutResultSet,24);
+                ClassName.NoPutResultSet,26);
     }
 
     private int getScanArguments(ExpressionClassBuilder acb, MethodBuilder mb) throws StandardException{
@@ -2263,7 +2264,7 @@ public class FromBaseTable extends FromTable {
             }
         }
 
-        return trulyTheBestJoinStrategy.getScanArgs(
+        int numArgs = trulyTheBestJoinStrategy.getScanArgs(
                 getLanguageConnectionContext().getTransactionCompile(),
                 mb,
                 this,
@@ -2288,6 +2289,11 @@ public class FromBaseTable extends FromTable {
                 tableDescriptor.getStoredAs(),
                 tableDescriptor.getLocation()
         );
+
+        // compute the default row
+        numArgs += generateDefaultRow((ActivationClassBuilder)acb, mb);
+
+        return numArgs;
     }
 
     /**
