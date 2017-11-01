@@ -133,9 +133,9 @@ public class MPipelineTestEnv extends MemSITestEnv implements PipelineTestEnv{
     /*private helper methods*/
     @SuppressWarnings("unchecked")
     private TransactionalRegionFactory buildTransactionalRegionFactory(){
-        SITransactor transactor = new SITransactor(getTxnStore(),
+        SITransactor transactor = new SITransactor(getTxnStore(),null,
                 getOperationFactory(),getBaseOperationFactory(),getOperationStatusFactory(),getExceptionFactory());
-        return new TransactionalRegionFactory(this.getTxnStore(),
+        return new TransactionalRegionFactory(this.getTxnStore(),null,
                 transactor,getOperationFactory(),NoopRollForward.INSTANCE,NoOpReadResolver.INSTANCE);
     }
 

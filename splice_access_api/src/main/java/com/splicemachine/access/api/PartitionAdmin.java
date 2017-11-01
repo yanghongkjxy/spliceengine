@@ -60,4 +60,6 @@ public interface PartitionAdmin extends AutoCloseable{
     void disableTable(String tableName) throws IOException;
 
     void enableTable(String tableName) throws IOException;
+
+    boolean tableExists(String tableName) throws IOException;
 }

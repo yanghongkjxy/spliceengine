@@ -26,6 +26,7 @@ import com.splicemachine.si.api.txn.TxnSupplier;
 import com.splicemachine.si.api.txn.TxnView;
 import com.splicemachine.si.impl.filter.HRowAccumulator;
 import com.splicemachine.si.impl.filter.PackedTxnFilter;
+import com.splicemachine.si.impl.store.IgnoreTxnSupplier;
 import com.splicemachine.storage.*;
 import com.splicemachine.utils.ByteSlice;
 import org.spark_project.guava.collect.Iterators;
@@ -43,6 +44,7 @@ public class TxnRegion<InternalScanner> implements TransactionalRegion<InternalS
     private final RollForward rollForward;
     private final ReadResolver readResolver;
     private final TxnSupplier txnSupplier;
+    private final IgnoreTxnSupplier ignoreTxnSupplier;
     private final Transactor transactor;
     private final TxnOperationFactory opFactory;
     private Partition region;
@@ -53,11 +55,13 @@ public class TxnRegion<InternalScanner> implements TransactionalRegion<InternalS
                      RollForward rollForward,
                      ReadResolver readResolver,
                      TxnSupplier txnSupplier,
+                     IgnoreTxnSupplier ignoreTxnSupplier,
                      Transactor transactor,TxnOperationFactory opFactory){
         this.region=region;
         this.rollForward=rollForward;
         this.readResolver=readResolver;
         this.txnSupplier=txnSupplier;
+        this.ignoreTxnSupplier = ignoreTxnSupplier;
         this.transactor=transactor;
         this.opFactory=opFactory;
         if(region!=null){
@@ -67,7 +71,7 @@ public class TxnRegion<InternalScanner> implements TransactionalRegion<InternalS
 
     @Override
     public TxnFilter unpackedFilter(TxnView txn) throws IOException{
-        return new SimpleTxnFilter(tableName,txn,readResolver,txnSupplier);
+        return new SimpleTxnFilter(tableName,txn,readResolver,txnSupplier, ignoreTxnSupplier);
     }
 
     @Override

@@ -23,6 +23,7 @@ import com.splicemachine.si.impl.DDLFilter;
 import com.splicemachine.si.impl.SimpleTxnFilter;
 import com.splicemachine.si.impl.filter.HRowAccumulator;
 import com.splicemachine.si.impl.filter.PackedTxnFilter;
+import com.splicemachine.si.impl.store.IgnoreTxnSupplier;
 import com.splicemachine.storage.DataGet;
 import com.splicemachine.storage.DataScan;
 import com.splicemachine.storage.EntryDecoder;
@@ -36,9 +37,11 @@ import java.io.IOException;
  */
 public class SITransactionReadController implements TransactionReadController{
     private final TxnSupplier txnSupplier;
+    private final IgnoreTxnSupplier ignoreTxnSupplier;
 
-    public SITransactionReadController(TxnSupplier txnSupplier){
+    public SITransactionReadController(TxnSupplier txnSupplier, IgnoreTxnSupplier ignoreTxnSupplier){
         this.txnSupplier = txnSupplier;
+        this.ignoreTxnSupplier = ignoreTxnSupplier;
     }
 
     @Override
@@ -55,7 +58,7 @@ public class SITransactionReadController implements TransactionReadController{
 
     @Override
     public TxnFilter newFilterState(ReadResolver readResolver,TxnView txn) throws IOException{
-        return new SimpleTxnFilter(null,txn,readResolver,txnSupplier);
+        return new SimpleTxnFilter(null,txn,readResolver,txnSupplier,ignoreTxnSupplier);
     }
 
     @Override

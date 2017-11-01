@@ -117,7 +117,7 @@ public class ControlDataSetProcessor implements DataSetProcessor{
                 try{
                     p =SIDriver.driver().getTableFactory().getTable(tableName);
                     TxnRegion localRegion=new TxnRegion(p,NoopRollForward.INSTANCE,NoOpReadResolver.INSTANCE,
-                            txnSupplier,transactory,txnOperationFactory);
+                            txnSupplier,SIDriver.driver().getIgnoreTxnSupplier(),transactory,txnOperationFactory);
 
                     this.region(localRegion).scanner(p.openScanner(getScan(),metricFactory)); //set the scanner
                     TableScannerIterator tableScannerIterator=new TableScannerIterator(this,spliceOperation);

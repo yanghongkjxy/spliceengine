@@ -305,7 +305,7 @@ public class DDLCoordinationTest{
 
         TxnStore supplier = new TestingTxnStore(clock,new TestingTimestampSource(),null,100l);
         supplier.recordNewTransaction(txn);
-        SITransactionReadController txnController=new SITransactionReadController(supplier);
+        SITransactionReadController txnController=new SITransactionReadController(supplier,null);
         return new DDLWatchRefresher(refreshChecker,txnController,clock,ef,10l,supplier);
     }
 

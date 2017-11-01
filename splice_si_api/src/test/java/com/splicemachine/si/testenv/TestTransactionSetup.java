@@ -80,9 +80,10 @@ public class TestTransactionSetup {
         lfManager.setKeepAliveScheduler(keepAliveScheduler);
         ((ClientTxnLifecycleManager) txnLifecycleManager).setKeepAliveScheduler(keepAliveScheduler);
 
-        readController = new SITransactionReadController(txnSupplier);
+        readController = new SITransactionReadController(txnSupplier,null);
 
         transactor = new SITransactor(txnSupplier,
+                null,
                 txnOperationFactory,
                 testEnv.getBaseOperationFactory(),
                 testEnv.getOperationStatusFactory(),

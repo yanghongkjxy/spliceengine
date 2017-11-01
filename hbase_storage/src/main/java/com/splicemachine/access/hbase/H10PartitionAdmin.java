@@ -153,6 +153,8 @@ public class H10PartitionAdmin implements PartitionAdmin{
                     lastActivation.addWarning(warning);
                     return;
                 }
+                else
+                    throw e;
             }
         }
 
@@ -280,5 +282,11 @@ public class H10PartitionAdmin implements PartitionAdmin{
     public void enableTable(String tableName) throws IOException
     {
         admin.enableTable(TableName.valueOf(tableName));
+    }
+
+    @Override
+    public boolean tableExists(String tableName) throws IOException
+    {
+        return admin.tableExists(tableInfoFactory.getTableInfo(tableName));
     }
 }

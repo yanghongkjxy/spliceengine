@@ -20,6 +20,7 @@ import com.splicemachine.si.api.readresolve.RollForward;
 import com.splicemachine.si.api.txn.TxnSupplier;
 import com.splicemachine.si.impl.TxnRegion;
 import com.splicemachine.si.impl.server.SITransactor;
+import com.splicemachine.si.impl.store.IgnoreTxnSupplier;
 import com.splicemachine.storage.Partition;
 
 /**
@@ -28,17 +29,20 @@ import com.splicemachine.storage.Partition;
  */
 public class TransactionalRegionFactory{
     private final TxnSupplier txnSupplier;
+    private final IgnoreTxnSupplier ignoreTxnSupplier;
     private final SITransactor transactor;
     private final TxnOperationFactory txnOpFactory;
     private final RollForward rollForward;
     private final ReadResolver readResolver;
 
     public TransactionalRegionFactory(TxnSupplier txnSupplier,
+                                      IgnoreTxnSupplier ignoreTxnSupplier,
                                       SITransactor transactor,
                                       TxnOperationFactory txnOpFactory,
                                       RollForward rollForward,
                                       ReadResolver readResolver){
         this.txnSupplier=txnSupplier;
+        this.ignoreTxnSupplier = ignoreTxnSupplier;
         this.transactor=transactor;
         this.txnOpFactory=txnOpFactory;
         this.rollForward=rollForward;
@@ -46,6 +50,6 @@ public class TransactionalRegionFactory{
     }
 
     public TransactionalRegion newRegion(Partition p){
-        return new TxnRegion(p,rollForward, readResolver,txnSupplier,transactor,txnOpFactory);
+        return new TxnRegion(p,rollForward, readResolver,txnSupplier,ignoreTxnSupplier,transactor,txnOpFactory);
     }
 }

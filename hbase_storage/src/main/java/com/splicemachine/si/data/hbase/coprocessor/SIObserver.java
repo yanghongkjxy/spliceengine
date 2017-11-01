@@ -101,6 +101,7 @@ public class SIObserver extends BaseRegionObserver{
                         driver.getRollForward(),
                         driver.getReadResolver(regionPartition),
                         driver.getTxnSupplier(),
+                        driver.getIgnoreTxnSupplier(),
                         driver.getTransactor(),
                         driver.getOperationFactory()
                 );

@@ -34,6 +34,7 @@ import com.splicemachine.si.constants.SIConstants;
 import com.splicemachine.si.impl.ConflictResults;
 import com.splicemachine.si.impl.SimpleTxnFilter;
 import com.splicemachine.si.impl.readresolve.NoOpReadResolver;
+import com.splicemachine.si.impl.store.IgnoreTxnSupplier;
 import com.splicemachine.storage.*;
 import com.splicemachine.utils.ByteSlice;
 import com.splicemachine.utils.Pair;
@@ -61,13 +62,15 @@ public class SITransactor implements Transactor{
 
     private final TxnOperationFactory txnOperationFactory;
     private final TxnSupplier txnSupplier;
-
+    private final IgnoreTxnSupplier ignoreTxnSupplier;
     public SITransactor(TxnSupplier txnSupplier,
+                        IgnoreTxnSupplier ignoreTxnSupplier,
                         TxnOperationFactory txnOperationFactory,
                         OperationFactory opFactory,
                         OperationStatusFactory operationStatusLib,
                         ExceptionFactory exceptionFactory){
         this.txnSupplier=txnSupplier;
+        this.ignoreTxnSupplier = ignoreTxnSupplier;
         this.txnOperationFactory=txnOperationFactory;
         this.opFactory= opFactory;
         this.operationStatusLib = operationStatusLib;
@@ -176,7 +179,7 @@ public class SITransactor implements Transactor{
         Pair<KVPair, Lock>[] lockPairs=new Pair[mutations.size()];
         TxnFilter constraintState=null;
         if(constraintChecker!=null)
-            constraintState=new SimpleTxnFilter(null,txn,NoOpReadResolver.INSTANCE,txnSupplier);
+            constraintState=new SimpleTxnFilter(null,txn,NoOpReadResolver.INSTANCE,txnSupplier,ignoreTxnSupplier);
         @SuppressWarnings("unchecked") final LongOpenHashSet[] conflictingChildren=new LongOpenHashSet[mutations.size()];
         try{
             lockRows(table,mutations,lockPairs,finalStatus);

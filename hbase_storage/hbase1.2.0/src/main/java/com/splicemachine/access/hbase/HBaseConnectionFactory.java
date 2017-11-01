@@ -24,6 +24,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.io.Closeables;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -242,6 +243,17 @@ public class HBaseConnectionFactory{
         }catch(Exception e){
             SpliceLogUtils.error(LOG,"Unable to set up HBase Tables",e);
             return false;
+        }
+    }
+
+    public void createRestoreTableIfNecessary() {
+
+        try(Admin admin=connection.getAdmin()){
+            HTableDescriptor td=generateNonSITable(HConfiguration.IGNORE_TXN_TABLE_NAME);
+            admin.createTable(td);
+            SpliceLogUtils.info(LOG, HConfiguration.IGNORE_TXN_TABLE_NAME +" created");
+        }catch(Exception e) {
+            SpliceLogUtils.error(LOG, "Unable to create SPLICE_IGNORE_TXN Table", e);
         }
     }
 

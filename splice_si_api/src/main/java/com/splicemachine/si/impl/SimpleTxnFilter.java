@@ -20,7 +20,9 @@ import com.splicemachine.si.api.filter.TxnFilter;
 import com.splicemachine.si.api.readresolve.ReadResolver;
 import com.splicemachine.si.api.txn.TxnSupplier;
 import com.splicemachine.si.api.txn.TxnView;
+import com.splicemachine.si.impl.store.ActiveIgnoreTxnCacheSupplier;
 import com.splicemachine.si.impl.store.ActiveTxnCacheSupplier;
+import com.splicemachine.si.impl.store.IgnoreTxnSupplier;
 import com.splicemachine.si.impl.txn.CommittedTxn;
 import com.splicemachine.storage.CellType;
 import com.splicemachine.storage.DataCell;
@@ -46,7 +48,7 @@ public class SimpleTxnFilter implements TxnFilter{
     private Long antiTombstonedTxnRow = null;
     private final ByteSlice rowKey=new ByteSlice();
     private final String tableName;
-
+    private final ActiveIgnoreTxnCacheSupplier ignoreTxnCache;
     /*
      * The most common case for databases is insert-only--that is, that there
      * are few updates and deletes relative to the number of inserts. As a result,
@@ -63,12 +65,14 @@ public class SimpleTxnFilter implements TxnFilter{
     public SimpleTxnFilter(String tableName,
                            TxnView myTxn,
                            ReadResolver readResolver,
-                           TxnSupplier baseSupplier){
+                           TxnSupplier baseSupplier,
+                           IgnoreTxnSupplier ignoreTxnSupplier){
         assert readResolver!=null;
         this.transactionStore = new ActiveTxnCacheSupplier(baseSupplier,1024); //TODO -sf- configure
         this.tableName=tableName;
         this.myTxn=myTxn;
         this.readResolver=readResolver;
+        this.ignoreTxnCache = new ActiveIgnoreTxnCacheSupplier(ignoreTxnSupplier);
     }
 
     @Override
@@ -189,6 +193,8 @@ public class SimpleTxnFilter implements TxnFilter{
 		 * it matches, then we can see it.
 		 */
         long timestamp=data.version();//dataStore.getOpFactory().getTimestamp(data);
+        if (ignoreTxnCache != null && ignoreTxnCache.shouldIgnore(timestamp))
+            return DataFilter.ReturnCode.SKIP;
         if(tombstonedTxnRow != null && timestamp<= tombstonedTxnRow)
             return DataFilter.ReturnCode.NEXT_ROW;
 

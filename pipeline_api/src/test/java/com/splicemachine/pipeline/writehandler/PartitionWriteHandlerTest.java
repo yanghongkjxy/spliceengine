@@ -102,8 +102,8 @@ public class PartitionWriteHandlerTest{
         when(p.writeBatch(any(DataPut[].class))).then(new LatchAnswer<>(Arrays.asList(iteratorNotServingRegionAnswer,dataAnswer)));
         PartitionFactory pf = mock(PartitionFactory.class);
         TxnOperationFactory txnOpFactory = new SimpleTxnOperationFactory(ef,opFactory);
-        TransactionalRegion testRegion = new TxnRegion(p,NoopRollForward.INSTANCE,NoOpReadResolver.INSTANCE,testStore,
-                new SITransactor(testStore,txnOpFactory,opFactory,opStatusFactory,ef),
+        TransactionalRegion testRegion = new TxnRegion(p,NoopRollForward.INSTANCE,NoOpReadResolver.INSTANCE,testStore,null,
+                new SITransactor(testStore,null,txnOpFactory,opFactory,opStatusFactory,ef),
                 txnOpFactory);
 
 

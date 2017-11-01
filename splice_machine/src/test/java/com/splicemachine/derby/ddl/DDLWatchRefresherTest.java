@@ -104,7 +104,7 @@ public class DDLWatchRefresherTest{
 
         TxnStore supplier = new TestingTxnStore(clock,new TestingTimestampSource(),null,100l);
         supplier.recordNewTransaction(txn);
-        SITransactionReadController txnController=new SITransactionReadController(supplier);
+        SITransactionReadController txnController=new SITransactionReadController(supplier,null);
         DDLWatchRefresher refresher = new DDLWatchRefresher(checker,txnController,clock,ef,10l,supplier );
         CountingListener assertionListener = new CountingListener();
 
@@ -138,7 +138,7 @@ public class DDLWatchRefresherTest{
 
         TxnStore supplier = new TestingTxnStore(clock,new TestingTimestampSource(),null,100l);
         supplier.recordNewTransaction(txn);
-        SITransactionReadController txnController=new SITransactionReadController(supplier);
+        SITransactionReadController txnController=new SITransactionReadController(supplier,null);
         DDLWatchRefresher refresher = new DDLWatchRefresher(checker,txnController,clock,ef,10l,supplier);
         CountingListener assertionListener = new CountingListener();
 
@@ -171,7 +171,7 @@ public class DDLWatchRefresherTest{
 
         TxnStore supplier = new TestingTxnStore(clock,new TestingTimestampSource(),null,100l);
         supplier.recordNewTransaction(txn);
-        SITransactionReadController txnController=new SITransactionReadController(supplier);
+        SITransactionReadController txnController=new SITransactionReadController(supplier,null);
         DDLWatchRefresher refresher = new DDLWatchRefresher(checker,txnController,clock,ef,10l,supplier);
 
         //add a new change
