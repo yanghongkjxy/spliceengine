@@ -2504,7 +2504,8 @@ public class SubqueryNode extends ValueNode{
         int outerSize=outerFromList.size();
         for(int outer=0;outer<outerSize;outer++)
             dependencyMap.or(((FromTable)outerFromList.elementAt(outer)).getReferencedTableMap());
-        ((FromTable) newPRN).setExistsTable(true, dependencyMap, false, false);
+        ((FromTable) newPRN).setExistsTable(true,false, false);
+        ((FromTable) newPRN).setDependencyMap(dependencyMap);
 
         // add the current subquery as a FromSubquery(DT) in the outer block's fromList
         outerFromList.addElement(newPRN);
