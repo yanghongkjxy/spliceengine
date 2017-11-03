@@ -158,7 +158,7 @@ public class OlapServerSubmitter implements Runnable {
                 }
             }
         }
-        String extraOptions = System.getProperty("splice.olap.extraJavaOptions");
+        String extraOptions = System.getProperty("splice.olapServer.extraJavaOptions");
         if (extraOptions != null) {
             for (String option : extraOptions.split("\\s+")) {
                 result.append(' ').append(option);
@@ -169,9 +169,16 @@ public class OlapServerSubmitter implements Runnable {
     }
 
     private void setupAppMasterEnv(Map<String, String> appMasterEnv) {
-        Apps.addToEnvironment(appMasterEnv,
-                ApplicationConstants.Environment.CLASSPATH.name(),
-                ApplicationConstants.Environment.PWD.$() + File.separator + "*");
+        String classpath = System.getProperty("splice.olapServer.classpath");
+        if (classpath == null) {
+            Apps.addToEnvironment(appMasterEnv,
+                    ApplicationConstants.Environment.CLASSPATH.name(),
+                    ApplicationConstants.Environment.PWD.$() + File.separator + "*");
+        } else {
+            Apps.addToEnvironment(appMasterEnv,
+                    ApplicationConstants.Environment.CLASSPATH.name(),
+                    classpath);
+        }
     }
 
     public void stop() {
