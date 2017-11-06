@@ -72,7 +72,7 @@ public class OlapServerSubmitter implements Runnable {
                 amContainer.setCommands(
                         Collections.singletonList(prepareCommands(
                                 "$JAVA_HOME/bin/java",
-                                " -cp " + System.getProperty("splice.spark.executor.extraClassPath") +
+                                //" -cp " + System.getProperty("splice.spark.executor.extraClassPath") +
                                         " -Xmx1024M " +
                                         OlapServerMaster.class.getCanonicalName() +
                                         " " + serverName.toString() +
@@ -85,6 +85,7 @@ public class OlapServerSubmitter implements Runnable {
                 Map<String, String> appMasterEnv = new HashMap<String, String>();
                 setupAppMasterEnv(appMasterEnv);
                 amContainer.setEnvironment(appMasterEnv);
+
 
                 // Set up resource type requirements for ApplicationMaster
                 Resource capability = Records.newRecord(Resource.class);
@@ -170,15 +171,23 @@ public class OlapServerSubmitter implements Runnable {
 
     private void setupAppMasterEnv(Map<String, String> appMasterEnv) {
         String classpath = System.getProperty("splice.olapServer.classpath");
-        if (classpath == null) {
-            Apps.addToEnvironment(appMasterEnv,
+            addPathToEnvironment(appMasterEnv,
                     ApplicationConstants.Environment.CLASSPATH.name(),
                     ApplicationConstants.Environment.PWD.$() + File.separator + "*");
-        } else {
-            Apps.addToEnvironment(appMasterEnv,
-                    ApplicationConstants.Environment.CLASSPATH.name(),
-                    classpath);
+            addPathToEnvironment(appMasterEnv,
+                    ApplicationConstants.Environment.CLASSPATH.name(), System.getProperty("splice.spark.executor.extraClassPath"));
+        if (classpath != null) {
+            addPathToEnvironment(appMasterEnv,
+                    ApplicationConstants.Environment.CLASSPATH.name(), classpath);
         }
+    }
+
+    private void addPathToEnvironment(Map<String, String> env, String key, String value) {
+        String newValue = value;
+        if (env.containsKey(key)) {
+            newValue = env.get(key) + ApplicationConstants.CLASS_PATH_SEPARATOR  + value;
+        }
+        env.put(key, newValue);
     }
 
     public void stop() {
